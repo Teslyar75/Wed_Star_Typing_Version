@@ -1,18 +1,127 @@
-import { useEffect, useRef, useState } from "react";
+/** Радиорубка — раскладка как stamina/radio/screen.RadioScreen. */
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
-import { searchStations, type Station } from "./api";
+import {
+  fetchCountries,
+  fetchLanguages,
+  fetchTags,
+  searchStations,
+  topStations,
+  type CountryOpt,
+  type Station,
+} from "./api";
 import { useRadio } from "./radioStore";
 import { cacheStations, loadCachedStations } from "./stationCache";
 
+type Tab = "air" | "rx";
+type HudOpt = { value: string; label: string };
+
+/** Свой список вместо native &lt;select&gt; — clip-path на панелях ломает системный popup. */
+function HudSelect({
+  value,
+  onChange,
+  options,
+  emptyLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: HudOpt[];
+  emptyLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const current = options.find((o) => o.value === value)?.label ?? emptyLabel;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={`hud-select${open ? " open" : ""}`} ref={rootRef}>
+      <button
+        type="button"
+        className="hud-btn hud-select-trigger"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="hud-select-label">{current}</span>
+        <span aria-hidden>▾</span>
+      </button>
+      {open ? (
+        <ul className="hud-select-menu" role="listbox">
+          <li role="option" aria-selected={!value}>
+            <button
+              type="button"
+              className={!value ? "on" : ""}
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
+            >
+              {emptyLabel}
+            </button>
+          </li>
+          {options.map((o) => (
+            <li key={o.value} role="option" aria-selected={value === o.value}>
+              <button
+                type="button"
+                className={value === o.value ? "on" : ""}
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+              >
+                {o.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function Antenna({ size = 44 }: { size?: number }) {
+  return (
+    <svg className="radio-antenna" width={size} height={size} viewBox="0 0 44 44" aria-hidden>
+      <circle cx="22" cy="22" r="14" fill="none" stroke="currentColor" strokeWidth="2" className="ant-ring" />
+      <line x1="22" y1="12" x2="22" y2="34" stroke="var(--st-accent)" strokeWidth="2" />
+      <line x1="22" y1="14" x2="32" y2="22" stroke="var(--st-accent)" strokeWidth="2" />
+      <line x1="22" y1="14" x2="12" y2="22" stroke="var(--st-accent)" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function stationSub(s: Station): string {
+  return [s.country, (s.tags || "").slice(0, 40), s.bitrate ? `${s.bitrate} kbps` : ""]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export default function RadioPanel() {
-  const [q, setQ] = useState("ambient");
+  const [tab, setTab] = useState<Tab>("air");
+  const [q, setQ] = useState("");
   const [tag, setTag] = useState("");
   const [country, setCountry] = useState("");
   const [lang, setLang] = useState("");
+  const [countries, setCountries] = useState<CountryOpt[]>([]);
+  const [langs, setLangs] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
-  const [err, setErr] = useState("");
-  const [tab, setTab] = useState<"air" | "favs" | "rx">("air");
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
   const {
     station,
     playing,
@@ -25,7 +134,6 @@ export default function RadioPanel() {
     play,
     pause,
     resume,
-    setAudio,
     setVolume,
     toggleFav,
     isFav,
@@ -33,26 +141,13 @@ export default function RadioPanel() {
     prevFav,
     setDuckOnType,
     setAutoLast,
-    tryAutoplayLast,
-    syncFavsFromServer,
   } = useRadio();
-
-  useEffect(() => {
-    setAudio(audioRef.current);
-    return () => setAudio(null);
-  }, [setAudio]);
-
-  useEffect(() => {
-    const tmr = window.setTimeout(() => tryAutoplayLast(), 400);
-    void syncFavsFromServer();
-    return () => clearTimeout(tmr);
-  }, [tryAutoplayLast, syncFavsFromServer]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (tab !== "rx") return;
       const tagName = (e.target as HTMLElement)?.tagName;
-      if (tagName === "INPUT" || tagName === "TEXTAREA") return;
+      if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") return;
       if (e.key === " ") {
         e.preventDefault();
         playing ? pause() : resume();
@@ -78,8 +173,46 @@ export default function RadioPanel() {
     return () => window.removeEventListener("keydown", onKey);
   }, [tab, playing, pause, resume, prevFav, nextFav, setVolume, volume]);
 
+  const applyList = useCallback((data: Station[], note: string) => {
+    setStations(data);
+    setStatus(note);
+  }, []);
+
+  const loadTop = useCallback(async () => {
+    setBusy(true);
+    setStatus(t("radio_loading"));
+    const cacheKey = "top:70";
+    try {
+      const [data, c, l, tg] = await Promise.all([
+        topStations(70),
+        fetchCountries(),
+        fetchLanguages(),
+        fetchTags(),
+      ]);
+      setCountries(c);
+      setLangs(l);
+      setTags(tg);
+      applyList(data, t("radio_status_top"));
+      void cacheStations(cacheKey, data);
+    } catch {
+      const cached = (await loadCachedStations(cacheKey)) as Station[] | null;
+      if (cached?.length) applyList(cached, t("radio_cache"));
+      else {
+        setStations([]);
+        setStatus(t("radio_err_net"));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [applyList]);
+
+  useEffect(() => {
+    void loadTop();
+  }, [loadTop]);
+
   const search = async () => {
-    setErr("");
+    setBusy(true);
+    setStatus(t("radio_searching"));
     const cacheKey = `q:${q}|t:${tag}|c:${country}|l:${lang}`;
     try {
       const data = await searchStations({
@@ -87,172 +220,222 @@ export default function RadioPanel() {
         tag: tag || undefined,
         country: country || undefined,
         language: lang || undefined,
-        limit: 12,
+        limit: 80,
       });
-      setStations(data);
+      applyList(data, t("radio_found").replace("{0}", String(data.length)));
       void cacheStations(cacheKey, data);
-      if (!data.length) setErr(t("radio_empty"));
+      if (!data.length) setStatus(t("radio_empty"));
     } catch {
       const cached = (await loadCachedStations(cacheKey)) as Station[] | null;
-      if (cached?.length) {
-        setStations(cached);
-        setErr(t("radio_cache"));
-      } else setErr(t("radio_err_net"));
+      if (cached?.length) applyList(cached, t("radio_cache"));
+      else {
+        setStations([]);
+        setStatus(t("radio_err_net"));
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
-  useEffect(() => {
-    void search();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const list = tab === "favs" ? favs : stations;
+  const showFavs = () => {
+    applyList(favs, t("radio_status_favs"));
+  };
 
   const onPlay = (s: Station) => {
     try {
       play(s);
       setTab("rx");
     } catch {
-      setErr(t("radio_err_stream"));
+      setStatus(t("radio_err_stream"));
     }
   };
 
-  const favDial = favs.length
-    ? Math.max(
-        0,
-        favs.findIndex((x) => (x.stationuuid || x.url_resolved) === (station?.stationuuid || station?.url_resolved)),
-      )
-    : 0;
+  const playingUuid = station?.stationuuid || station?.url_resolved;
 
   return (
-    <div className="radio">
-      <div className="bridge-actions">
-        <button type="button" className={`hud-btn ${tab === "air" ? "amber" : ""}`} onClick={() => setTab("air")}>
-          {t("radio_air")}
-        </button>
-        <button type="button" className={`hud-btn ${tab === "favs" ? "amber" : ""}`} onClick={() => setTab("favs")}>
-          {t("radio_favs")} ({favs.length})
-        </button>
-        <button type="button" className={`hud-btn ${tab === "rx" ? "amber" : ""}`} onClick={() => setTab("rx")}>
-          {t("radio_rx")}
-        </button>
-      </div>
-
-      <div className="bridge-actions">
-        <label className="muted">
-          <input type="checkbox" checked={duckOnType} onChange={(e) => setDuckOnType(e.target.checked)} />{" "}
-          {t("radio_duck_type")}
-        </label>
-        <label className="muted">
-          <input type="checkbox" checked={autoLast} onChange={(e) => setAutoLast(e.target.checked)} />{" "}
-          {t("radio_auto_last")}
-        </label>
-      </div>
+    <section className="radio">
+      <header className="radio-head">
+        <h2 className="route-title radio-title">{t("radio")}</h2>
+        <div className="radio-tabs">
+          <button type="button" className={`hud-btn ${tab === "air" ? "amber" : ""}`} onClick={() => setTab("air")}>
+            {t("radio_air")}
+          </button>
+          <button type="button" className={`hud-btn ${tab === "rx" ? "amber" : ""}`} onClick={() => setTab("rx")}>
+            {t("radio_rx")}
+          </button>
+        </div>
+      </header>
 
       {tab === "air" && (
-        <div className="bridge-actions">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("radio_search")} />
-          <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder={t("radio_tag")} />
-          <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder={t("radio_country")} />
-          <input value={lang} onChange={(e) => setLang(e.target.value)} placeholder="lang" />
-          <button type="button" className="hud-btn amber" onClick={() => void search()}>
-            {t("radio_find")}
-          </button>
+        <div className="radio-air">
+          <aside className="inst-panel radio-filters">
+            <div className="lab">{t("radio_filters")}</div>
+
+            <label className="radio-field">
+              <span className="lab">{t("radio_search_lab")}</span>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void search()}
+                placeholder={t("radio_search")}
+              />
+            </label>
+
+            <label className="radio-field">
+              <span className="lab">{t("radio_country_lab")}</span>
+              <HudSelect
+                value={country}
+                onChange={setCountry}
+                emptyLabel={t("radio_all_countries")}
+                options={countries.map((c) => ({
+                  value: c.code,
+                  label: `${c.name} (${c.code})`,
+                }))}
+              />
+            </label>
+
+            <label className="radio-field">
+              <span className="lab">{t("radio_lang_lab")}</span>
+              <HudSelect
+                value={lang}
+                onChange={setLang}
+                emptyLabel={t("radio_all_langs")}
+                options={langs.map((l) => ({ value: l, label: l }))}
+              />
+            </label>
+
+            <label className="radio-field">
+              <span className="lab">{t("radio_genre_lab")}</span>
+              <HudSelect
+                value={tag}
+                onChange={setTag}
+                emptyLabel={t("radio_all_tags")}
+                options={tags.map((tg) => ({ value: tg, label: tg }))}
+              />
+            </label>
+
+            <button type="button" className="hud-btn radio-act" disabled={busy} onClick={() => void search()}>
+              🔍 {t("radio_find")}
+            </button>
+            <button type="button" className="hud-btn amber radio-act" onClick={showFavs}>
+              ★ {t("radio_favs")}
+            </button>
+            <button type="button" className="hud-btn ok radio-act" disabled={busy} onClick={() => void loadTop()}>
+              {t("radio_top")}
+            </button>
+
+            {status && <p className="muted radio-status">{status}</p>}
+          </aside>
+
+          <div className="radio-freqs">
+            <div className="radio-freqs-head">
+              <h3 className="radio-freqs-title">{t("radio_freqs")}</h3>
+              <span className="muted">
+                {t("radio_stations_n").replace("{0}", String(stations.length))}
+              </span>
+            </div>
+            <ul className="radio-station-list">
+              {!stations.length && <li className="muted radio-empty">{t("radio_empty")}</li>}
+              {stations.slice(0, 120).map((s) => {
+                const id = s.stationuuid || s.url_resolved;
+                const active = id === playingUuid;
+                return (
+                  <li key={id + s.name} className={`radio-row${active ? " playing" : ""}`}>
+                    <div className="radio-row-logo" aria-hidden>
+                      <Antenna />
+                    </div>
+                    <div className="radio-row-info">
+                      <div className="radio-row-name">{s.name.slice(0, 48)}</div>
+                      <div className="muted radio-row-sub">{stationSub(s) || "—"}</div>
+                    </div>
+                    <button type="button" className="hud-btn ok radio-row-btn" onClick={() => onPlay(s)}>
+                      ▶
+                    </button>
+                    <button
+                      type="button"
+                      className="hud-btn amber radio-row-btn"
+                      title={t("radio_fav_toggle")}
+                      onClick={() => toggleFav(s)}
+                    >
+                      {isFav(s) ? "★" : "☆"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       )}
 
-      {err && <p className="muted">{err}</p>}
-
-      {(tab === "air" || tab === "favs") && (
-        <ul className="station-list">
-          {list.map((s) => (
-            <li key={(s.stationuuid || s.url_resolved) + s.name}>
-              <button type="button" className="hud-btn" onClick={() => onPlay(s)}>
-                {s.name}
-                {s.country ? ` · ${s.country}` : ""}
-                {s.bitrate ? ` · ${s.bitrate}k` : ""}
-              </button>
-              <button type="button" className="hud-btn" title={t("radio_fav_toggle")} onClick={() => toggleFav(s)}>
-                {isFav(s) ? "★" : "☆"}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
       {tab === "rx" && (
-        <div className="radio-receiver">
+        <div className="inst-panel radio-receiver">
+          <div className="lab">{t("radio_rx")}</div>
           {station ? (
             <>
-              <p>
-                <span className={`badge ${playing ? "ok" : ""}`}>{playing ? t("radio_on_air") : t("pause")}</span>{" "}
-                <strong>{station.name}</strong>
-              </p>
-              {nowPlaying && (
-                <p className="muted">
-                  {t("radio_track")}: {nowPlaying}
-                </p>
-              )}
-              {favs.length > 1 && (
-                <div className="freq-dial">
-                  <label className="muted">
-                    {t("radio_dial")}{" "}
-                    <input
-                      type="range"
-                      min={0}
-                      max={favs.length - 1}
-                      step={1}
-                      value={favDial}
-                      onChange={(e) => {
-                        const s = favs[Number(e.target.value)];
-                        if (s) onPlay(s);
-                      }}
-                    />
-                  </label>
-                  <span className="muted">
-                    {favDial + 1}/{favs.length}
-                  </span>
+              <div className="radio-rx-top">
+                <div className="radio-rx-logo">
+                  <Antenna size={100} />
                 </div>
-              )}
-              <div className="bridge-actions">
+                <div className="radio-rx-meta">
+                  <h3 className="radio-rx-name">{station.name.slice(0, 60)}</h3>
+                  <p className="radio-rx-track">{nowPlaying || station.tags || t("radio_wait_meta")}</p>
+                  <div className="radio-rx-live">
+                    <span className={`radio-dot${playing ? " on" : ""}`}>●</span>
+                    <span className={playing ? "warn" : "muted"}>{playing ? t("radio_in_air") : t("radio_silence")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="radio-rx-controls">
                 <button type="button" className="hud-btn" onClick={() => prevFav()} disabled={!favs.length}>
                   ⏮
                 </button>
-                <button type="button" className="hud-btn amber" onClick={() => (playing ? pause() : resume())}>
+                <button type="button" className="hud-btn ok" onClick={() => (playing ? pause() : resume())}>
                   {playing ? t("pause") : t("start")}
+                </button>
+                <button type="button" className="hud-btn danger" onClick={() => pause()}>
+                  ⏹ {t("stop")}
                 </button>
                 <button type="button" className="hud-btn" onClick={() => nextFav()} disabled={!favs.length}>
                   ⏭
                 </button>
-                <label>
-                  {t("radio_vol")}{" "}
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={volume}
-                    onChange={(e) => setVolume(Number(e.target.value))}
-                  />
-                </label>
               </div>
-              {history.length > 0 && (
-                <>
-                  <h4>{t("radio_history")}</h4>
-                  <ul className="station-list">
-                    {history.map((tr, i) => (
-                      <li key={`${tr}-${i}`}>{tr}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
+
+              <label className="radio-vol-row">
+                <span className="lab">{t("radio_vol")}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                />
+              </label>
+
+              <label className="radio-opt muted">
+                <input type="checkbox" checked={duckOnType} onChange={(e) => setDuckOnType(e.target.checked)} />{" "}
+                {t("radio_duck_type")}
+              </label>
+              <label className="radio-opt muted">
+                <input type="checkbox" checked={autoLast} onChange={(e) => setAutoLast(e.target.checked)} />{" "}
+                {t("radio_auto_last")}
+              </label>
+
+              <div className="lab radio-hist-lab">{t("radio_history")}</div>
+              <ul className="radio-history">
+                {history.length === 0 && <li className="muted">—</li>}
+                {history.map((tr, i) => (
+                  <li key={`${tr}-${i}`}>{tr}</li>
+                ))}
+              </ul>
             </>
           ) : (
             <p className="muted">{t("radio_rx_empty")}</p>
           )}
         </div>
       )}
-      <audio ref={audioRef} className="radio-audio" crossOrigin="anonymous" />
-    </div>
+
+    </section>
   );
 }

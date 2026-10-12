@@ -28,8 +28,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     volumes:
       - frontend_dist:/out
     entrypoint: ["/bin/sh", "-c", "cp -a /srv/frontend/. /out/ && sleep infinity"]
@@ -37,7 +37,8 @@ services:
   caddy:
     image: caddy:2-alpine
     environment:
-      DOMAIN: ${DOMAIN:-localhost}
+      # :80 — HTTP без TLS (IDE Simple Browser не ест self-signed)
+      DOMAIN: ${DOMAIN:-:80}
       ACME_EMAIL: ${ACME_EMAIL:-admin@localhost}
     ports:
       - "80:80"

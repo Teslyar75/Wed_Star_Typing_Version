@@ -10,19 +10,20 @@ function colorFor(rate: number | undefined): string {
   return "color-mix(in srgb, #c94c4c 60%, transparent)";
 }
 
-type Props = { rates: KeyRate[]; lang: string };
+type Props = { rates: KeyRate[]; lang: string; showTitle?: boolean; showPct?: boolean };
 
-export default function Heatmap({ rates, lang }: Props) {
+export default function Heatmap({ rates, lang, showTitle = true, showPct = false }: Props) {
   const map = new Map(rates.map((r) => [r.key.toLowerCase(), r]));
   return (
-    <div className="heatmap">
-      <h3>{t("heatmap")}</h3>
+    <div className={`heatmap ${showPct ? "with-pct" : ""}`}>
+      {showTitle ? <h3>{t("heatmap")}</h3> : null}
       <div className="keyboard" aria-label={t("heatmap")}>
         {ROWS.map((row, ri) => (
           <div className="kb-row" key={ri}>
             {row.map(([id, en, ru, w, finger]) => {
               const label = (lang === "ru" ? ru || en : en || ru).toLowerCase();
               const stat = map.get(label) || map.get(id.replace("Key", "").toLowerCase());
+              const pct = stat && stat.rate > 0 ? `${Math.round(stat.rate * 1000) / 10}` : "";
               return (
                 <div
                   key={id}
@@ -35,6 +36,7 @@ export default function Heatmap({ rates, lang }: Props) {
                   }}
                 >
                   <span>{lang === "ru" ? ru || en : en || ru}</span>
+                  {showPct && pct ? <em className="key-pct">{pct}</em> : null}
                 </div>
               );
             })}

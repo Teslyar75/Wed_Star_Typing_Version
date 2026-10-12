@@ -1,13 +1,19 @@
+/** Компактный список миссий (мостик) + тип Drill для API. */
 import { t } from "../i18n";
 
 export type Drill = {
   id: string;
+  lang: string;
   num: number;
   title: string;
   sector: string;
+  keys: string;
+  new: string;
   goal: number;
   unlocked: boolean;
   best_stars: number;
+  attempts?: number;
+  best_cpm?: number | null;
 };
 
 type Props = {
@@ -50,4 +56,18 @@ export default function MissionRail({ drills, activeId, lastStars, onStart, onRe
       </ul>
     </div>
   );
+}
+
+/** Капсулы новых клавиш для карточки миссии. */
+export function missionKeycaps(d: Pick<Drill, "new" | "lang">): string[] {
+  const neu = d.new ?? "";
+  if (!neu) return d.lang === "ru" ? ["А–Я"] : ["A–Z"];
+  if (neu === "0123456789" || /^\d+$/.test(neu)) return ["0–9"];
+  return [...neu.toUpperCase()];
+}
+
+export function missionAccent(d: Pick<Drill, "unlocked" | "best_stars">): "locked" | "done" | "ready" {
+  if (!d.unlocked) return "locked";
+  if (d.best_stars > 0) return "done";
+  return "ready";
 }

@@ -132,7 +132,13 @@ def _vocab_candidates(limit: int) -> list[Path]:
     return [bundled, full, dev]
 
 
+_SEED_ROWS_CACHE: dict[int, list[tuple[str, str, str]]] = {}
+
+
 def _iter_seed_rows(limit: int) -> list[tuple[str, str, str]]:
+    cached = _SEED_ROWS_CACHE.get(limit)
+    if cached is not None:
+        return cached
     for path in _vocab_candidates(limit):
         if not path.is_file():
             continue
@@ -156,29 +162,59 @@ def _iter_seed_rows(limit: int) -> list[tuple[str, str, str]]:
             if len(rows) >= limit:
                 break
         if rows:
+            _SEED_ROWS_CACHE[limit] = rows
             return rows
-    return [(w, tr, ex) for w, tr, ex in FALLBACK_SEED]
+    fallback = [(w, tr, ex) for w, tr, ex in FALLBACK_SEED]
+    _SEED_ROWS_CACHE[limit] = fallback
+    return fallback
+
+
+def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, int | bool]:
+    """Досеять словарь порцией: без полной сверки 20k слов за один запрос."""
+    limit = max(1, min(int(limit), 20000))
+    batch = max(1, min(int(batch), 2000))
+    total = db.query(VocabWord).count()
+    if total >= limit:
+        return {"added": 0, "total": total, "done": True}
+
+    rows = _iter_seed_rows(limit)
+    # Словарь растёт с начала файла — берём следующий кусок после уже имеющихся.
+    start = min(total, len(rows))
+    chunk = rows[start : start + batch]
+    if not chunk:
+        return {"added": 0, "total": total, "done": True}
+
+    words = [w for w, _, _ in chunk]
+    have = {
+        w
+        for (w,) in db.query(VocabWord.word).filter(VocabWord.word.in_(words)).all()
+    }
+    n = 0
+    for w, tr, ex in chunk:
+        if w in have:
+            continue
+        db.add(VocabWord(word=w, translation=tr, example=ex))
+        n += 1
+    if n:
+        db.commit()
+        total = db.query(VocabWord).count()
+    done = total >= limit or start + len(chunk) >= len(rows)
+    return {"added": n, "total": total, "done": done}
 
 
 @router.post("/seed")
 def seed_vocab(
     db: Session = Depends(get_db),
     limit: int = Query(20000, ge=1, le=20000),
-) -> dict[str, int]:
-    n = 0
-    for w, tr, ex in _iter_seed_rows(limit):
-        if db.query(VocabWord).filter_by(word=w).first():
-            continue
-        db.add(VocabWord(word=w, translation=tr, example=ex))
-        n += 1
-    db.commit()
-    return {"added": n, "total": db.query(VocabWord).count()}
+    batch: int = Query(400, ge=1, le=2000),
+) -> dict[str, int | bool]:
+    return _seed_vocab(db, limit, batch)
 
 
 @router.get("/words", response_model=list[WordOut])
 def list_words(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)) -> list[VocabWord]:
     if db.query(VocabWord).count() == 0:
-        seed_vocab(db)
+        _seed_vocab(db)
     return (
         db.query(VocabWord)
         .order_by(VocabWord.id)
@@ -197,7 +233,7 @@ def warehouse_due(
 ) -> list[VocabWord]:
     """Склад: due | favorite | learned | inbox."""
     if db.query(VocabWord).count() == 0:
-        seed_vocab(db)
+        _seed_vocab(db)
     pid = pilot.id if pilot else 0
     limit = max(1, min(limit, 100))
 
@@ -328,6 +364,17 @@ def english_progress(
     name, thr, nxt = rank_for_xp(xp)
     today = date.today()
     streak = 0
+    day_flags: list[bool] = []
+    for i in range(14):
+        day = today - timedelta(days=13 - i)
+        start = datetime.combine(day, datetime.min.time())
+        end = datetime.combine(day, datetime.max.time())
+        n = (
+            db.query(ReviewLog)
+            .filter(ReviewLog.pilot_id == pid, ReviewLog.created_at >= start, ReviewLog.created_at <= end)
+            .count()
+        )
+        day_flags.append(n > 0)
     for i in range(30):
         day = today - timedelta(days=i)
         start = datetime.combine(day, datetime.min.time())
@@ -342,16 +389,64 @@ def english_progress(
                 continue
             break
         streak += 1
+    start_t = datetime.combine(today, datetime.min.time())
+    end_t = datetime.combine(today, datetime.max.time())
+    reviews_today = (
+        db.query(ReviewLog)
+        .filter(ReviewLog.pilot_id == pid, ReviewLog.created_at >= start_t, ReviewLog.created_at <= end_t)
+        .count()
+    )
+    xp_today = reviews_today * 3
+    daily_goal = 30
+    new_per_day = 20
+    # грубый уровень по XP (как UI телеметрии)
+    level = 1
+    lo, hi = 0, 40
+    for i, (thr, _) in enumerate(ENGLISH_RANKS):
+        if xp >= thr:
+            level = i + 1
+            lo = thr
+            hi = ENGLISH_RANKS[i + 1][0] if i + 1 < len(ENGLISH_RANKS) else thr + 400
+    learned = sum(1 for c in cards if c.bin == "learned")
+    due = sum(1 for c in cards if c.bin != "learned" and c.due <= date.today())
     return {
         "xp": xp,
         "rank": name,
         "rank_threshold": thr,
         "next_threshold": nxt,
         "favorite": sum(1 for c in cards if c.bin == "favorite"),
-        "learned": sum(1 for c in cards if c.bin == "learned"),
+        "learned": learned,
         "inbox": sum(1 for c in cards if c.bin == "inbox"),
-        "due": sum(1 for c in cards if c.bin != "learned" and c.due <= date.today()),
+        "due": due,
         "streak_days": streak,
+        "best_streak": max(streak, sum(1 for f in day_flags if f)),
+        "day_flags": day_flags,
+        "daily_goal": daily_goal,
+        "xp_today": xp_today,
+        "new_available": new_per_day,
+        "level": level,
+        "level_lo": lo,
+        "level_hi": hi,
+        "vocab_total": db.query(VocabWord).count(),
+    }
+
+
+@router.get("/word-of-day")
+def word_of_day(db: Session = Depends(get_db)) -> dict:
+    if db.query(VocabWord).count() == 0:
+        _seed_vocab(db)
+    rows = db.query(VocabWord).order_by(VocabWord.id).limit(500).all()
+    if not rows:
+        return {"id": 0, "word": "—", "translation": "", "example": "", "rank": 0, "pos": "—"}
+    idx = date.today().toordinal() % len(rows)
+    w = rows[idx]
+    return {
+        "id": w.id,
+        "word": w.word,
+        "translation": w.translation,
+        "example": w.example,
+        "rank": w.id,
+        "pos": "NOUN",
     }
 
 

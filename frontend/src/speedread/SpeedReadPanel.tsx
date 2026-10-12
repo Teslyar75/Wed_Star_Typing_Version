@@ -5,10 +5,12 @@ import { makeQuiz, type QuizItem } from "./quiz";
 import { buildPyramid } from "./epyr";
 import { gorbovSequence, shuffleGorbovGrid } from "./gorbov";
 import { useReadingPos } from "../reading/positionStore";
+import SpeedOverview, { type SrBook, type SrSession, type SrTrainer } from "./SpeedOverview";
 
-type Mode = "rsvp" | "schulte" | "gorbov" | "quiz" | "tachi" | "epyr" | "journal" | "ramp";
+type Page = "overview" | "reader" | "book" | "trainers" | "library" | "journal" | "settings";
+type Mode = "rsvp" | "schulte" | "gorbov" | "quiz" | "tachi" | "epyr" | "ramp";
 
-type JournalRow = { id: number; mode: string; wpm: number; words: number; elapsed: number; score: number };
+type JournalRow = SrSession;
 
 function orpIndex(word: string) {
   if (word.length <= 1) return 0;
@@ -18,6 +20,18 @@ function orpIndex(word: string) {
 }
 
 const RAMP_KEY = "st_speed_ramp";
+const TARGET_WPM = 600;
+
+const TRAINERS: SrTrainer[] = [
+  { code: "E-SHL", title: "Таблица Шульте", desc: "Числа или буквы по порядку, 3×3…7×7", ready: true, best: "—" },
+  { code: "E-GRB", title: "Таблица Горбова", desc: "Чёрные ↑ и красные ↓ поочерёдно", ready: true, best: "—" },
+  { code: "E-PYR", title: "Пирамида", desc: "Расширение поля зрения по клину", ready: true, best: "—" },
+  { code: "E-TAC", title: "Вспышка", desc: "Тахистоскоп: слова на 50–300 мс", ready: true, best: "—" },
+  { code: "E-FND", title: "Поиск слов", desc: "Найди заданные слова в тексте", ready: false, best: "" },
+  { code: "E-GAP", title: "Пропущенные буквы", desc: "Прочти слова с пропусками", ready: false, best: "" },
+  { code: "E-EYE", title: "Глазодвигатель", desc: "Точки-мишени, саккады", ready: false, best: "" },
+  { code: "E-PCR", title: "Указка", desc: "Ведущая строка без возвратов", ready: false, best: "" },
+];
 
 function loadRampPreset() {
   try {
@@ -35,6 +49,7 @@ function loadRampPreset() {
 export default function SpeedReadPanel() {
   const textId = useReadingPos((s) => s.textId);
   const sentenceId = useReadingPos((s) => s.sentenceId);
+  const [page, setPage] = useState<Page>("overview");
   const [text, setText] = useState("Star Typing teaches you to read faster and type with rhythm.");
   const [wpm, setWpm] = useState(300);
   const [i, setI] = useState(0);
@@ -58,12 +73,24 @@ export default function SpeedReadPanel() {
   const [filterMode, setFilterMode] = useState("");
   const [ramp, setRamp] = useState(loadRampPreset);
   const [liveWpm, setLiveWpm] = useState(200);
+  const [bookMeta, setBookMeta] = useState<{ title: string; segments: number } | null>(null);
+  const [pilotXp, setPilotXp] = useState(0);
   const words = text.split(/\s+/).filter(Boolean);
   const pyramid = buildPyramid(text, 8);
   const gorbovOrder = gorbovSequence(gorbovN);
   const raf = useRef(0);
   const last = useRef(0);
   const started = useRef(0);
+
+  const pages: { id: Page; label: string }[] = [
+    { id: "overview", label: t("sr_overview") },
+    { id: "reader", label: t("hyperdrive") },
+    { id: "book", label: t("sr_book") },
+    { id: "trainers", label: t("sr_trainers_tab") },
+    { id: "library", label: t("library") },
+    { id: "journal", label: t("journal") },
+    { id: "settings", label: t("settings") },
+  ];
 
   const saveResult = async (payload: {
     mode: string;
@@ -78,13 +105,16 @@ export default function SpeedReadPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (r.ok) setMsg(t("result_saved"));
+    if (r.ok) {
+      setMsg(t("result_saved"));
+      void loadJournal();
+    }
   };
 
   const loadJournal = async (m?: string) => {
-    const q = m ? `?mode=${encodeURIComponent(m)}` : "";
+    const q = m ? `?mode=${encodeURIComponent(m)}&limit=40` : "?limit=40";
     const rows = await (await fetch(`/api/speedread/results${q}`, { credentials: "include" })).json();
-    setJournal(rows);
+    setJournal(Array.isArray(rows) ? rows : []);
   };
 
   const loadFromShelf = async () => {
@@ -104,6 +134,38 @@ export default function SpeedReadPanel() {
       setMsg(`${t("from_shelf")} · s${sentenceId}`);
     }
   };
+
+  useEffect(() => {
+    void loadJournal();
+    void (async () => {
+      try {
+        const me = await fetch("/api/pilots/me", { credentials: "include" });
+        if (me.ok) {
+          const j = await me.json();
+          setPilotXp(Number(j.xp) || 0);
+        }
+      } catch {
+        /* guest */
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (textId == null) {
+      setBookMeta(null);
+      return;
+    }
+    void (async () => {
+      try {
+        const shelf = await (await fetch("/api/library", { credentials: "include" })).json();
+        const hit = Array.isArray(shelf) ? shelf.find((x: { text_id: number }) => x.text_id === textId) : null;
+        if (hit) setBookMeta({ title: hit.title || `#${textId}`, segments: Number(hit.segments) || 0 });
+        else setBookMeta({ title: `#${textId}`, segments: 0 });
+      } catch {
+        setBookMeta({ title: `#${textId}`, segments: 0 });
+      }
+    })();
+  }, [textId]);
 
   useEffect(() => {
     if (!run || (mode !== "rsvp" && mode !== "ramp")) return;
@@ -144,7 +206,7 @@ export default function SpeedReadPanel() {
     };
     raf.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf.current);
-  }, [run, wpm, liveWpm, mode, words.length, ramp]);
+  }, [run, wpm, liveWpm, mode, words.length, ramp, text]);
 
   useEffect(() => {
     if (!run || mode !== "tachi") return;
@@ -200,8 +262,8 @@ export default function SpeedReadPanel() {
   }, [run, mode, wpm, pyramid.length]);
 
   useEffect(() => {
-    if (mode === "journal") void loadJournal(filterMode || undefined);
-  }, [mode, filterMode]);
+    if (page === "journal") void loadJournal(filterMode || undefined);
+  }, [page, filterMode]);
 
   const word = words[i] || "";
   const oi = orpIndex(word);
@@ -235,16 +297,50 @@ export default function SpeedReadPanel() {
     setGorbovStep((x) => x + 1);
   };
 
-  const modes: { id: Mode; label: string }[] = [
-    { id: "rsvp", label: t("hyperdrive") },
-    { id: "ramp", label: t("ramp") },
-    { id: "tachi", label: t("tachi") },
-    { id: "epyr", label: t("epyr") },
-    { id: "schulte", label: t("schulte") },
-    { id: "gorbov", label: t("gorbov") },
-    { id: "quiz", label: t("quiz") },
-    { id: "journal", label: t("journal") },
-  ];
+  const openTrainer = (code: string) => {
+    setPage("trainers");
+    setRun(false);
+    if (code === "E-SHL") {
+      setMode("schulte");
+      setNextNum(1);
+      setSchulte(Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5));
+    } else if (code === "E-GRB") {
+      setMode("gorbov");
+      setGorbovStep(0);
+      setGorbovGrid(shuffleGorbovGrid(gorbovN));
+    } else if (code === "E-PYR") {
+      setMode("epyr");
+    } else if (code === "E-TAC") {
+      setMode("tachi");
+    }
+  };
+
+  const book: SrBook =
+    textId != null
+      ? {
+          title: bookMeta?.title || `#${textId}`,
+          status: t("sr_original"),
+          lang: "en",
+          readWord: Math.max(0, sentenceId),
+          totalWords: Math.max(bookMeta?.segments || 0, sentenceId + 1),
+          typeWord: null,
+          startWpm: wpm,
+          hasBook: true,
+        }
+      : {
+          title: t("sr_lib_empty"),
+          status: "",
+          lang: "en",
+          readWord: 0,
+          totalWords: 0,
+          typeWord: null,
+          startWpm: wpm,
+          hasBook: false,
+        };
+
+  const wpmRows = journal.filter((r) => r.wpm > 0);
+  const recordWpm = wpmRows.length ? Math.round(Math.max(...wpmRows.map((r) => r.wpm))) : null;
+  const effWpm = wpmRows.length ? Math.round(wpmRows[0]!.wpm) : null;
 
   const chartPoints = journal
     .filter((r) => r.wpm > 0)
@@ -254,42 +350,277 @@ export default function SpeedReadPanel() {
   const maxW = Math.max(100, ...chartPoints);
 
   return (
-    <div className="speed">
-      <div className="bridge-actions">
-        {modes.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            className={`hud-btn ${mode === m.id ? "amber" : ""}`}
-            onClick={() => {
-              setMode(m.id);
-              setRun(false);
-              if (m.id === "schulte") {
-                setNextNum(1);
-                setSchulte(Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5));
-              }
-              if (m.id === "gorbov") {
-                setGorbovStep(0);
-                setGorbovGrid(shuffleGorbovGrid(gorbovN));
-              }
-              if (m.id === "quiz") {
-                const items = makeQuiz(text, "en");
-                setQuiz(items);
-                setQi(0);
-                setScore(0);
-              }
-              if (m.id === "ramp") {
-                setLiveWpm(ramp.start);
-              }
-            }}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
+    <div className="speed sr-hub">
+      <header className="sr-hub-head">
+        <h2 className="route-title">{t("speed")}</h2>
+        <nav className="tabs sr-subs" aria-label={t("speed")}>
+          {pages.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`tab ${page === p.id ? "on" : ""}`}
+              onClick={() => {
+                setPage(p.id);
+                setRun(false);
+                if (p.id === "reader") setMode("rsvp");
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </nav>
+      </header>
       {msg && <p className="muted">{msg}</p>}
 
-      {mode === "journal" ? (
+      {page === "overview" && (
+        <SpeedOverview
+          book={book}
+          sessions={journal}
+          targetWpm={TARGET_WPM}
+          recordWpm={recordWpm}
+          effWpm={effWpm}
+          streak={0}
+          xp={pilotXp}
+          trainers={TRAINERS}
+          onHyperdrive={() => {
+            setPage("reader");
+            setMode("rsvp");
+            void loadFromShelf();
+          }}
+          onBook={() => setPage("book")}
+          onLibrary={() => setPage("library")}
+          onTrainer={openTrainer}
+        />
+      )}
+
+      {page === "reader" && (
+        <div className="sr-reader">
+          <div className="bridge-actions">
+            {(
+              [
+                ["rsvp", t("hyperdrive")],
+                ["ramp", t("ramp")],
+                ["quiz", t("quiz")],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={`hud-btn ${mode === id ? "amber" : ""}`}
+                onClick={() => {
+                  setMode(id);
+                  setRun(false);
+                  if (id === "quiz") {
+                    const items = makeQuiz(text, "en");
+                    setQuiz(items);
+                    setQi(0);
+                    setScore(0);
+                  }
+                  if (id === "ramp") setLiveWpm(ramp.start);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {mode === "quiz" ? (
+            quiz.length === 0 ? (
+              <p className="muted">{t("quiz_need_text")}</p>
+            ) : qi >= quiz.length ? (
+              <p>
+                {score}/{quiz.length}
+              </p>
+            ) : (
+              <div className="quiz">
+                <p>{quiz[qi]!.question}</p>
+                <div className="bridge-actions">
+                  {quiz[qi]!.options.map((opt, oi2) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className="hud-btn amber"
+                      onClick={() => {
+                        if (oi2 === quiz[qi]!.answer) setScore((s) => s + 1);
+                        setQi((x) => x + 1);
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ) : (
+            <>
+              <textarea className="cargo-input sr-text" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+              <div className="bridge-actions">
+                <button type="button" className="hud-btn" onClick={() => void loadFromShelf()}>
+                  {t("from_shelf")}
+                </button>
+                {mode === "ramp" ? (
+                  <>
+                    <label>
+                      {t("ramp")} {ramp.start}→
+                      <input
+                        type="number"
+                        value={ramp.target}
+                        min={150}
+                        max={1200}
+                        onChange={(e) => {
+                          const next = { ...ramp, target: Number(e.target.value) };
+                          setRamp(next);
+                          localStorage.setItem(RAMP_KEY, JSON.stringify(next));
+                        }}
+                      />
+                    </label>
+                    <span className="muted">{Math.round(liveWpm)} WPM</span>
+                  </>
+                ) : (
+                  <label>
+                    WPM{" "}
+                    <input type="number" value={wpm} min={100} max={1200} onChange={(e) => setWpm(Number(e.target.value))} />
+                  </label>
+                )}
+                <button
+                  type="button"
+                  className="hud-btn amber"
+                  onClick={() => {
+                    setI(0);
+                    started.current = 0;
+                    setMsg("");
+                    if (mode === "ramp") setLiveWpm(ramp.start);
+                    setRun(true);
+                  }}
+                >
+                  {t("start")}
+                </button>
+                <button type="button" className="hud-btn" onClick={() => setRun(false)}>
+                  {t("pause")}
+                </button>
+              </div>
+              {(mode === "rsvp" || mode === "ramp") && (
+                <div className="rsvp">
+                  <span>{word.slice(0, oi)}</span>
+                  <span className="orp">{word[oi] ?? ""}</span>
+                  <span>{word.slice(oi + 1)}</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {page === "book" && (
+        <div className="panel-inset">
+          <p className="muted">{book.hasBook ? book.title : t("sr_lib_empty_hint")}</p>
+          <button type="button" className="hud-btn amber" disabled={!book.hasBook} onClick={() => setPage("reader")}>
+            ▶ {t("hyperdrive")}
+          </button>
+        </div>
+      )}
+
+      {page === "trainers" && (
+        <div className="sr-trainers-page">
+          <div className="bridge-actions">
+            {(
+              [
+                ["schulte", t("schulte")],
+                ["gorbov", t("gorbov")],
+                ["epyr", t("epyr")],
+                ["tachi", t("tachi")],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={`hud-btn ${mode === id ? "amber" : ""}`}
+                onClick={() => openTrainer(id === "schulte" ? "E-SHL" : id === "gorbov" ? "E-GRB" : id === "epyr" ? "E-PYR" : "E-TAC")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {mode === "schulte" && (
+            <>
+              <p className="muted">
+                {t("next_num")}: {nextNum}
+              </p>
+              <div className="schulte">
+                {schulte.map((n) => (
+                  <button key={n} type="button" className="schulte-cell" onClick={() => onSchulte(n)}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {mode === "gorbov" && (
+            <>
+              <p className="muted">
+                {gorbovOrder[gorbovStep]
+                  ? `${gorbovOrder[gorbovStep]!.color === "b" ? "●" : "○"} ${gorbovOrder[gorbovStep]!.value}`
+                  : "OK"}
+              </p>
+              <div className="schulte gorbov" style={{ gridTemplateColumns: `repeat(${gorbovN}, 1fr)` }}>
+                {gorbovGrid.map((cell, idx) => (
+                  <button
+                    key={`${cell.color}-${cell.value}-${idx}`}
+                    type="button"
+                    className="schulte-cell"
+                    style={{ color: cell.color === "r" ? "#e05050" : "#e8e8e8", fontWeight: 700 }}
+                    onClick={() => onGorbov(cell)}
+                  >
+                    {cell.value}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {mode === "tachi" && (
+            <>
+              <div className="bridge-actions">
+                <button type="button" className="hud-btn amber" onClick={() => setRun(true)}>
+                  {t("start")}
+                </button>
+                <button type="button" className="hud-btn" onClick={() => setRun(false)}>
+                  {t("pause")}
+                </button>
+              </div>
+              <div className={`rsvp tachi ${flashOn ? "on" : ""}`}>{flashOn ? flash : "·"}</div>
+            </>
+          )}
+          {mode === "epyr" && (
+            <>
+              <div className="bridge-actions">
+                <button type="button" className="hud-btn amber" onClick={() => setRun(true)}>
+                  {t("start")}
+                </button>
+                <button type="button" className="hud-btn" onClick={() => setRun(false)}>
+                  {t("pause")}
+                </button>
+              </div>
+              <div className="epyr">
+                {pyramid.slice(0, pyrLevel + 1).map((line, li) => (
+                  <div key={li} className="epyr-line">
+                    {line}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {page === "library" && (
+        <div className="panel-inset">
+          <p className="muted">{t("sr_lib_hint")}</p>
+          <button type="button" className="hud-btn" onClick={() => void loadFromShelf()}>
+            {t("from_shelf")}
+          </button>
+        </div>
+      )}
+
+      {page === "journal" && (
         <>
           <div className="bridge-actions">
             <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)}>
@@ -303,7 +634,7 @@ export default function SpeedReadPanel() {
             </select>
           </div>
           {chartPoints.length > 1 && (
-            <svg viewBox="0 0 200 60" className="speed-chart" style={{ width: "100%", maxWidth: 360, height: 60 }}>
+            <svg viewBox="0 0 200 60" className="speed-chart" style={{ width: "100%", height: 60 }}>
               <polyline
                 fill="none"
                 stroke="var(--amber, #f0a030)"
@@ -335,135 +666,16 @@ export default function SpeedReadPanel() {
             </tbody>
           </table>
         </>
-      ) : mode === "quiz" ? (
-        quiz.length === 0 ? (
-          <p className="muted">{t("quiz_need_text")}</p>
-        ) : qi >= quiz.length ? (
-          <p>
-            {score}/{quiz.length}
-          </p>
-        ) : (
-          <div className="quiz">
-            <p>{quiz[qi]!.question}</p>
-            <div className="bridge-actions">
-              {quiz[qi]!.options.map((opt, oi2) => (
-                <button
-                  key={opt}
-                  type="button"
-                  className="hud-btn amber"
-                  onClick={() => {
-                    if (oi2 === quiz[qi]!.answer) setScore((s) => s + 1);
-                    setQi((x) => x + 1);
-                  }}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-        )
-      ) : mode === "schulte" ? (
-        <>
-          <p className="muted">
-            {t("next_num")}: {nextNum}
-          </p>
-          <div className="schulte">
-            {schulte.map((n) => (
-              <button key={n} type="button" className="schulte-cell" onClick={() => onSchulte(n)}>
-                {n}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : mode === "gorbov" ? (
-        <>
-          <p className="muted">
-            {gorbovOrder[gorbovStep]
-              ? `${gorbovOrder[gorbovStep]!.color === "b" ? "●" : "○"} ${gorbovOrder[gorbovStep]!.value}`
-              : "OK"}
-          </p>
-          <div className="schulte gorbov" style={{ gridTemplateColumns: `repeat(${gorbovN}, 1fr)` }}>
-            {gorbovGrid.map((cell, idx) => (
-              <button
-                key={`${cell.color}-${cell.value}-${idx}`}
-                type="button"
-                className="schulte-cell"
-                style={{ color: cell.color === "r" ? "#e05050" : "#e8e8e8", fontWeight: 700 }}
-                onClick={() => onGorbov(cell)}
-              >
-                {cell.value}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : (
-        <>
-          <textarea className="cargo-input" rows={2} value={text} onChange={(e) => setText(e.target.value)} />
-          <div className="bridge-actions">
-            <button type="button" className="hud-btn" onClick={() => void loadFromShelf()}>
-              {t("from_shelf")}
-            </button>
-            {mode === "ramp" ? (
-              <>
-                <label>
-                  {t("ramp")} {ramp.start}→
-                  <input
-                    type="number"
-                    value={ramp.target}
-                    min={150}
-                    max={1200}
-                    onChange={(e) => {
-                      const next = { ...ramp, target: Number(e.target.value) };
-                      setRamp(next);
-                      localStorage.setItem(RAMP_KEY, JSON.stringify(next));
-                    }}
-                  />
-                </label>
-                <span className="muted">{Math.round(liveWpm)} WPM</span>
-              </>
-            ) : (
-              <label>
-                WPM{" "}
-                <input type="number" value={wpm} min={100} max={1200} onChange={(e) => setWpm(Number(e.target.value))} />
-              </label>
-            )}
-            <button
-              type="button"
-              className="hud-btn amber"
-              onClick={() => {
-                setI(0);
-                started.current = 0;
-                setMsg("");
-                if (mode === "ramp") setLiveWpm(ramp.start);
-                setRun(true);
-              }}
-            >
-              {t("start")}
-            </button>
-            <button type="button" className="hud-btn" onClick={() => setRun(false)}>
-              {t("pause")}
-            </button>
-          </div>
-          {(mode === "rsvp" || mode === "ramp") && (
-            <div className="rsvp">
-              <span>{word.slice(0, oi)}</span>
-              <span className="orp">{word[oi] ?? ""}</span>
-              <span>{word.slice(oi + 1)}</span>
-            </div>
-          )}
-          {mode === "tachi" && (
-            <div className={`rsvp tachi ${flashOn ? "on" : ""}`}>{flashOn ? flash : "·"}</div>
-          )}
-          {mode === "epyr" && (
-            <div className="epyr">
-              {pyramid.slice(0, pyrLevel + 1).map((line, li) => (
-                <div key={li} className="epyr-line">
-                  {line}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+      )}
+
+      {page === "settings" && (
+        <div className="panel-inset">
+          <label>
+            {t("sr_target_wpm")}{" "}
+            <input type="number" value={TARGET_WPM} disabled readOnly />
+          </label>
+          <p className="muted">{t("sr_settings_hint")}</p>
+        </div>
       )}
     </div>
   );

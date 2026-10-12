@@ -1,11 +1,13 @@
-# Локально: DOMAIN не задан → localhost (HTTP).
+# Локально: DOMAIN=http://localhost (без TLS — Simple Browser / IDE).
 # Прод: DOMAIN=star.example.com ACME_EMAIL=you@example.com
 #   Caddy сам поднимет HTTPS (Let's Encrypt) на :443.
 {
 	email {$ACME_EMAIL:admin@localhost}
 }
 
-{$DOMAIN:localhost} {
+# Локальный дефолт слушает :80 (и localhost, и 127.0.0.1 — IDE-браузер).
+# Прод: DOMAIN=star.example.com (без схемы → HTTPS).
+{$DOMAIN::80} {
 	encode gzip
 	handle /api/* {
 		reverse_proxy backend:8000

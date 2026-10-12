@@ -66,29 +66,43 @@ def _m(mid: str, lang: str, num: int, title: str, sector: str, keys: str, new: s
     }
 
 
+# Пока названия/секторы на русском для обеих раскладок (как десктопный UI ru).
+# Позже — перевод по языку интерфейса, не по EN/RU клавиатуре.
+_TITLES = [
+    ("Стыковка", "Домашний ряд"),
+    ("Орбита", "Домашний ряд"),
+    ("Притяжение", "Домашний ряд"),
+    ("Домашний ряд", "Домашний ряд"),
+    ("Верхняя палуба I", "Верхний ряд"),
+    ("Верхняя палуба II", "Верхний ряд"),
+    ("Нижний отсек I", "Нижний ряд"),
+    ("Нижний отсек II", "Нижний ряд"),
+    ("Гиперпрыжок", "Все буквы"),
+    ("Коды доступа", "Цифры"),
+]
 _EN = [
-    ("Docking", "Home row", "fj", "fj", 50),
-    ("Orbit", "Home row", "fjdk", "dk", 60),
-    ("Gravity", "Home row", "fjdksl", "sl", 70),
-    ("Home row", "Home row", "asdfghjkl", "agh", 80),
-    ("Upper deck I", "Top row", "asdfghjkleiru", "eiru", 90),
-    ("Upper deck II", "Top row", "asdfghjkleirutywoqp", "tywoqp", 100),
-    ("Lower bay I", "Bottom row", "asdfghjkleirutywoqpvmcnb", "vmcnb", 110),
-    ("Lower bay II", "Bottom row", "abcdefghijklmnopqrstuvwxyz", "xz", 120),
-    ("Hyperspace", "All letters", "abcdefghijklmnopqrstuvwxyz", "", 140),
-    ("Access codes", "Digits", "abcdefghijklmnopqrstuvwxyz0123456789", "0123456789", 110),
+    (*_TITLES[0], "fj", "fj", 50),
+    (*_TITLES[1], "fjdk", "dk", 60),
+    (*_TITLES[2], "fjdksl", "sl", 70),
+    (*_TITLES[3], "asdfghjkl", "agh", 80),
+    (*_TITLES[4], "asdfghjkleiru", "eiru", 90),
+    (*_TITLES[5], "asdfghjkleirutywoqp", "tywoqp", 100),
+    (*_TITLES[6], "asdfghjkleirutywoqpvmcnb", "vmcnb", 110),
+    (*_TITLES[7], "abcdefghijklmnopqrstuvwxyz", "xz", 120),
+    (*_TITLES[8], "abcdefghijklmnopqrstuvwxyz", "", 140),
+    (*_TITLES[9], "abcdefghijklmnopqrstuvwxyz0123456789", "0123456789", 110),
 ]
 _RU = [
-    ("Стыковка", "Домашний ряд", "ао", "ао", 50),
-    ("Орбита", "Домашний ряд", "аовл", "вл", 60),
-    ("Притяжение", "Домашний ряд", "аовлыд", "ыд", 70),
-    ("Домашний ряд", "Домашний ряд", "фывапролджэ", "фпржэ", 80),
-    ("Верхняя палуба I", "Верхний ряд", "фывапролджэкенг", "кенг", 90),
-    ("Верхняя палуба II", "Верхний ряд", "фывапролджэкенгуцшщйзхъ", "уцшщйзхъ", 100),
-    ("Нижний отсек I", "Нижний ряд", "фывапролджэкенгуцшщйзхъмитьсб", "митьсб", 110),
-    ("Нижний отсек II", "Нижний ряд", "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "ячюё", 120),
-    ("Гиперпрыжок", "Все буквы", "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "", 140),
-    ("Коды доступа", "Цифры", "абвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789", "0123456789", 110),
+    (*_TITLES[0], "ао", "ао", 50),
+    (*_TITLES[1], "аовл", "вл", 60),
+    (*_TITLES[2], "аовлыд", "ыд", 70),
+    (*_TITLES[3], "фывапролджэ", "фпржэ", 80),
+    (*_TITLES[4], "фывапролджэкенг", "кенг", 90),
+    (*_TITLES[5], "фывапролджэкенгуцшщйзхъ", "уцшщйзхъ", 100),
+    (*_TITLES[6], "фывапролджэкенгуцшщйзхъмитьсб", "митьсб", 110),
+    (*_TITLES[7], "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "ячюё", 120),
+    (*_TITLES[8], "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "", 140),
+    (*_TITLES[9], "абвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789", "0123456789", 110),
 ]
 
 MISSIONS: list[dict[str, Any]] = []
@@ -180,3 +194,27 @@ def generate_repair_text(weak: list[str], lang: str, rng: random.Random | None =
     letters = "".join(sorted(set("".join(source))))
     words = [w for w in source if any(ch in w for ch in focus)]
     return _build(rng, words or source, letters, focus, length, 0.8)
+
+
+# Звания (порт stamina/missions.RANKS) — имена стабильные RU, UI переводит при нужде.
+RANKS: list[tuple[int, str]] = [
+    (0, "Кадет"),
+    (100, "Пилот-стажёр"),
+    (300, "Мичман"),
+    (700, "Лейтенант"),
+    (1500, "Капитан-лейтенант"),
+    (3000, "Капитан"),
+    (6000, "Коммодор"),
+    (12000, "Адмирал флота"),
+]
+
+
+def rank_for(xp: int) -> tuple[str, int, int | None]:
+    """(звание, порог текущего, порог следующего или None)."""
+    current = RANKS[0]
+    nxt: int | None = None
+    for i, (threshold, name) in enumerate(RANKS):
+        if xp >= threshold:
+            current = (threshold, name)
+            nxt = RANKS[i + 1][0] if i + 1 < len(RANKS) else None
+    return current[1], current[0], nxt
