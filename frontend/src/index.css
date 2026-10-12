@@ -349,13 +349,29 @@ code {
   color: var(--st-muted);
 }
 
-.screen-page p {
+.screen-page p,
+.screen-cols p {
   margin: 0.4rem 0;
   line-height: 1.55;
+  cursor: pointer;
 }
 
-.screen-page p.on {
+.screen-page p.on,
+.screen-cols p.on {
   color: var(--st-accent);
+}
+
+.screen-cols {
+  column-gap: 1.5rem;
+  min-height: 280px;
+}
+
+.screen-cols.cols-1 {
+  columns: 1;
+}
+
+.screen-cols.cols-2 {
+  columns: 2;
 }
 
 .english .card {

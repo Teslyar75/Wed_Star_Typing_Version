@@ -1,7 +1,13 @@
-FROM node:22-alpine
+# Prod static build для Caddy (фаза 8)
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 COPY . .
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+RUN npm run build
+
+FROM alpine:3.20
+WORKDIR /srv/frontend
+COPY --from=build /app/dist .
+# артефакт читает Caddy volume/mount; образ сам по себе — только файлы
+CMD ["sleep", "infinity"]

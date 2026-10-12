@@ -48,11 +48,14 @@ npm run dev
 - UI: http://localhost:5173  
 - Health: http://localhost:8000/api/health → `{"ok":true}`
 
-**Docker**
+**Docker (Postgres + API + Caddy :80)**
 
 ```powershell
 docker compose up --build
+# UI: http://localhost   API: http://localhost/api/health
 ```
+
+Фронт собирается в static `dist`, Caddy отдаёт SPA и проксирует `/api/*`. HTTPS — раскомментируйте блок домена в `Caddyfile`.
 
 ## Статус фаз (WEB_PLAN)
 
@@ -70,7 +73,7 @@ docker compose up --build
 
 ### Углубление
 
-Сделано: изоляция пилотов, UPLINK worker, vocab 20k, virtuoso, vosk, Playwright, i18next, **living_space порт**, **Lighthouse PWA 100** (`npm run lighthouse:pwa`).
+Сделано: изоляция пилотов, UPLINK worker, vocab 20k, virtuoso, vosk, Playwright, i18next, living_space, Lighthouse PWA 100, **читалка 1/2 стр + `sentence_id` sync**, **Caddy compose**, **`/api/migrate/pilot|bundle`**, **speedread quiz**.
 
 ```powershell
 cd frontend

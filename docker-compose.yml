@@ -5,10 +5,13 @@ services:
       POSTGRES_USER: star
       POSTGRES_PASSWORD: star
       POSTGRES_DB: star_typing
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U star -d star_typing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
     build:
@@ -16,21 +19,37 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://star:star@postgres:5432/star_typing
-    ports:
-      - "8000:8000"
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-prod}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      VITE_API_URL: http://localhost:8000
+    volumes:
+      - frontend_dist:/out
+    entrypoint: ["/bin/sh", "-c", "cp -a /srv/frontend/. /out/ && sleep infinity"]
+
+  caddy:
+    image: caddy:2-alpine
     ports:
-      - "5173:5173"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - frontend_dist:/srv/frontend:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - backend
+      - frontend
 
 volumes:
   pgdata:
+  frontend_dist:
+  caddy_data:
+  caddy_config:

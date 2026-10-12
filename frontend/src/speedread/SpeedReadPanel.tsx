@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { msPerWord } from "./timing";
 import { t } from "../i18n";
+import { makeQuiz, type QuizItem } from "./quiz";
 
 function orpIndex(word: string) {
   if (word.length <= 1) return 0;
@@ -14,8 +15,11 @@ export default function SpeedReadPanel() {
   const [wpm, setWpm] = useState(300);
   const [i, setI] = useState(0);
   const [run, setRun] = useState(false);
-  const [mode, setMode] = useState<"rsvp" | "schulte">("rsvp");
+  const [mode, setMode] = useState<"rsvp" | "schulte" | "quiz">("rsvp");
   const [msg, setMsg] = useState("");
+  const [quiz, setQuiz] = useState<QuizItem[]>([]);
+  const [qi, setQi] = useState(0);
+  const [score, setScore] = useState(0);
   const [schulte, setSchulte] = useState(() =>
     Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5),
   );
@@ -53,6 +57,13 @@ export default function SpeedReadPanel() {
             setRun(false);
             const elapsed = (performance.now() - started.current) / 1000;
             void saveResult({ mode: "rsvp", wpm, words: words.length, elapsed, score: wpm });
+            const items = makeQuiz(text, "en");
+            if (items.length) {
+              setQuiz(items);
+              setQi(0);
+              setScore(0);
+              setMode("quiz");
+            }
             started.current = 0;
             return x;
           }
@@ -99,9 +110,55 @@ export default function SpeedReadPanel() {
         >
           {t("schulte")}
         </button>
+        <button
+          type="button"
+          className={`hud-btn ${mode === "quiz" ? "amber" : ""}`}
+          onClick={() => {
+            const items = makeQuiz(text, "en");
+            setQuiz(items);
+            setQi(0);
+            setScore(0);
+            setMode("quiz");
+          }}
+        >
+          Quiz
+        </button>
       </div>
       {msg && <p className="muted">{msg}</p>}
-      {mode === "rsvp" ? (
+      {mode === "quiz" ? (
+        quiz.length === 0 ? (
+          <p className="muted">Нужен более длинный текст для викторины.</p>
+        ) : qi >= quiz.length ? (
+          <p>
+            {score}/{quiz.length} —{" "}
+            <button type="button" className="hud-btn" onClick={() => setMode("rsvp")}>
+              RSVP
+            </button>
+          </p>
+        ) : (
+          <div className="quiz">
+            <p>{quiz[qi]!.question}</p>
+            <div className="bridge-actions">
+              {quiz[qi]!.options.map((opt, oi) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className="hud-btn amber"
+                  onClick={() => {
+                    if (oi === quiz[qi]!.answer) setScore((s) => s + 1);
+                    setQi((x) => x + 1);
+                  }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <p className="muted">
+              {qi + 1}/{quiz.length}
+            </p>
+          </div>
+        )
+      ) : mode === "rsvp" ? (
         <>
           <textarea className="cargo-input" rows={2} value={text} onChange={(e) => setText(e.target.value)} />
           <div className="bridge-actions">

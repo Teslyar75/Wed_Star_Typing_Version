@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DONE, ERROR, TypingEngine } from "../typing/engine";
 import { FINGER_COLORS, keyForChar, ROWS } from "../typing/layouts";
 import { t, onLangChange } from "../i18n";
+import { useReadingPos } from "../reading/positionStore";
 
-type Segment = { idx: number; original: string; translation: string; status: string };
+type Segment = { idx: number; original: string; translation: string; status: string; char_start?: number };
 
 /** Окно вокруг курсора — DOM не держит весь текст (критерий 100k). */
 const WINDOW = 96;
 
 export default function BridgeScreen() {
+  const jump = useReadingPos((s) => s.jump);
+  const setSentence = useReadingPos((s) => s.setSentence);
   const [textId, setTextId] = useState<number | null>(null);
   const [draft, setDraft] = useState("the quick brown fox jumps over the lazy dog");
   const [lang, setLang] = useState("en");
@@ -16,6 +19,7 @@ export default function BridgeScreen() {
   const [tick, setTick] = useState(0);
   const [flash, setFlash] = useState(false);
   const [status, setStatus] = useState(() => t("ready"));
+  const [segStarts, setSegStarts] = useState<number[]>([]);
   const [, bumpLang] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const now = () => performance.now() / 1000;
@@ -43,7 +47,17 @@ export default function BridgeScreen() {
     const doc = await r.json();
     setTextId(doc.id);
     const segs: Segment[] = await (await fetch(`/api/texts/${doc.id}/segments?limit=2000`)).json();
-    const joined = segs.map((s) => s.original).join(" ");
+    const starts: number[] = [];
+    let pos = 0;
+    const parts: string[] = [];
+    for (const s of segs) {
+      starts.push(pos);
+      parts.push(s.original);
+      pos += s.original.length + 1;
+    }
+    setSegStarts(starts);
+    jump(doc.id, segs[0]?.idx ?? 0);
+    const joined = parts.join(" ");
     // длинный текст не дублируем в textarea — только в engine
     if (joined.length > 4000) {
       setDraft(joined.slice(0, 400) + `… (+${joined.length - 400} симв.)`);
@@ -51,6 +65,18 @@ export default function BridgeScreen() {
       setDraft(joined);
     }
     reloadEngine(joined);
+  };
+
+  const sentenceAt = (charIndex: number) => {
+    if (!segStarts.length) return 0;
+    let lo = 0;
+    let hi = segStarts.length - 1;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (segStarts[mid]! <= charIndex) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo;
   };
 
   const saveSession = async (eng: TypingEngine) => {
@@ -90,6 +116,7 @@ export default function BridgeScreen() {
       setStatus(res === DONE ? t("finish") : t("flying"));
     }
     setTick((x) => x + 1);
+    setSentence(sentenceAt(engine.index));
     if (res === DONE) void saveSession(engine);
   };
 

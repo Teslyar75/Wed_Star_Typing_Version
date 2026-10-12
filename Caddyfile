@@ -1,5 +1,9 @@
-# Деплой-заготовка (фаза 8): HTTPS через Caddy
-:443 {
+# Локально: http://localhost  |  прод: подставьте домен и уберите :80 блок
+{
+	auto_https disable_redirects
+}
+
+:80 {
 	encode gzip
 	handle /api/* {
 		reverse_proxy backend:8000
@@ -10,3 +14,16 @@
 		file_server
 	}
 }
+
+# HTTPS (Let's Encrypt): раскомментируйте и укажите домен
+# your.domain.com {
+# 	encode gzip
+# 	handle /api/* {
+# 		reverse_proxy backend:8000
+# 	}
+# 	handle {
+# 		root * /srv/frontend
+# 		try_files {path} /index.html
+# 		file_server
+# 	}
+# }
