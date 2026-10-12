@@ -4,13 +4,14 @@ import { FINGER_COLORS, keyForChar, ROWS } from "../typing/layouts";
 
 type Segment = { idx: number; original: string; translation: string; status: string };
 
-const WINDOW = 48; // символов вокруг курсора (виртуализация строки)
+/** Окно вокруг курсора — DOM не держит весь текст (критерий 100k). */
+const WINDOW = 96;
 
 export default function BridgeScreen() {
   const [textId, setTextId] = useState<number | null>(null);
-  const [raw, setRaw] = useState("the quick brown fox jumps over the lazy dog");
+  const [draft, setDraft] = useState("the quick brown fox jumps over the lazy dog");
   const [lang, setLang] = useState("en");
-  const [engine, setEngine] = useState(() => new TypingEngine(raw));
+  const [engine, setEngine] = useState(() => new TypingEngine(draft));
   const [tick, setTick] = useState(0);
   const [flash, setFlash] = useState(false);
   const [status, setStatus] = useState("К ЗАПУСКУ ГОТОВ");
@@ -28,7 +29,7 @@ export default function BridgeScreen() {
   }, [engine]);
 
   const loadPractice = async () => {
-    const content = raw.trim() || "hello world";
+    const content = draft.trim() || "hello world";
     const r = await fetch("/api/texts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37,9 +38,14 @@ export default function BridgeScreen() {
     if (!r.ok) return;
     const doc = await r.json();
     setTextId(doc.id);
-    const segs: Segment[] = await (await fetch(`/api/texts/${doc.id}/segments?limit=500`)).json();
+    const segs: Segment[] = await (await fetch(`/api/texts/${doc.id}/segments?limit=2000`)).json();
     const joined = segs.map((s) => s.original).join(" ");
-    setRaw(joined);
+    // длинный текст не дублируем в textarea — только в engine
+    if (joined.length > 4000) {
+      setDraft(joined.slice(0, 400) + `… (+${joined.length - 400} симв.)`);
+    } else {
+      setDraft(joined);
+    }
     reloadEngine(joined);
   };
 
@@ -47,6 +53,7 @@ export default function BridgeScreen() {
     const seg = eng.segment(now());
     await fetch("/api/sessions", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         text_id: textId,
@@ -70,7 +77,6 @@ export default function BridgeScreen() {
     const ch = e.key.length === 1 ? e.key : e.key === " " ? " " : "";
     if (!ch) return;
     e.preventDefault();
-    const t0 = performance.now();
     const res = engine.press(ch, now());
     if (res === null) return;
     if (res === ERROR) {
@@ -81,8 +87,6 @@ export default function BridgeScreen() {
     }
     setTick((x) => x + 1);
     if (res === DONE) void saveSession(engine);
-    // критерий: обработка < 16 мс
-    void t0;
   };
 
   const idx = engine.index;
@@ -100,6 +104,7 @@ export default function BridgeScreen() {
       acc: engine.accuracy != null ? Math.round(engine.accuracy) : "—",
       err: engine.errors,
       el: engine.elapsed(t).toFixed(1),
+      len: engine.text.length,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, engine]);
@@ -110,8 +115,8 @@ export default function BridgeScreen() {
         <textarea
           className="cargo-input"
           rows={3}
-          value={raw}
-          onChange={(e) => setRaw(e.target.value)}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
           placeholder="Вставьте текст для набора…"
         />
         <div className="bridge-actions">
@@ -122,16 +127,19 @@ export default function BridgeScreen() {
           <button type="button" className="hud-btn" onClick={() => void loadPractice()}>
             На борт
           </button>
-          <button type="button" className="hud-btn amber" onClick={() => reloadEngine(raw)}>
+          <button type="button" className="hud-btn amber" onClick={() => reloadEngine(draft.includes("… (+") ? engine.text : draft)}>
             Заново
           </button>
+          <span className="muted">{stats.len} симв.</span>
         </div>
       </div>
 
       <div className={`viewport ${flash ? "flash" : ""}`} onClick={() => inputRef.current?.focus()}>
+        {start > 0 && <span className="muted">…</span>}
         <span className="muted">{slice.slice(0, cursorLocal)}</span>
         <span className="cursor">{engine.current ?? "¶"}</span>
         <span className="ahead">{slice.slice(cursorLocal + (engine.finished ? 0 : 1))}</span>
+        {end < engine.text.length && <span className="muted">…</span>}
         <input
           ref={inputRef}
           className="ghost-input"

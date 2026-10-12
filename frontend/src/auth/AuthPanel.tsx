@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t } from "../i18n";
 
 type Pilot = { id: number; callsign: string; display_name: string; skin: string; xp: number };
 type Honor = { callsign: string; xp: number; best_cpm: number; sessions: number };
@@ -48,10 +49,10 @@ export default function AuthPanel() {
         <input value={callsign} onChange={(e) => setCallsign(e.target.value)} placeholder="позывной" />
         <input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" type="password" />
         <button type="button" className="hud-btn" onClick={() => void register()}>
-          Зачислить
+          {t("enroll")}
         </button>
         <button type="button" className="hud-btn amber" onClick={() => void login()}>
-          Войти
+          {t("login")}
         </button>
       </div>
       {me && (
@@ -60,7 +61,7 @@ export default function AuthPanel() {
         </p>
       )}
       {msg && <p className="muted">{msg}</p>}
-      <h3>Доска почёта</h3>
+      <h3>{t("honor")}</h3>
       <table className="honor">
         <thead>
           <tr>

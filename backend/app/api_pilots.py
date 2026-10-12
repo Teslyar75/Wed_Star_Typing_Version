@@ -4,13 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.auth_deps import COOKIE, get_optional_pilot
 from app.db import get_db
-from app.pilots import Pilot, decode_token, hash_pin, make_token, verify_pin
+from app.pilots import Pilot, hash_pin, make_token, verify_pin
 from app.sessions import TypingSession
-from fastapi import Cookie
 
 router = APIRouter(prefix="/api/pilots", tags=["pilots"])
-COOKIE = "st_token"
 
 
 class RegisterIn(BaseModel):
@@ -80,13 +79,8 @@ def logout(response: Response) -> dict[str, bool]:
 
 
 @router.get("/me", response_model=PilotOut | None)
-def me(db: Session = Depends(get_db), st_token: str | None = Cookie(default=None)) -> Pilot | None:
-    if not st_token:
-        return None
-    pid = decode_token(st_token)
-    if pid is None:
-        return None
-    return db.get(Pilot, pid)
+def me(pilot: Pilot | None = Depends(get_optional_pilot)) -> Pilot | None:
+    return pilot
 
 
 @router.get("/honor", response_model=list[HonorRow])

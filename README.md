@@ -68,4 +68,14 @@ docker compose up --build
 | 7 Космос Canvas / скины / звук / радио | ✅ |
 | 8 i18n / PWA / Caddy / migrate | ✅ |
 
-Дальше — углубление (vosk-browser, реальный UPLINK, полный vocab, e2e Playwright).
+### Углубление (после MVP)
+
+| Сделано | Ещё впереди |
+| --- | --- |
+| Изоляция сессий пилота + XP | Playwright UI e2e |
+| UPLINK Google/MyMemory + кэш | Очередь переводов в фоне (worker) |
+| vocab seed 500 + склад due | Полный vocab 20k + миссии |
+| RSVP/Шульте → `/api/speedread` | Тесты таймера <5 мс |
+| Окно набора (не DOM 100k) | react-virtuoso для читалки |
+| textutil TS + SpeechRecognition | vosk-browser WASM |
+| API e2e регистрация→сессия→доска | Lighthouse PWA ≥90, полный i18next |

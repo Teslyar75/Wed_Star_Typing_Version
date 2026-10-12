@@ -1,0 +1,2502 @@
+[
+{
+"word": "the",
+"translation": "определённый артикль (этот, тот)",
+"example": "I don't have the time to do that."
+},
+{
+"word": "to",
+"translation": "к, в, на; (частица инфинитива)",
+"example": "I don't have the time to do that."
+},
+{
+"word": "and",
+"translation": "и, да, а",
+"example": "You and I are two of a kind!"
+},
+{
+"word": "of",
+"translation": "из, о, (родительный падеж)",
+"example": "This is not the end of the world."
+},
+{
+"word": "a",
+"translation": "неопределённый артикль (один, какой-то)",
+"example": "You and I are two of a kind!"
+},
+{
+"word": "in",
+"translation": "за, в, через",
+"example": "I have all the time in the world."
+},
+{
+"word": "i",
+"translation": "я",
+"example": "I have all the time in the world."
+},
+{
+"word": "be",
+"translation": "быть, являться, находиться",
+"example": "And what will be the result of that?"
+},
+{
+"word": "for",
+"translation": "к, на, для",
+"example": "I do this for the fun of it."
+},
+{
+"word": "that",
+"translation": "тот, то",
+"example": "That is the way of the world."
+},
+{
+"word": "you",
+"translation": "ты, вы",
+"example": "It is you who is in the wrong."
+},
+{
+"word": "it",
+"translation": "это, он, она, оно",
+"example": "It is you who is in the wrong."
+},
+{
+"word": "on",
+"translation": "включенный; на, в, с",
+"example": "Would you like to be on the team?"
+},
+{
+"word": "with",
+"translation": "с",
+"example": "I want you to take this with you."
+},
+{
+"word": "this",
+"translation": "это, этот, такой",
+"example": "This is not the end of the world."
+},
+{
+"word": "as",
+"translation": "как, так; ас, асс",
+"example": "You are to do as I tell you."
+},
+{
+"word": "have",
+"translation": "иметь; у меня есть",
+"example": "I have all the time in the world."
+},
+{
+"word": "at",
+"translation": "в, на, по",
+"example": "I have to be at the station by 2:30."
+},
+{
+"word": "he",
+"translation": "он",
+"example": "He was the only one in the room."
+},
+{
+"word": "not",
+"translation": "не",
+"example": "This is not the end of the world."
+},
+{
+"word": "by",
+"translation": "у, около, к; (кем-либо, посредством)",
+"example": "I have to be at the station by 2:30."
+},
+{
+"word": "but",
+"translation": "но, а, только",
+"example": "I want to do that, but I can't."
+},
+{
+"word": "from",
+"translation": "из, с, от",
+"example": "What is it that you want from me?"
+},
+{
+"word": "my",
+"translation": "мой, моя",
+"example": "I was on my way to the party."
+},
+{
+"word": "or",
+"translation": "или, либо",
+"example": "This is not the time or the place."
+},
+{
+"word": "we",
+"translation": "мы",
+"example": "We have all the time in the world."
+},
+{
+"word": "an",
+"translation": "неопределённый артикль (один, какой-то)",
+"example": "It is an exciting time of the year."
+},
+{
+"word": "your",
+"translation": "твой, ваш",
+"example": "Are you on your way to the station?"
+},
+{
+"word": "all",
+"translation": "всё, весь, целый",
+"example": "I have all the time in the world."
+},
+{
+"word": "so",
+"translation": "так, поэтому, итак; настолько",
+"example": "It is kind of you to say so."
+},
+{
+"word": "his",
+"translation": "его, свой",
+"example": "He is on his way to the school."
+},
+{
+"word": "they",
+"translation": "они",
+"example": "The more they have, the more they want."
+},
+{
+"word": "me",
+"translation": "я, меня, мне",
+"example": "No, it is not me! It is you!"
+},
+{
+"word": "if",
+"translation": "если, ли, ежели",
+"example": "I don't know if I have the time."
+},
+{
+"word": "one",
+"translation": "один, одна; единица",
+"example": "Which one is the better of the two?"
+},
+{
+"word": "can",
+"translation": "мочь, уметь; банка",
+"example": "This is all I can do for you."
+},
+{
+"word": "will",
+"translation": "буду (будущее время); воля, завещание",
+"example": "And what will be the result of that?"
+},
+{
+"word": "just",
+"translation": "только, просто, лишь; правильный, верный",
+"example": "I like you just the way you are."
+},
+{
+"word": "like",
+"translation": "нравиться, любить; как, подобно",
+"example": "I like to do that in the summer."
+},
+{
+"word": "about",
+"translation": "о, об, про; около, примерно",
+"example": "I want to talk to you about it."
+},
+{
+"word": "up",
+"translation": "вверх, наверх; вставать",
+"example": "What to do is up to you."
+},
+{
+"word": "out",
+"translation": "вне, наружу, из",
+"example": "I have to get you out of here."
+},
+{
+"word": "what",
+"translation": "что, какой",
+"example": "And what will be the result of that?"
+},
+{
+"word": "when",
+"translation": "когда",
+"example": "When is the best time to do that?"
+},
+{
+"word": "more",
+"translation": "больше, ещё",
+"example": "The more you have, the more you want."
+},
+{
+"word": "do",
+"translation": "делать; (вспомогательный глагол)",
+"example": "I don't have the time to do that."
+},
+{
+"word": "no",
+"translation": "нет; никакой",
+"example": "No, it is not me! It is you!"
+},
+{
+"word": "who",
+"translation": "кто, который",
+"example": "It is you who is in the wrong."
+},
+{
+"word": "their",
+"translation": "их, ихний",
+"example": "Are you spending the night in their house?"
+},
+{
+"word": "there",
+"translation": "там, туда; (there is — есть, имеется)",
+"example": "I feel like I have to be there."
+},
+{
+"word": "her",
+"translation": "её",
+"example": "I was talking to her, not to you."
+},
+{
+"word": "which",
+"translation": "который, какой",
+"example": "Which one is the better of the two?"
+},
+{
+"word": "time",
+"translation": "время; раз",
+"example": "I have all the time in the world."
+},
+{
+"word": "get",
+"translation": "получать, доставать; становиться",
+"example": "I want you to get in the car."
+},
+{
+"word": "would",
+"translation": "бы (условное); буду (форма will)",
+"example": "Would you like to be on the team?"
+},
+{
+"word": "she",
+"translation": "она",
+"example": "She was the one I was thinking of."
+},
+{
+"word": "new",
+"translation": "новый",
+"example": "I am the god of the new world."
+},
+{
+"word": "people",
+"translation": "люди",
+"example": "The more people have, the more they want."
+},
+{
+"word": "how",
+"translation": "как, насколько, каким образом",
+"example": "How can I be of service to you?"
+},
+{
+"word": "some",
+"translation": "немного, несколько, некоторый",
+"example": "I have some things I have to do."
+},
+{
+"word": "also",
+"translation": "тоже, также",
+"example": "I also have to do that."
+},
+{
+"word": "them",
+"translation": "их, им",
+"example": "I was talking to them, not to you."
+},
+{
+"word": "now",
+"translation": "теперь, сейчас, так",
+"example": "Now is not the time to do that."
+},
+{
+"word": "other",
+"translation": "другой, иной",
+"example": "I want to be on the other team."
+},
+{
+"word": "its",
+"translation": "его, её",
+"example": "I have put it back in its place."
+},
+{
+"word": "our",
+"translation": "наш",
+"example": "We have to do this on our own."
+},
+{
+"word": "than",
+"translation": "чем, нежели",
+"example": "I have more of them than you."
+},
+{
+"word": "good",
+"translation": "хороший, добрый; добро, польза",
+"example": "This one is as good as that one."
+},
+{
+"word": "only",
+"translation": "только, лишь, всего; единственный, единый",
+"example": "He was the only one in the room."
+},
+{
+"word": "after",
+"translation": "после, потом",
+"example": "You get used to it after a while."
+},
+{
+"word": "first",
+"translation": "первый; во-первых, сперва",
+"example": "I was the first in the group."
+},
+{
+"word": "him",
+"translation": "ему, его",
+"example": "I was the last one to see him."
+},
+{
+"word": "into",
+"translation": "в, на, увлечён",
+"example": "I'm the one who got you into this."
+},
+{
+"word": "know",
+"translation": "знать, понимать, испытывать",
+"example": "I know that you know that I know."
+},
+{
+"word": "see",
+"translation": "видеть, смотреть; понимать",
+"example": "I see you, and you see me."
+},
+{
+"word": "two",
+"translation": "два, две; двойка",
+"example": "This is much the better of the two."
+},
+{
+"word": "make",
+"translation": "делать, создавать; заставлять",
+"example": "You can make of that what you will."
+},
+{
+"word": "over",
+"translation": "над, через, свыше; кончено",
+"example": "I just want to get this over with."
+},
+{
+"word": "think",
+"translation": "думать, полагать, считать; размышление, обдумывание",
+"example": "I don't think that this is for you."
+},
+{
+"word": "any",
+"translation": "любой, какой-нибудь; сколько-нибудь",
+"example": "Can I be of any service to you?"
+},
+{
+"word": "then",
+"translation": "тогда, потом, затем",
+"example": "That was then and this is now."
+},
+{
+"word": "could",
+"translation": "мог бы, мог (форма can)",
+"example": "Could I talk to you for a second?"
+},
+{
+"word": "back",
+"translation": "спина; назад, обратно; задний",
+"example": "It's at the back of the building."
+},
+{
+"word": "us",
+"translation": "нас, нам",
+"example": "One of us will have to do that."
+},
+{
+"word": "want",
+"translation": "хотеть, желать; желание, потребность",
+"example": "The more you have, the more you want."
+},
+{
+"word": "because",
+"translation": "ведь, поскольку, потому что",
+"example": "All of this is because of you."
+},
+{
+"word": "go",
+"translation": "идти, ехать, ходить; попытка",
+"example": "One of the two will have to go."
+},
+{
+"word": "well",
+"translation": "хорошо, как следует; здоровый",
+"example": "The money is in the well."
+},
+{
+"word": "way",
+"translation": "способ, путь, дорога",
+"example": "That is the way of the world."
+},
+{
+"word": "most",
+"translation": "самый, наиболее, пре-",
+"example": "I was at home most of the day."
+},
+{
+"word": "much",
+"translation": "много, намного",
+"example": "This is much the better of the two."
+},
+{
+"word": "very",
+"translation": "очень, самый, весьма; самый, тот самый",
+"example": "He is the very man for the job."
+},
+{
+"word": "where",
+"translation": "где, куда, откуда",
+"example": "This is where I want to be."
+},
+{
+"word": "even",
+"translation": "точно, даже, ещё; равный, одинаковый",
+"example": "You don't even know the half of it!"
+},
+{
+"word": "should",
+"translation": "следует, должен бы",
+"example": "This is the time you should get up."
+},
+{
+"word": "may",
+"translation": "может, можно; май",
+"example": "This may be of use to you."
+},
+{
+"word": "here",
+"translation": "здесь, тут, сюда",
+"example": "I have to get you out of here."
+},
+{
+"word": "need",
+"translation": "нуждаться, быть нужным; нужда, необходимость",
+"example": "I need to talk to one of you."
+},
+{
+"word": "really",
+"translation": "действительно, правда",
+"example": "I really like the way you do this."
+},
+{
+"word": "right",
+"translation": "правый, правильный; право; прямо",
+"example": "You don't have the right to do that."
+},
+{
+"word": "work",
+"translation": "работать; работа",
+"example": "I have a lot of work to do."
+},
+{
+"word": "year",
+"translation": "год",
+"example": "This is the best time of the year."
+},
+{
+"word": "being",
+"translation": "будучи; существо, бытие",
+"example": "The money will do for the time being."
+},
+{
+"word": "day",
+"translation": "день, сутки, световой день",
+"example": "We have to do the work in a day."
+},
+{
+"word": "too",
+"translation": "также, тоже, слишком",
+"example": "Do I have to do that, too?"
+},
+{
+"word": "going",
+"translation": "идёт",
+"example": "What are you going to do to me?"
+},
+{
+"word": "before",
+"translation": "до, перед",
+"example": "I have to do that before 2:30."
+},
+{
+"word": "off",
+"translation": "прочь, от; выключенный",
+"example": "I want you to get off my back."
+},
+{
+"word": "why",
+"translation": "почему, зачем",
+"example": "Why do you have to be like that?"
+},
+{
+"word": "still",
+"translation": "ещё, всё-таки, всё ещё; неподвижный",
+"example": "I still have to go to the bank."
+},
+{
+"word": "take",
+"translation": "брать, взять; занимать (время)",
+"example": "I want you to take this with you."
+},
+{
+"word": "got",
+"translation": "получил; стал (форма get)",
+"example": "What has it got to do with you?"
+},
+{
+"word": "many",
+"translation": "много, многие",
+"example": "You can have as many as you like."
+},
+{
+"word": "never",
+"translation": "никогда",
+"example": "I would never do that to you."
+},
+{
+"word": "life",
+"translation": "жизнь, существование, дни",
+"example": "I like my life the way it is."
+},
+{
+"word": "say",
+"translation": "говорить, скажем, сообщать; голос, право голоса",
+"example": "That's all I have to say to you."
+},
+{
+"word": "world",
+"translation": "мир, свет, вселенная",
+"example": "I have all the time in the world."
+},
+{
+"word": "down",
+"translation": "вниз; вниз по",
+"example": "I want to write all of this down."
+},
+{
+"word": "great",
+"translation": "великий, большой; отличный",
+"example": "You are the great love of my life."
+},
+{
+"word": "through",
+"translation": "через, по, из-за",
+"example": "Did you read it through to the end?"
+},
+{
+"word": "last",
+"translation": "последний, прошлый, предыдущий; после всех, в конце",
+"example": "I was one of the last to leave."
+},
+{
+"word": "while",
+"translation": "время, промежуток времени",
+"example": "I had to go out for a while."
+},
+{
+"word": "best",
+"translation": "лучший; лучше всего",
+"example": "This is the best time of the year."
+},
+{
+"word": "such",
+"translation": "такой, таков, этакий",
+"example": "A year is such a long time."
+},
+{
+"word": "love",
+"translation": "любить, спать, заниматься любовью; любовь, дорогая",
+"example": "I think I was in love with you."
+},
+{
+"word": "man",
+"translation": "мужчина, человек",
+"example": "I will make a man out of you."
+},
+{
+"word": "home",
+"translation": "дом, родина; домой, дома",
+"example": "I was at home most of the day."
+},
+{
+"word": "long",
+"translation": "длинный, долгий; далеко, долго",
+"example": "It is a long way to the village."
+},
+{
+"word": "look",
+"translation": "смотреть, выглядеть, глядеть; взгляд, вид",
+"example": "I was about to go look for you."
+},
+{
+"word": "something",
+"translation": "что-то, кое-что",
+"example": "I have something to say to all of you."
+},
+{
+"word": "use",
+"translation": "употреблять, применять, иметь обыкновение; употребление, использование",
+"example": "This may be of use to you."
+},
+{
+"word": "same",
+"translation": "одинаковый, тот же, такой же",
+"example": "The same to you."
+},
+{
+"word": "used",
+"translation": "использованный, подержанный; used to — раньше (делал)",
+"example": "I used to do that all the time."
+},
+{
+"word": "both",
+"translation": "оба, обе",
+"example": "I want to talk to both of you."
+},
+{
+"word": "every",
+"translation": "каждый, всякий",
+"example": "Do you have to do this every time?"
+},
+{
+"word": "come",
+"translation": "приходить, приезжать",
+"example": "You don't have to come to the party."
+},
+{
+"word": "part",
+"translation": "часть, доля; роль",
+"example": "Is the head a part of the body?"
+},
+{
+"word": "state",
+"translation": "государство, штат; состояние; заявлять",
+"example": "Is it a state?"
+},
+{
+"word": "three",
+"translation": "три, трое, тройка",
+"example": "I know what the three of you want."
+},
+{
+"word": "around",
+"translation": "вокруг, по, около",
+"example": "I like to be around people."
+},
+{
+"word": "between",
+"translation": "между",
+"example": "This is just between you and me."
+},
+{
+"word": "always",
+"translation": "всегда, вечно, постоянно",
+"example": "This is always the way it has been."
+},
+{
+"word": "better",
+"translation": "лучше, лучший; лучше",
+"example": "This is much the better of the two."
+},
+{
+"word": "find",
+"translation": "находить, выискивать; находка, искание",
+"example": "Were you the one to find it?"
+},
+{
+"word": "help",
+"translation": "помогать; помощь, помощник",
+"example": "I want you to help me with this."
+},
+{
+"word": "high",
+"translation": "высокий; высоко",
+"example": "That is a high building, is it not?"
+},
+{
+"word": "little",
+"translation": "маленький, малый, младший; мало, немного",
+"example": "This is the little I know."
+},
+{
+"word": "old",
+"translation": "старый, бывший, пожилой",
+"example": "The house that I live in is old."
+},
+{
+"word": "since",
+"translation": "с",
+"example": "I've had this since I was a kid."
+},
+{
+"word": "another",
+"translation": "другой, ещё один, различный",
+"example": "He was in another part of the building."
+},
+{
+"word": "own",
+"translation": "свой, собственный; иметь, владеть",
+"example": "I can have a home of my own."
+},
+{
+"word": "thing",
+"translation": "вещь, нечто, предмет",
+"example": "This is the very thing that you need."
+},
+{
+"word": "under",
+"translation": "под, меньше, ниже",
+"example": "No, and it is also not under the chair."
+},
+{
+"word": "game",
+"translation": "игра, матч, соревнование",
+"example": "Was it just a game to you?"
+},
+{
+"word": "give",
+"translation": "давать, дать",
+"example": "I have some things to give to you."
+},
+{
+"word": "house",
+"translation": "дом, палата, династия; вмещать, помещать",
+"example": "You need to get out of the house."
+},
+{
+"word": "place",
+"translation": "место; помещать, ставить",
+"example": "This is not the time or the place."
+},
+{
+"word": "school",
+"translation": "школа, университет, училище; учить",
+"example": "He is on his way to the school."
+},
+{
+"word": "again",
+"translation": "опять, снова, назад",
+"example": "I want to be in your life again."
+},
+{
+"word": "next",
+"translation": "следующий, будущий, ближайший; потом, после",
+"example": "What is the name of the next station?"
+},
+{
+"word": "each",
+"translation": "каждый",
+"example": "I love each and everyone of you."
+},
+{
+"word": "without",
+"translation": "без",
+"example": "I would not be the same without you."
+},
+{
+"word": "against",
+"translation": "против",
+"example": "Are you for the war or against it?"
+},
+{
+"word": "end",
+"translation": "смерть, конец, край; заканчивать, прекращать",
+"example": "This is not the end of the world."
+},
+{
+"word": "found",
+"translation": "нашёл, найденный (форма find); основывать",
+"example": "I'm the one who found it, not you."
+},
+{
+"word": "must",
+"translation": "должен, обязан",
+"example": "You must do it, like it or not."
+},
+{
+"word": "show",
+"translation": "показывать, показываться; представление, шоу",
+"example": "I can show you how to do that."
+},
+{
+"word": "big",
+"translation": "большой, великий, крупный",
+"example": "He is a big man in the company."
+},
+{
+"word": "feel",
+"translation": "чувствовать, ощущать",
+"example": "I feel like I have to be there."
+},
+{
+"word": "sure",
+"translation": "уверенный, верный",
+"example": "Are you sure that you can do that?"
+},
+{
+"word": "team",
+"translation": "команда, экипаж, упряжка",
+"example": "Would you like to be on the team?"
+},
+{
+"word": "ever",
+"translation": "всегда, когда-либо",
+"example": "Did you ever hear the like of it?"
+},
+{
+"word": "family",
+"translation": "семья",
+"example": "I have the best family in the world!"
+},
+{
+"word": "keep",
+"translation": "держать, хранить; продолжать",
+"example": "You can keep it if you want to."
+},
+{
+"word": "might",
+"translation": "мог бы, может быть; мощь, сила",
+"example": "I might not have time to do that."
+},
+{
+"word": "please",
+"translation": "пожалуйста; радовать, угождать",
+"example": "Do as you please. It's up to you."
+},
+{
+"word": "put",
+"translation": "класть, ставить",
+"example": "We had to put a stop to that."
+},
+{
+"word": "money",
+"translation": "деньги, наличные, богатство",
+"example": "I don't have the money to do that."
+},
+{
+"word": "free",
+"translation": "свободный; бесплатный; бесплатно",
+"example": "Do you have a lot of free time?"
+},
+{
+"word": "second",
+"translation": "второй; момент, секунда",
+"example": "Can I talk to you for a second?"
+},
+{
+"word": "someone",
+"translation": "кто-то, кто-нибудь",
+"example": "I know that someone has to do that."
+},
+{
+"word": "away",
+"translation": "прочь, вон, долой; далеко, недоступно",
+"example": "I want you to do that right away."
+},
+{
+"word": "left",
+"translation": "левый; ушёл, оставил (форма leave)",
+"example": "It is there to the left."
+},
+{
+"word": "number",
+"translation": "номер, количество, число; насчитывать, исчисляться",
+"example": "Are you sure this is the right number?"
+},
+{
+"word": "city",
+"translation": "город",
+"example": "This is a city in a city."
+},
+{
+"word": "lot",
+"translation": "группа, судьба, участь",
+"example": "I have a lot of work to do."
+},
+{
+"word": "name",
+"translation": "имя, название; называть",
+"example": "What is the name of the song?"
+},
+{
+"word": "night",
+"translation": "ночь, вечер, тьма",
+"example": "This is going to be a long night."
+},
+{
+"word": "play",
+"translation": "играть; игра, пьеса",
+"example": "I have no one to play with."
+},
+{
+"word": "until",
+"translation": "до, не раньше",
+"example": "You don't have to wait until the end."
+},
+{
+"word": "company",
+"translation": "компания, фирма; общество",
+"example": "He is a big man in the company."
+},
+{
+"word": "doing",
+"translation": "дело, поступок",
+"example": "What is the good of doing it?"
+},
+{
+"word": "few",
+"translation": "несколько, мало",
+"example": "You're one of the few friends I have."
+},
+{
+"word": "let",
+"translation": "пусть, пускать, позволять",
+"example": "You have to let me in."
+},
+{
+"word": "real",
+"translation": "настоящий, истинный, реальный; реал",
+"example": "That is of course not the real reason."
+},
+{
+"word": "call",
+"translation": "звонить, звать, называть; звонок",
+"example": "I was just about to call you."
+},
+{
+"word": "different",
+"translation": "другой, иной, разный",
+"example": "I want it to be different this time."
+},
+{
+"word": "set",
+"translation": "класть, ставить, задавать; устройство, аппарат",
+"example": "The book is set in the present day."
+},
+{
+"word": "thought",
+"translation": "думал (форма think); мысль",
+"example": "I thought you had to be up by 7.30."
+},
+{
+"word": "done",
+"translation": "сделано, сделанный (форма do)",
+"example": "And what have you done for that?"
+},
+{
+"word": "however",
+"translation": "в любом случае",
+"example": "However, we can be people of the earth."
+},
+{
+"word": "god",
+"translation": "бог, идол, божество; идолизировать, обожествлять",
+"example": "I am the god of the new world."
+},
+{
+"word": "government",
+"translation": "правительство, управление, государство",
+"example": "What do you think of the new government?"
+},
+{
+"word": "group",
+"translation": "группа, коллектив, авиаполк; группировать, группироваться",
+"example": "I was the first in the group."
+},
+{
+"word": "public",
+"translation": "публичный, открытый, общественный; народ, публика",
+"example": "The public has the right to know."
+},
+{
+"word": "top",
+"translation": "верх, крышка, топ; лучший, топ-",
+"example": "Have you been to the top?"
+},
+{
+"word": "woman",
+"translation": "женщина, баба",
+"example": "The man and the woman are a couple."
+},
+{
+"word": "business",
+"translation": "бизнес, дело",
+"example": "I don't like the way you do business."
+},
+{
+"word": "care",
+"translation": "беспокоиться, заботиться, присматривать; забота, беспокойство",
+"example": "I want you to take care of me."
+},
+{
+"word": "start",
+"translation": "начинать, запускать, начинаться; начало, старт",
+"example": "Did you see the start of the race?"
+},
+{
+"word": "system",
+"translation": "система",
+"example": "You are the product of that system."
+},
+{
+"word": "times",
+"translation": "на",
+"example": "I did that a number of times."
+},
+{
+"word": "week",
+"translation": "неделя",
+"example": "I was in the hospital for a week."
+},
+{
+"word": "already",
+"translation": "уже, раньше",
+"example": "You already know what to do, don't you?"
+},
+{
+"word": "anything",
+"translation": "всё, что-нибудь",
+"example": "I don't have anything to give to you."
+},
+{
+"word": "case",
+"translation": "случай, дело; чехол, футляр",
+"example": "I have nothing to do with the case."
+},
+{
+"word": "nothing",
+"translation": "ничего, ничто",
+"example": "I have nothing more to say to you."
+},
+{
+"word": "person",
+"translation": "человек, личность, лицо",
+"example": "I want you to be a good person."
+},
+{
+"word": "today",
+"translation": "сегодня, сегодняшний день; сегодня, теперь",
+"example": "Today is the last day of the year."
+},
+{
+"word": "change",
+"translation": "переодеваться, менять, меняться; замена, смена",
+"example": "I have to change it."
+},
+{
+"word": "enough",
+"translation": "достаточно, довольно",
+"example": "That will be enough for the time being."
+},
+{
+"word": "everything",
+"translation": "всё",
+"example": "There is a time and place for everything."
+},
+{
+"word": "full",
+"translation": "полный, целый, наполненный",
+"example": "The house is full of people."
+},
+{
+"word": "live",
+"translation": "жить, проживать, выживать; живой, живьём",
+"example": "To live at the end of the world."
+},
+{
+"word": "point",
+"translation": "точка, момент, пункт; указывать",
+"example": "I don't get the point of it."
+},
+{
+"word": "read",
+"translation": "читать; прочитанный",
+"example": "The more I read, the more I know."
+},
+{
+"word": "tell",
+"translation": "сказать, рассказывать",
+"example": "You are to do as I tell you."
+},
+{
+"word": "yet",
+"translation": "ещё, вскоре, до сих пор",
+"example": "I think the best is yet to come."
+},
+{
+"word": "bad",
+"translation": "плохой, неподходящий, дурной",
+"example": "Is that a good or a bad thing?"
+},
+{
+"word": "four",
+"translation": "четыре, четвёрка",
+"example": "We got up at four in the morning."
+},
+{
+"word": "hard",
+"translation": "тяжёлый, трудный, крепкий; сильно",
+"example": "Is it hard for you to do this?"
+},
+{
+"word": "mean",
+"translation": "значить, иметь в виду; подлый, злой",
+"example": "That used to mean a lot to me."
+},
+{
+"word": "once",
+"translation": "однажды, раньше, когда-то",
+"example": "I want you to do that at once."
+},
+{
+"word": "support",
+"translation": "поддерживать; опора, поддержка",
+"example": "I am for it! I support you!"
+},
+{
+"word": "including",
+"translation": "включая, в том числе",
+"example": "There are six people including him."
+},
+{
+"word": "music",
+"translation": "музыка, ноты, партитура fc",
+"example": "This is the kind of music I like."
+},
+{
+"word": "power",
+"translation": "мощность, власть, влияние",
+"example": "Do you believe in the power of love?"
+},
+{
+"word": "seen",
+"translation": "увиденный (форма see)",
+"example": "I have not seen you in a while."
+},
+{
+"word": "stop",
+"translation": "останавливаться, останавливать, прекращать; точка, остановка",
+"example": "We had to put a stop to that."
+},
+{
+"word": "water",
+"translation": "вода, воды, моча; писать, поливать",
+"example": "I was in the water."
+},
+{
+"word": "based",
+"translation": "основанный (на); с базой в",
+"example": "The play was based on a true story."
+},
+{
+"word": "believe",
+"translation": "верить, думать, считать",
+"example": "You have to see it to believe it."
+},
+{
+"word": "head",
+"translation": "голова, глава, верх; главный, головной",
+"example": "Is the head a part of the body?"
+},
+{
+"word": "national",
+"translation": "национальный, государственный; гражданин",
+"example": "This is a matter of national security."
+},
+{
+"word": "small",
+"translation": "маленький, небольшой",
+"example": "One is big and the other is small."
+},
+{
+"word": "white",
+"translation": "белый, светлый, бледный; белый, белая",
+"example": "One is red and the other is white."
+},
+{
+"word": "far",
+"translation": "далеко; дальний, далёкий",
+"example": "This is as far as I can go."
+},
+{
+"word": "job",
+"translation": "работа, дело, должность",
+"example": "I have the best job in the world."
+},
+{
+"word": "side",
+"translation": "сторона, бок, страница",
+"example": "I want you to be by my side."
+},
+{
+"word": "though",
+"translation": "однако, всё-таки",
+"example": "I love you, though you don't know it."
+},
+{
+"word": "try",
+"translation": "пытаться, стараться, пробовать; попытка, проба",
+"example": "I want you to try to do that."
+},
+{
+"word": "yes",
+"translation": "да; да, так",
+"example": "Is that a yes or a no?"
+},
+{
+"word": "actually",
+"translation": "действительно, вообще-то",
+"example": "I was actually going to do that."
+},
+{
+"word": "American",
+"translation": "американский; американец",
+"example": "This is the American way of life."
+},
+{
+"word": "later",
+"translation": "позже, после, потом",
+"example": "I have to be home no later than 2:30."
+},
+{
+"word": "less",
+"translation": "меньше, менее",
+"example": "The more I read, the less I know."
+},
+{
+"word": "line",
+"translation": "черта, очередь, линия; выстраивать, выстилать",
+"example": "Go to the end of the line."
+},
+{
+"word": "order",
+"translation": "порядок; заказ, приказ; заказывать",
+"example": "This is the order."
+},
+{
+"word": "party",
+"translation": "группа, сторона, вечеринка",
+"example": "I was on my way to the party."
+},
+{
+"word": "run",
+"translation": "бежать, бегать; управлять; пробег",
+"example": "I run, run, and run."
+},
+{
+"word": "service",
+"translation": "услуга, служба, обслуживание; обслуживать",
+"example": "How can I be of service to you?"
+},
+{
+"word": "country",
+"translation": "страна, земля, государство; деревенский, сельский",
+"example": "I live in the center of the country."
+},
+{
+"word": "open",
+"translation": "открывать, развернуть, поднимать; открытый",
+"example": "I have nothing to open the can with."
+},
+{
+"word": "season",
+"translation": "сезон, время года, приправа",
+"example": "It's the best season of the year."
+},
+{
+"word": "thank",
+"translation": "благодарить",
+"example": "I want to thank you for that."
+},
+{
+"word": "everyone",
+"translation": "все, каждый",
+"example": "He is known to everyone in the town."
+},
+{
+"word": "general",
+"translation": "общий, генеральный, всеобщий; генерал, военачальник",
+"example": "He was a general in the Second World War."
+},
+{
+"word": "unite",
+"translation": "объединять, объединяться",
+"example": "Workers of the world, unite!"
+},
+{
+"word": "area",
+"translation": "площадь, район, область",
+"example": "What is the area of this city?"
+},
+{
+"word": "black",
+"translation": "чёрный, чернокожий, вороной; чёрный, негр",
+"example": "Here it is, all in black and white."
+},
+{
+"word": "following",
+"translation": "следующий, попутный; аудитория, фолловинг",
+"example": "I told him to come the following day."
+},
+{
+"word": "law",
+"translation": "право, закон, правило",
+"example": "The law is the law."
+},
+{
+"word": "together",
+"translation": "вместе, совместно",
+"example": "You and I should do that together."
+},
+{
+"word": "war",
+"translation": "война, борьба; воевать, вести войну",
+"example": "Are you for the war or against it?"
+},
+{
+"word": "whole",
+"translation": "целый, полный, цельный; полностью, целиком",
+"example": "On the whole I agree with you."
+},
+{
+"word": "car",
+"translation": "машина, автомобиль, кабина",
+"example": "I want you to get in the car."
+},
+{
+"word": "face",
+"translation": "поверхность, лицо, грань; сталкиваться, смело встречать",
+"example": "I want to punch you in the face."
+},
+{
+"word": "five",
+"translation": "пять, пятеро, пяток",
+"example": "I got up at five in the morning."
+},
+{
+"word": "kind",
+"translation": "вид, характер, род; добрый, сердечный",
+"example": "You and I are two of a kind!"
+},
+{
+"word": "maybe",
+"translation": "возможно, наверное, может быть",
+"example": "Maybe I can do that for you."
+},
+{
+"word": "per",
+"translation": "в, через, по",
+"example": "I go to the movies once per week."
+},
+{
+"word": "president",
+"translation": "президент, председатель, генеральный директор",
+"example": "Was the president in favor of the plan?"
+},
+{
+"word": "story",
+"translation": "история, рассказ",
+"example": "This is the end of the story."
+},
+{
+"word": "working",
+"translation": "рабочий, рабочие, рабочее; действие, способ",
+"example": "All of us are working on the case."
+},
+{
+"word": "course",
+"translation": "ход, курс, последовательность; преследовать, бежать",
+"example": "Of course, I will go there with you."
+},
+{
+"word": "health",
+"translation": "здоровье",
+"example": "You are not good for my health!"
+},
+{
+"word": "hope",
+"translation": "надеяться, уповать; надежда, надёжа",
+"example": "You have to hope for the best."
+},
+{
+"word": "important",
+"translation": "важный, значимый",
+"example": "I know that this is important to you."
+},
+{
+"word": "least",
+"translation": "наименьший",
+"example": "It was the least I could do."
+},
+{
+"word": "within",
+"translation": "внутри",
+"example": "The key to everything is within us."
+},
+{
+"word": "able",
+"translation": "способный, умелый, компетентный",
+"example": "I used to be able to do that."
+},
+{
+"word": "book",
+"translation": "книга; бронировать",
+"example": "This is the book you are looking for."
+},
+{
+"word": "early",
+"translation": "ранний; рано",
+"example": "I have to get up early in the morning."
+},
+{
+"word": "friend",
+"translation": "друг, приятель, подруга; дружить, добавить в друзья",
+"example": "She's a friend of a friend of a friend."
+},
+{
+"word": "information",
+"translation": "информация, данные",
+"example": "You do not have all the information."
+},
+{
+"word": "local",
+"translation": "местный, локальный; местный, туземец",
+"example": "Are you a local?"
+},
+{
+"word": "oh",
+"translation": "о, а, ага",
+"example": "Oh, by the way, I have something for you."
+},
+{
+"word": "post",
+"translation": "публикация, пост; почта; столб",
+"example": "The post office is to the right."
+},
+{
+"word": "thanks",
+"translation": "спасибо, благодарю",
+"example": "My thanks to all of you."
+},
+{
+"word": "video",
+"translation": "видео, ролик, клип",
+"example": "This is the video I wanted to see."
+},
+{
+"word": "young",
+"translation": "молодой, юный, моложавый; молодняк, молодь",
+"example": "You are too young to be in love."
+},
+{
+"word": "ago",
+"translation": "назад, тому назад",
+"example": "It happened to me about a year ago."
+},
+{
+"word": "social",
+"translation": "социальный, общественный, общительный",
+"example": "He is a man of high social status."
+},
+{
+"word": "talk",
+"translation": "говорить, разговаривать; разговор, история",
+"example": "I need to talk to one of you."
+},
+{
+"word": "court",
+"translation": "двор, дворец, суд; ухаживать, добиваться расположения",
+"example": "I have to be in court at 2:30."
+},
+{
+"word": "fact",
+"translation": "факт",
+"example": "Do you know that for a fact?"
+},
+{
+"word": "given",
+"translation": "данный (форма give)",
+"example": "Give, and it will be given to you."
+},
+{
+"word": "half",
+"translation": "половина, сторона, тайм; пол-, полу-",
+"example": "I can do it in half the time."
+},
+{
+"word": "hand",
+"translation": "рука, кисть; передавать",
+"example": "What is it you have in your hand?"
+},
+{
+"word": "level",
+"translation": "уровень, степень, этап; ровный",
+"example": "We are on the same level."
+},
+{
+"word": "mind",
+"translation": "ум, разум, память; присматривать, заботиться",
+"example": "Is that what you have in mind?"
+},
+{
+"word": "often",
+"translation": "часто, зачастую",
+"example": "Do you often have to do that?"
+},
+{
+"word": "single",
+"translation": "один, одна, целый; сингл, холостяк",
+"example": "Not a single person was in the street."
+},
+{
+"word": "become",
+"translation": "становиться, стать",
+"example": "I don't know what will become of you."
+},
+{
+"word": "body",
+"translation": "тело, группа, корпус",
+"example": "Is the head a part of the body?"
+},
+{
+"word": "coming",
+"translation": "наступление, приход",
+"example": "The end of the world is coming."
+},
+{
+"word": "control",
+"translation": "власть, контроль; управлять, контролировать",
+"example": "He is out of control."
+},
+{
+"word": "death",
+"translation": "смерть, гибель, ангел смерти",
+"example": "This is a matter of life and death."
+},
+{
+"word": "food",
+"translation": "еда, питание, пища",
+"example": "The food is on the table."
+},
+{
+"word": "guy",
+"translation": "люди, парень, мужчина",
+"example": "I know the girl but not the guy."
+},
+{
+"word": "hour",
+"translation": "час, время, година",
+"example": "In an hour, I have to work."
+},
+{
+"word": "office",
+"translation": "служба, офис, бюро",
+"example": "I have to go to the office."
+},
+{
+"word": "pay",
+"translation": "платить, оплачивать, уделять; зарплата",
+"example": "I don't want you to pay for it."
+},
+{
+"word": "problem",
+"translation": "проблема, задание, задача",
+"example": "And the problem is?"
+},
+{
+"word": "south",
+"translation": "южный; юг, зюйд",
+"example": "To the south."
+},
+{
+"word": "true",
+"translation": "верный, настоящий, истинный",
+"example": "Is it true that this is not true?"
+},
+{
+"word": "almost",
+"translation": "почти, почти что",
+"example": "It's almost the end of the year."
+},
+{
+"word": "history",
+"translation": "история, прошлое, история болезни",
+"example": "I will tell you the history of my life."
+},
+{
+"word": "known",
+"translation": "известный, знакомый (форма know)",
+"example": "The cause of the fire is not known."
+},
+{
+"word": "large",
+"translation": "большой, крупный",
+"example": "One is large and the other is small."
+},
+{
+"word": "lost",
+"translation": "потерянный, пропавший, погибший",
+"example": "The old man lost the will to live."
+},
+{
+"word": "research",
+"translation": "исследование; исследовать, расследовать",
+"example": "I have to do a little research."
+},
+{
+"word": "room",
+"translation": "возможность, место, номер",
+"example": "He was the only one in the room."
+},
+{
+"word": "several",
+"translation": "несколько, некоторый, различный",
+"example": "It took me several hours to do that."
+},
+{
+"word": "taking",
+"translation": "взятие",
+"example": "This is taking a lot of time."
+},
+{
+"word": "university",
+"translation": "университет",
+"example": "What do you want to do in university?"
+},
+{
+"word": "win",
+"translation": "побеждать, выигрывать, добиваться; выигрыш, победа",
+"example": "A win is a win!"
+},
+{
+"word": "wrong",
+"translation": "неправильный, плохой, неверный; неправильно, не так",
+"example": "It is you who is in the wrong."
+},
+{
+"word": "along",
+"translation": "по, вдоль",
+"example": "I was the one that was right all along."
+},
+{
+"word": "anyone",
+"translation": "всякий, любой",
+"example": "Is anyone I know going to be there?"
+},
+{
+"word": "else",
+"translation": "ещё; иначе",
+"example": "I have no one else to talk to."
+},
+{
+"word": "girl",
+"translation": "девушка, девочка, служанка",
+"example": "This is the girl you wanted to see."
+},
+{
+"word": "matter",
+"translation": "дело, вопрос, материя; иметь значение, быть важным",
+"example": "What the hell is the matter with you?"
+},
+{
+"word": "pretty",
+"translation": "довольно, достаточно; милый, хорошенький",
+"example": "I used to be pretty good at this."
+},
+{
+"word": "remember",
+"translation": "помнить, вспоминать, запоминать",
+"example": "I have to remember to do that."
+},
+{
+"word": "air",
+"translation": "воздух, чувство, ощущение; распространять, транслировать",
+"example": "You are on the air."
+},
+{
+"word": "bit",
+"translation": "кусок, бит, удила",
+"example": "I have a bit of a cold."
+},
+{
+"word": "hit",
+"translation": "ударить, попасть; удар, хит",
+"example": "One of them hit me in the back."
+},
+{
+"word": "nice",
+"translation": "милый, хороший, вкусный",
+"example": "It would be nice to have a party."
+},
+{
+"word": "probably",
+"translation": "вероятно, наверно",
+"example": "You probably do this all the time."
+},
+{
+"word": "understand",
+"translation": "понимать, подразумевать",
+"example": "The more I think, the less I understand."
+},
+{
+"word": "yeah",
+"translation": "ага, угу",
+"example": "Yeah, I want you to do it."
+},
+{
+"word": "class",
+"translation": "класс, разряд, группа; классифицировать",
+"example": "He and I are in the same class."
+},
+{
+"word": "close",
+"translation": "закрывать, заканчивать, сокращать; закрытие, тупик",
+"example": "The end of the world is close."
+},
+{
+"word": "idea",
+"translation": "идея, мысль, план",
+"example": "You and I have the same idea."
+},
+{
+"word": "international",
+"translation": "международный, интернациональный; интернационал",
+"example": "Don't say anything to the international press."
+},
+{
+"word": "past",
+"translation": "прошлое, былое, прошедшее время; прошлый, прошедший",
+"example": "The past is the past."
+},
+{
+"word": "possible",
+"translation": "возможный, подходящий, вероятный",
+"example": "It is possible for him to do the job."
+},
+{
+"word": "cause",
+"translation": "причинять, заставлять; причина, дело",
+"example": "What was the cause of the fire?"
+},
+{
+"word": "due",
+"translation": "подлежащий оплате, причитающийся, подобающий; прямо, точно",
+"example": "The baby is due in a month."
+},
+{
+"word": "happy",
+"translation": "счастливый, удачный, радостный",
+"example": "I want you and me to be happy."
+},
+{
+"word": "human",
+"translation": "человеческий, людской; человек, люди",
+"example": "The head is a part of the human body."
+},
+{
+"word": "member",
+"translation": "член, часть тела",
+"example": "You are not a member of the family."
+},
+{
+"word": "month",
+"translation": "месяц",
+"example": "January is the first month of the year."
+},
+{
+"word": "move",
+"translation": "двигаться, двигать, действовать; переезд, ход",
+"example": "I would like you to move in with me."
+},
+{
+"word": "question",
+"translation": "вопрос, предмет, допрос; расспрашивать, допрашивать",
+"example": "That is out of the question."
+},
+{
+"word": "series",
+"translation": "серия, шоу, ряд",
+"example": "This is the final lecture of the series."
+},
+{
+"word": "wait",
+"translation": "ждать, ожидать, обслуживать; ожидание, задержка",
+"example": "All you have to do is to wait."
+},
+{
+"word": "ask",
+"translation": "просить, спрашивать, задавать",
+"example": "You have to ask me for it."
+},
+{
+"word": "community",
+"translation": "сообщество, общество, колония",
+"example": "The house was built by the community."
+},
+{
+"word": "datum",
+"translation": "элемент данных, единица данных",
+"example": "I think we have all the data we need."
+},
+{
+"word": "late",
+"translation": "поздний, покойный, запоздалый; поздно",
+"example": "See to it that you are not late."
+},
+{
+"word": "leave",
+"translation": "уходить, уйти, оставлять; разрешение, отпуск",
+"example": "I was one of the last to leave."
+},
+{
+"word": "north",
+"translation": "к северу, на север; север, норд",
+"example": "The airport is in the north of the city."
+},
+{
+"word": "saw",
+"translation": "видел (форма see); пила",
+"example": "I was there and I saw that."
+},
+{
+"word": "special",
+"translation": "дорогой, особый, любимый; распродажа",
+"example": "This is a special day for all of us."
+},
+{
+"word": "watch",
+"translation": "смотреть, наблюдать, следить; часы, охрана",
+"example": "I want you to have this watch."
+},
+{
+"word": "either",
+"translation": "каждый",
+"example": "Either you or I will have to go."
+},
+{
+"word": "fuck",
+"translation": "долбоёб, ебля, ёбля; ебаться, трахать",
+"example": "What the fuck is that?"
+},
+{
+"word": "future",
+"translation": "будущее, фьючерс; будущий, грядущий",
+"example": "I have to think of the future."
+},
+{
+"word": "light",
+"translation": "свет, освещение, спички; зажигать, освещать",
+"example": "You are the light of the world."
+},
+{
+"word": "low",
+"translation": "низкий, подлый, тихий",
+"example": "I have a low opinion of her."
+},
+{
+"word": "million",
+"translation": "миллион",
+"example": "There are a million ways to do this."
+},
+{
+"word": "morning",
+"translation": "утро, ночь, время до полудня",
+"example": "I'm going to do that in the morning."
+},
+{
+"word": "police",
+"translation": "полиция, милиция",
+"example": "I have to go to the police."
+},
+{
+"word": "short",
+"translation": "короткий, низкий, краткий; закорачивать, замыкать",
+"example": "It is a short drive to the park."
+},
+{
+"word": "stay",
+"translation": "оставаться, остановиться, откладывать; пребывание, отсрочка",
+"example": "I told you to stay out of it."
+},
+{
+"word": "age",
+"translation": "время, эпоха, поколение; стареть, старить",
+"example": "You and I are the same age."
+},
+{
+"word": "buy",
+"translation": "покупать, купить",
+"example": "I buy it for me, not for you."
+},
+{
+"word": "deal",
+"translation": "раздавать, сдавать, торговать; дело, сделка",
+"example": "A deal is a deal."
+},
+{
+"word": "rather",
+"translation": "лучше, скорее, достаточно",
+"example": "I would rather you had a day off."
+},
+{
+"word": "reason",
+"translation": "причина, мотив, повод; рассуждать, продумать",
+"example": "I have no reason not to do that."
+},
+{
+"word": "red",
+"translation": "красный, рыжий, алый; красный",
+"example": "The company is in the red."
+},
+{
+"word": "report",
+"translation": "сообщать, докладывать, отчитываться; сообщение, репортаж",
+"example": "I was told to report to you."
+},
+{
+"word": "soon",
+"translation": "скоро, вскоре",
+"example": "He is soon to be a father."
+},
+{
+"word": "third",
+"translation": "третий; третий, третья",
+"example": "March is the third month of the year."
+},
+{
+"word": "turn",
+"translation": "поворачивать, поворачиваться; очередь, поворот",
+"example": "I have no one to turn to."
+},
+{
+"word": "whether",
+"translation": "или, ли",
+"example": "I wonder whether I have to do that."
+},
+{
+"word": "among",
+"translation": "среди, между",
+"example": "He is the best among us."
+},
+{
+"word": "check",
+"translation": "проверять, ограничить, умерить; проверка, контроль",
+"example": "I can check that for you."
+},
+{
+"word": "development",
+"translation": "развитие, достижение, разработка",
+"example": "He contributed much to the development of the economy."
+},
+{
+"word": "form",
+"translation": "форма, фигура, бланк; придавать форму, формировать",
+"example": "Do you think this is the best form of government?"
+},
+{
+"word": "further",
+"translation": "дальше, далее, кроме того; дальний, далёкий",
+"example": "It's further to the school than the station."
+},
+{
+"word": "heart",
+"translation": "чувства, сердце, ядро; сердечкать",
+"example": "The eyes are the language of the heart."
+},
+{
+"word": "minute",
+"translation": "минута, протокол; вести протокол",
+"example": "Can I talk to you for a minute?"
+},
+{
+"word": "myself",
+"translation": "себя, себе, я сам",
+"example": "I have the house all to myself."
+},
+{
+"word": "yourself",
+"translation": "себя, ты сам, ты сама",
+"example": "I want you to do that by yourself."
+},
+{
+"word": "act",
+"translation": "игра, дело, закон; делать, действовать",
+"example": "Now is the time to act."
+},
+{
+"word": "although",
+"translation": "однако, хотя, хоть",
+"example": "It's the truth, although I don't like it."
+},
+{
+"word": "child",
+"translation": "ребёнок, дитя, дочерний",
+"example": "Who is the father of the child?"
+},
+{
+"word": "fire",
+"translation": "огонь, пожар, костёр; клёвый",
+"example": "What was the cause of the fire?"
+},
+{
+"word": "fun",
+"translation": "веселье, развлечение; забавный, смешной",
+"example": "I do this for the fun of it."
+},
+{
+"word": "living",
+"translation": "жизнь, образ жизни, стиль жизни; жизненный, живой",
+"example": "What is it you do for a living?"
+},
+{
+"word": "major",
+"translation": "мажорный; майор, главный предмет",
+"example": "He played a major part in the movement."
+},
+{
+"word": "media",
+"translation": "медиа, СМИ, средства массовой информации",
+"example": "The government tends to control the media."
+},
+{
+"word": "phone",
+"translation": "фона, фонема; звонить",
+"example": "I was on the phone to my friend."
+},
+{
+"word": "player",
+"translation": "игрок, актриса, актёр",
+"example": "You need to be a team player."
+},
+{
+"word": "art",
+"translation": "искусство, умение",
+"example": "I work in the field of art."
+},
+{
+"word": "behind",
+"translation": "за, после, сзади",
+"example": "Are you behind all of this?"
+},
+{
+"word": "build",
+"translation": "строить, собрать; телосложение, сборка",
+"example": "I can build a house for you."
+},
+{
+"word": "easy",
+"translation": "простой, лёгкий, податливый",
+"example": "Was it easy for you to do that?"
+},
+{
+"word": "gonna",
+"translation": "сделаем так, чтобы",
+"example": "How are you gonna deal with it?"
+},
+{
+"word": "market",
+"translation": "магазин, ярмарка, рынок",
+"example": "What time do you go to the market?"
+},
+{
+"word": "near",
+"translation": "близкий, ближний; близко",
+"example": "The end of the world is very near!"
+},
+{
+"word": "plan",
+"translation": "разрабатывать, планировать, собираться; план, схема",
+"example": "That is the plan."
+},
+{
+"word": "political",
+"translation": "политический",
+"example": "This is not political."
+},
+{
+"word": "quite",
+"translation": "вполне, совсем, весьма",
+"example": "That is not quite what I was looking for."
+},
+{
+"word": "six",
+"translation": "шесть, шестеро",
+"example": "I get up at six in the morning."
+},
+{
+"word": "west",
+"translation": "запад, вест; западный",
+"example": "The city is to the west of London."
+},
+{
+"word": "works",
+"translation": "работы",
+"example": "This is the office in which he works."
+},
+{
+"word": "accord",
+"translation": "соответствовать, оказывать, предоставлять; аккорд, согласие",
+"example": "According to her, he will not go."
+},
+{
+"word": "available",
+"translation": "в распоряжении, в наличии, доступный",
+"example": "This is all the air that is available to us."
+},
+{
+"word": "education",
+"translation": "образование, обучение",
+"example": "You have the advantage of a good education."
+},
+{
+"word": "final",
+"translation": "окончательный, финальный; выпускной, финал",
+"example": "The final score of the game was 3 to 1."
+},
+{
+"word": "former",
+"translation": "бывший, первый, прежний",
+"example": "He's a former president of the country."
+},
+{
+"word": "front",
+"translation": "перед, прикрытие, передняя часть; передний",
+"example": "What do you see in front of you?"
+},
+{
+"word": "kid",
+"translation": "парень, ребёнок, девчонка; шутить, дразнить",
+"example": "I used to do that as a kid."
+},
+{
+"word": "list",
+"translation": "список, перечень, кромка; желать, вносить в список",
+"example": "Your name is the first on the list."
+},
+{
+"word": "ready",
+"translation": "готовый",
+"example": "I want you to be ready for this."
+},
+{
+"word": "sometimes",
+"translation": "иногда, порой",
+"example": "You have to do what you want sometimes."
+},
+{
+"word": "son",
+"translation": "сын, сынок, приёмный сын",
+"example": "The prince is the son of the king."
+},
+{
+"word": "street",
+"translation": "улица",
+"example": "I kept the $20 I found in the street."
+},
+{
+"word": "bring",
+"translation": "приносить, приводить",
+"example": "I want you to bring it to me."
+},
+{
+"word": "college",
+"translation": "университет, академия, институт",
+"example": "I want my children to go to college."
+},
+{
+"word": "current",
+"translation": "течение, ток, ход; нынешний, современный",
+"example": "The current year is 2011."
+},
+{
+"word": "example",
+"translation": "пример, образец",
+"example": "I have to set a good example."
+},
+{
+"word": "experience",
+"translation": "опыт, переживание, искушённость; испытывать, переживать",
+"example": "That was a new experience for me."
+},
+{
+"word": "meet",
+"translation": "встречать, встречаться, знакомиться; подходящий",
+"example": "I don't have time to meet you."
+},
+{
+"word": "program",
+"translation": "программа; программировать",
+"example": "Would you like to contribute to the program?"
+},
+{
+"word": "type",
+"translation": "тип, вид, представитель; печатать",
+"example": "You and I have the same blood type."
+},
+{
+"word": "baby",
+"translation": "малыш, ребёнок, милая",
+"example": "He is the baby of the family."
+},
+{
+"word": "chance",
+"translation": "возможность, шанс, случайность",
+"example": "You had the chance to do it."
+},
+{
+"word": "father",
+"translation": "отец, папаша, батюшка",
+"example": "The desire is the father of the thought."
+},
+{
+"word": "march",
+"translation": "маршировать; марш, течение",
+"example": "March is the third month of the year."
+},
+{
+"word": "process",
+"translation": "процесс, ход, развитие; обрабатывать",
+"example": "I want to see the process."
+},
+{
+"word": "song",
+"translation": "песня, пение, песнь",
+"example": "What is the name of the song?"
+},
+{
+"word": "study",
+"translation": "кабинет, учение, исследование; учить, учиться",
+"example": "The more you study, the more you know."
+},
+{
+"word": "word",
+"translation": "слово, слова, речь; формулировать",
+"example": "I want to have a word with you."
+},
+{
+"word": "across",
+"translation": "через, напротив, сквозь",
+"example": "The film was a hit across the world."
+},
+{
+"word": "action",
+"translation": "действие, поступок, бой",
+"example": "He is a man of action."
+},
+{
+"word": "clear",
+"translation": "чистый, свободный, ясный; совсем, полностью",
+"example": "Just to be clear, this was not me."
+},
+{
+"word": "himself",
+"translation": "сам, себя, он сам",
+"example": "He did it for himself, not for me."
+},
+{
+"word": "outside",
+"translation": "внешний, наружный; наружная часть",
+"example": "I want to talk to you outside."
+},
+{
+"word": "self",
+"translation": "сам, себя",
+"example": "He was only a shadow of his former self."
+},
+{
+"word": "student",
+"translation": "ученик, студент, студентка",
+"example": "This is the mistake of the student."
+},
+{
+"word": "board",
+"translation": "доска, совет, панель; садиться, предоставлять пансион",
+"example": "Go to the board."
+},
+{
+"word": "cost",
+"translation": "расходы, стоимость, цена; стоить",
+"example": "The cost is $300."
+},
+{
+"word": "cut",
+"translation": "разрезать, резать, вырезать; резаный, нарезаный",
+"example": "I cut the article out of the magazine."
+},
+{
+"word": "field",
+"translation": "поле, пастбище, область; отправить, направить",
+"example": "I work in the field of art."
+},
+{
+"word": "hold",
+"translation": "держать, задерживать, проводить; захват, трюм",
+"example": "I tried to get hold of you."
+},
+{
+"word": "instead",
+"translation": "вместо того",
+"example": "I would like you to go instead of me."
+},
+{
+"word": "main",
+"translation": "главный, основной",
+"example": "That is the main street of this city."
+},
+{
+"word": "moment",
+"translation": "момент, мгновение, момент силы",
+"example": "I have nothing to do at the moment."
+},
+{
+"word": "mother",
+"translation": "мать, матушка",
+"example": "I have the best mother in the world!"
+},
+{
+"word": "road",
+"translation": "дорога, путь",
+"example": "I was on the road to the town."
+},
+{
+"word": "seem",
+"translation": "казаться",
+"example": "You seem to know a lot about it."
+},
+{
+"word": "town",
+"translation": "город, местечко",
+"example": "I was on the road to the town."
+},
+{
+"word": "de",
+"translation": "",
+"example": "What do you think about Rio de Janeiro?"
+},
+{
+"word": "department",
+"translation": "отдел, департамент, отделение",
+"example": "He is the manager of the marketing department."
+},
+{
+"word": "energy",
+"translation": "энергия",
+"example": "I have no energy for that."
+},
+{
+"word": "fight",
+"translation": "биться, сражаться, драться; борьба, бой",
+"example": "I just don't want to fight with you."
+},
+{
+"word": "fine",
+"translation": "хороший, отличный, милый; отлично, хорошо",
+"example": "I think it's fine the way it is."
+},
+{
+"word": "force",
+"translation": "сила, отряд, мощь; заставлять, принуждать",
+"example": "I don't want to force you to go."
+},
+{
+"word": "hear",
+"translation": "слышать",
+"example": "I want to hear it from you."
+},
+{
+"word": "issue",
+"translation": "проблема, вопрос, урожай",
+"example": "A new issue of the magazine is out."
+},
+{
+"word": "price",
+"translation": "цена, стоимость; оценивать",
+"example": "Is this the price for one or two?"
+},
+{
+"word": "re",
+"translation": "ре",
+"example": "Do you know who you’re talking to?"
+},
+{
+"word": "rest",
+"translation": "отдых, покой, пауза; оставаться, отдыхать",
+"example": "I have no time to have a rest."
+},
+{
+"word": "result",
+"translation": "результат, счёт, исход; приводить, проистекать",
+"example": "And what will be the result of that?"
+},
+{
+"word": "running",
+"translation": "подряд; бег, беготня",
+"example": "Do you want to go running with me?"
+},
+{
+"word": "space",
+"translation": "место, пространство, космос",
+"example": "Do you want to go to space?"
+},
+{
+"word": "summer",
+"translation": "лето, балка, брус; проводить лето",
+"example": "I like to do that in the summer."
+},
+{
+"word": "term",
+"translation": "условие, член, срок",
+"example": "This term is not found in the dictionary."
+},
+{
+"word": "wife",
+"translation": "жена, супруга",
+"example": "One for me and one for my wife."
+},
+{
+"word": "America",
+"translation": "Америка",
+"example": "I have no time to go to America."
+},
+{
+"word": "beautiful",
+"translation": "красивый, прекрасный, ясный",
+"example": "This is beautiful, and that is also beautiful."
+},
+{
+"word": "date",
+"translation": "дата, число; свидание",
+"example": "The time and date are to be announced."
+},
+{
+"word": "kill",
+"translation": "убивать, отменять, прекращать; убийство, жертва",
+"example": "Is that why you want to kill me?"
+},
+{
+"word": "land",
+"translation": "земля, земли, страна; высаживаться, причаливать",
+"example": "I want to see the land and the sun."
+},
+{
+"word": "miss",
+"translation": "избегать, упустить, опоздать; мисс, промах",
+"example": "I miss you and think of you so much."
+}
+]

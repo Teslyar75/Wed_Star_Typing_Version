@@ -6,7 +6,9 @@ client = TestClient(app)
 
 
 def test_register_login_honor() -> None:
-    cs = "CadetAlpha"
+    import uuid
+
+    cs = f"Cadet-{uuid.uuid4().hex[:8]}"
     reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "4242", "display_name": "Alpha"})
     assert reg.status_code == 200
     assert reg.json()["callsign"] == cs

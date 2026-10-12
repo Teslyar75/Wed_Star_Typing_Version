@@ -310,6 +310,21 @@ code {
   letter-spacing: 0.04em;
 }
 
+.mic-meter {
+  height: 6px;
+  margin: 0.75rem auto;
+  max-width: 220px;
+  background: var(--st-line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.mic-meter > div {
+  height: 100%;
+  background: var(--st-ok);
+  transition: width 0.1s linear;
+}
+
 .rsvp {
   margin: 2rem 0;
   text-align: center;
