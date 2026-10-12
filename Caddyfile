@@ -1,9 +1,11 @@
-# Локально: http://localhost  |  прод: подставьте домен и уберите :80 блок
+# Локально: DOMAIN не задан → localhost (HTTP).
+# Прод: DOMAIN=star.example.com ACME_EMAIL=you@example.com
+#   Caddy сам поднимет HTTPS (Let's Encrypt) на :443.
 {
-	auto_https disable_redirects
+	email {$ACME_EMAIL:admin@localhost}
 }
 
-:80 {
+{$DOMAIN:localhost} {
 	encode gzip
 	handle /api/* {
 		reverse_proxy backend:8000
@@ -14,16 +16,3 @@
 		file_server
 	}
 }
-
-# HTTPS (Let's Encrypt): раскомментируйте и укажите домен
-# your.domain.com {
-# 	encode gzip
-# 	handle /api/* {
-# 		reverse_proxy backend:8000
-# 	}
-# 	handle {
-# 		root * /srv/frontend
-# 		try_files {path} /index.html
-# 		file_server
-# 	}
-# }

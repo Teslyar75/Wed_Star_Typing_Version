@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listenOnce } from "./asr";
 import { t } from "../i18n";
+import { useRadio } from "../radio/radioStore";
 
 type Word = { id: number; word: string; translation: string; example: string };
 
@@ -13,6 +14,7 @@ export default function EnglishPanel() {
   const [heard, setHeard] = useState("");
   const [score, setScore] = useState<number | null>(null);
   const [level, setLevel] = useState(0);
+  const setDuck = useRadio((s) => s.setDuck);
 
   useEffect(() => {
     void (async () => {
@@ -27,15 +29,20 @@ export default function EnglishPanel() {
   const speak = () => {
     if (!w || !window.speechSynthesis) return;
     setSpeaking(true);
+    setDuck(true);
     const u = new SpeechSynthesisUtterance(w.word);
     u.lang = "en-US";
-    u.onend = () => setSpeaking(false);
+    u.onend = () => {
+      setSpeaking(false);
+      setDuck(false);
+    };
     window.speechSynthesis.speak(u);
   };
 
   const listen = async () => {
     if (!w) return;
     setListening(true);
+    setDuck(true);
     setHeard("");
     setScore(null);
     const res = await listenOnce({
@@ -45,6 +52,7 @@ export default function EnglishPanel() {
       onLevel: setLevel,
     });
     setListening(false);
+    setDuck(false);
     setHeard(res.transcript || (res.engine === "none" ? t("asr_unavailable") : ""));
     setScore(res.engine === "none" ? null : res.score);
     setLevel(0);

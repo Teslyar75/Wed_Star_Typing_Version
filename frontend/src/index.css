@@ -81,6 +81,32 @@ body {
   margin-top: 0.5rem;
 }
 
+.radio-minibar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: min(420px, 100%);
+}
+
+.radio-minibar input[type="range"] {
+  width: 72px;
+}
+
+.station-list li {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.radio-receiver {
+  margin-top: 0.75rem;
+  padding: 0.65rem;
+  border: 1px solid var(--st-line);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--st-panel, #0a1220) 80%, transparent);
+}
+
 .hud-bar {
   display: flex;
   align-items: center;

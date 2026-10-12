@@ -15,4 +15,11 @@ describe("LivingSpaceScene", () => {
     s.step(0.5, 1);
     expect(s.stars[0]!.x).toBeLessThan(x0);
   });
+
+  it("light profile is cheaper than full", () => {
+    const light = new LivingSpaceScene(800, 400, "light", 3);
+    const full = new LivingSpaceScene(800, 400, "full", 3);
+    expect(light.stars.length).toBeLessThan(full.stars.length);
+    expect(light.rocks.length).toBeLessThan(full.rocks.length);
+  });
 });

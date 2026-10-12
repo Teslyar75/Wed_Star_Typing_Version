@@ -3,6 +3,7 @@ import { DONE, ERROR, TypingEngine } from "../typing/engine";
 import { FINGER_COLORS, keyForChar, ROWS } from "../typing/layouts";
 import { t, onLangChange } from "../i18n";
 import { useReadingPos } from "../reading/positionStore";
+import { playClick, playError, playFinish } from "../fx/sounds";
 
 type Segment = { idx: number; original: string; translation: string; status: string; char_start?: number };
 
@@ -110,10 +111,15 @@ export default function BridgeScreen() {
     const res = engine.press(ch, now());
     if (res === null) return;
     if (res === ERROR) {
+      playError();
       setFlash(true);
       setTimeout(() => setFlash(false), 120);
+    } else if (res === DONE) {
+      playFinish();
+      setStatus(t("finish"));
     } else {
-      setStatus(res === DONE ? t("finish") : t("flying"));
+      playClick();
+      setStatus(t("flying"));
     }
     setTick((x) => x + 1);
     setSentence(sentenceAt(engine.index));

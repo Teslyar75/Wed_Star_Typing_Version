@@ -6,11 +6,13 @@ import SpeedReadPanel from "./speedread/SpeedReadPanel";
 import AuthPanel from "./auth/AuthPanel";
 import SkinPicker from "./theme/SkinPicker";
 import SpaceCanvas from "./fx/SpaceCanvas";
+import RadioPanel from "./radio/RadioPanel";
+import RadioMinibar from "./radio/RadioMinibar";
 import { applyTheme } from "./theme/applyTheme";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import spaceship from "../../packages/themes/spaceship.json";
 
-type Tab = "bridge" | "reader" | "english" | "speed" | "auth" | "skins";
+type Tab = "bridge" | "reader" | "english" | "speed" | "auth" | "skins" | "radio";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("bridge");
@@ -41,6 +43,7 @@ export default function App() {
     { id: "reader", label: t("reader") },
     { id: "english", label: t("english") },
     { id: "speed", label: t("speed") },
+    { id: "radio", label: t("radio") },
     { id: "auth", label: t("crew") },
     { id: "skins", label: t("skins") },
   ];
@@ -54,6 +57,7 @@ export default function App() {
         <span className="logo">★</span>
         <h1>Star Typing Web</h1>
         <span className={`badge ${health ? "ok" : ""}`}>{health ? t("api_ok") : "…"}</span>
+        <RadioMinibar onOpen={() => setTab("radio")} />
         <select className="lang-select" value={lang} onChange={(e) => switchLang(e.target.value)}>
           <option value="ru">RU</option>
           <option value="en">EN</option>
@@ -78,6 +82,7 @@ export default function App() {
         {tab === "reader" && <BilingualReader />}
         {tab === "english" && <EnglishPanel />}
         {tab === "speed" && <SpeedReadPanel />}
+        {tab === "radio" && <RadioPanel />}
         {tab === "auth" && <AuthPanel />}
         {tab === "skins" && <SkinPicker />}
       </main>

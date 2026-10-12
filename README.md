@@ -73,7 +73,12 @@ docker compose up --build
 
 ### Углубление
 
-Сделано: изоляция пилотов, UPLINK worker, vocab 20k, virtuoso, vosk(+IndexedDB), Playwright, i18next UI, living_space, Lighthouse PWA 100, читалка sync, Caddy, migrate API+UI, speedread quiz.
+Сделано: фазы 0–8 + углубление (IndexedDB vosk, i18n UI, migrate UI, читалка sync, радиорубка+минибар, Web Audio, Caddy `DOMAIN` HTTPS).
+
+```powershell
+# прод с HTTPS (Let's Encrypt):
+$env:DOMAIN="star.example.com"; $env:ACME_EMAIL="you@example.com"; docker compose up --build -d
+```
 
 ```powershell
 cd frontend
