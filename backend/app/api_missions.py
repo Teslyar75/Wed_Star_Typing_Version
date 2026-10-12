@@ -24,6 +24,7 @@ class MissionOut(BaseModel):
 
 
 @router.get("", response_model=list[MissionOut])
+@router.get("/", response_model=list[MissionOut], include_in_schema=False)
 def list_missions(
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
