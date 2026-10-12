@@ -4,6 +4,7 @@ import { FINGER_COLORS, keyForChar, ROWS } from "../typing/layouts";
 import { t, onLangChange } from "../i18n";
 import { useReadingPos } from "../reading/positionStore";
 import { playClick, playError, playFinish } from "../fx/sounds";
+import { useRadio } from "../radio/radioStore";
 import MissionRail, { type Drill } from "./MissionRail";
 import Heatmap, { type KeyRate } from "./Heatmap";
 
@@ -30,6 +31,9 @@ export default function BridgeScreen() {
   const [, bumpLang] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const activeDrillRef = useRef<string | null>(null);
+  const duckOnType = useRadio((s) => s.duckOnType);
+  const setDuck = useRadio((s) => s.setDuck);
+  const duckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const now = () => performance.now() / 1000;
 
   const reloadEngine = useCallback((text: string) => {
@@ -191,6 +195,11 @@ export default function BridgeScreen() {
     const ch = e.key.length === 1 ? e.key : e.key === " " ? " " : "";
     if (!ch) return;
     e.preventDefault();
+    if (duckOnType) {
+      setDuck(true);
+      if (duckTimer.current) clearTimeout(duckTimer.current);
+      duckTimer.current = setTimeout(() => setDuck(false), 900);
+    }
     const res = engine.press(ch, now());
     if (res === null) return;
     if (res === ERROR) {
@@ -200,6 +209,7 @@ export default function BridgeScreen() {
     } else if (res === DONE) {
       playFinish();
       setStatus(t("finish"));
+      setDuck(false);
     } else {
       playClick();
       setStatus(t("flying"));

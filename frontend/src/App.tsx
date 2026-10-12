@@ -9,11 +9,12 @@ import SpaceCanvas from "./fx/SpaceCanvas";
 import RadioPanel from "./radio/RadioPanel";
 import RadioMinibar from "./radio/RadioMinibar";
 import LibraryPanel from "./library/LibraryPanel";
+import LoungePanel from "./lounge/LoungePanel";
 import { applyTheme } from "./theme/applyTheme";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import spaceship from "../../packages/themes/spaceship.json";
 
-type Tab = "bridge" | "reader" | "library" | "english" | "speed" | "auth" | "skins" | "radio";
+type Tab = "bridge" | "reader" | "library" | "english" | "speed" | "auth" | "skins" | "radio" | "lounge";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("bridge");
@@ -52,6 +53,7 @@ export default function App() {
     { id: "english", label: t("english") },
     { id: "speed", label: t("speed") },
     { id: "radio", label: t("radio") },
+    { id: "lounge", label: t("lounge") },
     { id: "auth", label: t("crew") },
     { id: "skins", label: t("skins") },
   ];
@@ -115,6 +117,7 @@ export default function App() {
         {tab === "english" && <EnglishPanel />}
         {tab === "speed" && <SpeedReadPanel />}
         {tab === "radio" && <RadioPanel />}
+        {tab === "lounge" && <LoungePanel />}
         {tab === "auth" && <AuthPanel />}
         {tab === "skins" && <SkinPicker />}
       </main>

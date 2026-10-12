@@ -75,7 +75,7 @@ docker compose up --build
 
 ### Углубление + Excellence (W0–P6)
 
-Сделано: фазы 0–8 + углубление + паритет **W0–P6** (миссии★★★, библиотека/Gutenberg, english bins, tachi/E-Pyr, аватар/.stpilot, сэмплы-fallback). Подробности — [STATUS.md](docs/web/STATUS.md). Опционально дальше: P7 радио-глубина, P8 lounge.
+Сделано: фазы 0–8 + Excellence **W0–P8** (миссии★★★, библиотека, english bins, tachi/E-Pyr, аватар/.stpilot, сэмплы, радио-приёмник, lounge/snake). Подробности — [STATUS.md](docs/web/STATUS.md).
 
 ```powershell
 # прод с HTTPS (Let's Encrypt):

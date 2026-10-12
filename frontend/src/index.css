@@ -231,6 +231,35 @@ body {
   font-size: 1.5rem;
 }
 
+.freq-dial {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.freq-dial input[type="range"] {
+  min-width: 12rem;
+}
+
+.lounge h2,
+.lounge h3 {
+  margin: 0.4rem 0;
+}
+
+.snake-canvas {
+  display: block;
+  margin-top: 0.75rem;
+  border: 1px solid var(--st-line);
+  border-radius: 4px;
+  max-width: 100%;
+  outline: none;
+}
+
+.snake-canvas:focus {
+  border-color: var(--st-accent);
+}
+
 @media (max-width: 640px) {
   .hud-bar {
     gap: 0.4rem;

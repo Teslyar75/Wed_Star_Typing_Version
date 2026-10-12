@@ -255,11 +255,13 @@ P1 Миссии+ремонт+heatmap
 
 ---
 
-### Эпик P7: Радио — глубина Shortwave
+### Эпик P7: Радио — глубина Shortwave — ядро ✅
 
 **Проблема:** есть поиск/fav/minibar/ICY; нет шкалы избранного, prev/next, duck при наборе, автозапуск последней станции.
 
 **Источник ТЗ:** `docs/radio/CURSOR_TASK_RADIO.md`
+
+**Сделано:** вкладка Приёмник, prev/next + dial по избранному, duck-on-type на мостике, auto last station, minibar next/prev.
 
 #### Task P7.1 — Приёмник: prev/next по «Мои волны», громкость, last station
 
@@ -271,11 +273,13 @@ P1 Миссии+ремонт+heatmap
 
 ---
 
-### Эпик P8: Lounge (низкий приоритет)
+### Эпик P8: Lounge (низкий приоритет) — Snake ✅
 
 **Проблема:** snake/tetris/breakout только на десктопе.
 
 **Критерий:** одна вкладка «Кают-компания», одна игра (Snake) MVP → Tetris → Breakout; очки в `pilot` XP опционально.
+
+**Сделано:** вкладка Lounge + Snake (Esc пауза/рестарт, WASD, рекорд). Tetris/Breakout — опционально позже.
 
 **Commit:** `feat(lounge): snake mvp` (и далее)
 
