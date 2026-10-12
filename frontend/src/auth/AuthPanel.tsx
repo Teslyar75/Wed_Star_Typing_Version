@@ -9,12 +9,14 @@ export default function AuthPanel() {
   const [pin, setPin] = useState("1234");
   const [me, setMe] = useState<Pilot | null>(null);
   const [honor, setHonor] = useState<Honor[]>([]);
+  const [missions, setMissions] = useState<{ id: string; title: string; done: boolean; progress: number; target: number }[]>([]);
   const [msg, setMsg] = useState("");
 
   const refresh = async () => {
     const m = await (await fetch("/api/pilots/me", { credentials: "include" })).json();
     setMe(m);
     setHonor(await (await fetch("/api/pilots/honor")).json());
+    setMissions(await (await fetch("/api/missions", { credentials: "include" })).json());
   };
 
   useEffect(() => {
@@ -61,6 +63,14 @@ export default function AuthPanel() {
         </p>
       )}
       {msg && <p className="muted">{msg}</p>}
+      <h3>Миссии</h3>
+      <ul className="station-list">
+        {missions.map((m) => (
+          <li key={m.id}>
+            {m.done ? "✓" : "·"} {m.title} ({m.progress}/{m.target})
+          </li>
+        ))}
+      </ul>
       <h3>{t("honor")}</h3>
       <table className="honor">
         <thead>

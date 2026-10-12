@@ -119,7 +119,7 @@ def _iter_seed_rows(limit: int) -> list[tuple[str, str, str]]:
 @router.post("/seed")
 def seed_vocab(
     db: Session = Depends(get_db),
-    limit: int = Query(500, ge=1, le=5000),
+    limit: int = Query(2000, ge=1, le=20000),
 ) -> dict[str, int]:
     n = 0
     for w, tr, ex in _iter_seed_rows(limit):

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { msPerWord } from "./timing";
 
 function orpIndex(word: string) {
   if (word.length <= 1) return 0;
@@ -41,7 +42,7 @@ export default function SpeedReadPanel() {
 
   useEffect(() => {
     if (!run || mode !== "rsvp") return;
-    const ms = 60000 / wpm;
+    const ms = msPerWord(wpm);
     if (!started.current) started.current = performance.now();
     const loop = (t: number) => {
       if (t - last.current >= ms) {

@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api_english import router as english_router
 from app.api_migrate import router as migrate_router
+from app.api_missions import router as missions_router
 from app.api_pilots import router as pilots_router
 from app.api_reader import router as reader_router
 from app.api_sessions import router as sessions_router
@@ -48,6 +49,7 @@ app.include_router(pilots_router)
 app.include_router(reader_router)
 app.include_router(english_router)
 app.include_router(speedread_router)
+app.include_router(missions_router)
 app.include_router(migrate_router)
 
 
