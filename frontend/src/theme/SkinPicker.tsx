@@ -1,39 +1,32 @@
-import { useState } from "react";
-import { applyTheme, type SkinTheme } from "./applyTheme";
-import spaceship from "../../../packages/themes/spaceship.json";
-import bathyscaphe from "../../../packages/themes/bathyscaphe.json";
-import steampunk from "../../../packages/themes/steampunk.json";
-import scriptorium from "../../../packages/themes/scriptorium.json";
-import neonCity from "../../../packages/themes/neon_city.json";
-import zenGarden from "../../../packages/themes/zen_garden.json";
+import { ALL_SKINS, useSkin } from "./skinStore";
 import { t } from "../i18n";
 import { playClick, setSoundsMuted, soundsMuted } from "../fx/sounds";
 
-const SKINS = [spaceship, bathyscaphe, steampunk, scriptorium, neonCity, zenGarden] as SkinTheme[];
-
 export default function SkinPicker() {
-  const [id, setId] = useState("spaceship");
-  const [muted, setMuted] = useState(soundsMuted());
-
-  const pick = (skin: SkinTheme) => {
-    setId(skin.id);
-    applyTheme(skin);
-  };
+  const skin = useSkin((s) => s.skin);
+  const setSkin = useSkin((s) => s.setSkin);
+  const muted = soundsMuted();
 
   return (
     <div className="skins">
       <div className="skin-grid">
-        {SKINS.map((s) => (
+        {ALL_SKINS.map((s) => (
           <button
             key={s.id}
             type="button"
-            className={`skin-card ${id === s.id ? "on" : ""}`}
+            className={`skin-card ${skin.id === s.id ? "on" : ""}`}
             style={{ borderColor: s.colors.accent || s.colors.cyan }}
-            onClick={() => pick(s)}
+            onClick={() => {
+              setSkin(s.id);
+              playClick();
+            }}
           >
             <strong>{(s.name as Record<string, string>)?.ru || s.id}</strong>
             <span className="swatch" style={{ background: s.colors.bg }} />
             <span className="swatch" style={{ background: s.colors.accent || s.colors.cyan }} />
+            <span className="muted" style={{ fontSize: "0.75rem" }}>
+              {s.background?.engine || "living_space"} · FX
+            </span>
           </button>
         ))}
       </div>
@@ -45,16 +38,14 @@ export default function SkinPicker() {
         <button
           type="button"
           className={`hud-btn ${muted ? "amber" : ""}`}
-          onClick={() => {
-            const next = !muted;
-            setSoundsMuted(next);
-            setMuted(next);
-          }}
+          onClick={() => setSoundsMuted(!muted)}
         >
           {muted ? t("sound_off") : t("sound_on")}
         </button>
       </div>
-      <p className="muted">{t("radio_tab_hint")}</p>
+      <p className="muted">
+        Per-skin: /sounds/skins/{skin.id} · backdrop: /skins/{skin.id}/bg1.jpg
+      </p>
     </div>
   );
 }

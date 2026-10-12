@@ -1,14 +1,27 @@
 /** Применяет JSON-тему (формат docs/skins/SKINS.md) к :root. */
 
+export type SkinSounds = {
+  click?: string;
+  error?: string;
+  finish?: string;
+  ok?: string;
+  start?: string;
+  bell?: string;
+};
+
 export type SkinTheme = {
   id: string;
   name?: Record<string, string> | string;
   colors: Record<string, string>;
   fonts?: { ui?: string[]; title?: string[]; typing?: string[] };
+  background?: { engine?: string; params?: Record<string, unknown> };
+  assets?: { images?: string; icon?: string };
+  sounds?: SkinSounds;
 };
 
 const COLOR_MAP: Record<string, string> = {
   bg: "--st-bg",
+  bg2: "--st-bg2",
   panel: "--st-panel",
   panel_border: "--st-line",
   line: "--st-line",
@@ -30,4 +43,6 @@ export function applyTheme(theme: SkinTheme): void {
   const mono = theme.fonts?.typing?.[0];
   if (ui) root.style.setProperty("--st-font-ui", `"${ui}", system-ui, sans-serif`);
   if (mono) root.style.setProperty("--st-font-mono", `"${mono}", Consolas, monospace`);
+  const img = theme.assets?.images;
+  if (img) root.style.setProperty("--st-skin-images", img);
 }

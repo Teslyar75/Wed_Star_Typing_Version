@@ -1,9 +1,28 @@
-/** Звуки кабины: сэмплы из /sounds/* с fallback на Web Audio synth + микшер. */
+/** Звуки кабины: per-skin сэмплы + fallback /sounds/* + synth. */
+
+import type { SkinSounds } from "../theme/applyTheme";
+
+function lsGet(key: string): string | null {
+  try {
+    return globalThis.localStorage?.getItem?.(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function lsSet(key: string, value: string) {
+  try {
+    globalThis.localStorage?.setItem?.(key, value);
+  } catch {
+    /* jsdom / node without storage */
+  }
+}
 
 let ctx: AudioContext | null = null;
 let muted = false;
-let fxVolume = Number(localStorage.getItem("st_fx_vol") ?? "0.7");
-let bank = localStorage.getItem("st_fx_bank") || "default";
+let fxVolume = Number(lsGet("st_fx_vol") ?? "0.7");
+let bank = lsGet("st_fx_bank") || "default";
+let skinSounds: SkinSounds | null = null;
 const buffers = new Map<string, AudioBuffer>();
 const tried = new Set<string>();
 
@@ -19,7 +38,7 @@ function ac(): AudioContext | null {
 
 export function setSoundsMuted(v: boolean) {
   muted = v;
-  localStorage.setItem("st_fx_mute", v ? "1" : "0");
+  lsSet("st_fx_mute", v ? "1" : "0");
 }
 
 export function soundsMuted() {
@@ -28,7 +47,7 @@ export function soundsMuted() {
 
 export function setFxVolume(v: number) {
   fxVolume = Math.max(0, Math.min(1, v));
-  localStorage.setItem("st_fx_vol", String(fxVolume));
+  lsSet("st_fx_vol", String(fxVolume));
 }
 
 export function getFxVolume() {
@@ -37,7 +56,7 @@ export function getFxVolume() {
 
 export function setFxBank(b: string) {
   bank = b;
-  localStorage.setItem("st_fx_bank", b);
+  lsSet("st_fx_bank", b);
   buffers.clear();
   tried.clear();
 }
@@ -46,37 +65,71 @@ export function getFxBank() {
   return bank;
 }
 
+/** Пути из theme.sounds (абсолютные URL вроде /sounds/skins/…). */
+export function setSkinSounds(s: SkinSounds | null) {
+  skinSounds = s;
+  buffers.clear();
+  tried.clear();
+}
+
 export function applyQuietMode() {
   if (typeof window === "undefined") return;
   const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-  if (reduce || localStorage.getItem("st_quiet") === "1") {
+  if (reduce || lsGet("st_quiet") === "1") {
     muted = true;
   }
 }
 
 if (typeof window !== "undefined") {
-  muted = localStorage.getItem("st_fx_mute") === "1";
+  muted = lsGet("st_fx_mute") === "1";
   applyQuietMode();
 }
 
+function skinUrl(name: string): string | null {
+  if (!skinSounds) return null;
+  if (name === "click") return skinSounds.click || null;
+  if (name === "error") return skinSounds.error || null;
+  if (name === "finish") return skinSounds.finish || skinSounds.ok || skinSounds.bell || null;
+  if (name === "start") return skinSounds.start || null;
+  return null;
+}
+
+async function decodeUrl(url: string): Promise<AudioBuffer | null> {
+  const c = ac();
+  if (!c) return null;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return await c.decodeAudioData(await r.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
 async function loadSample(name: string): Promise<AudioBuffer | null> {
-  const key = `${bank}:${name}`;
+  const key = `${bank}:${skinSounds?.click || ""}:${name}`;
   if (buffers.has(key)) return buffers.get(key)!;
   if (tried.has(key)) return null;
   tried.add(key);
   const c = ac();
   if (!c) return null;
+
+  const preferred = skinUrl(name);
+  if (preferred) {
+    const buf = await decodeUrl(preferred);
+    if (buf) {
+      buffers.set(key, buf);
+      return buf;
+    }
+  }
+
   const names = bank === "alt" && name === "click" ? ["click_alt", "click"] : [name];
   for (const n of names) {
     for (const ext of ["ogg", "mp3", "wav"]) {
-      try {
-        const r = await fetch(`/sounds/${n}.${ext}`);
-        if (!r.ok) continue;
-        const buf = await c.decodeAudioData(await r.arrayBuffer());
+      const buf = await decodeUrl(`/sounds/${n}.${ext}`);
+      if (buf) {
         buffers.set(key, buf);
         return buf;
-      } catch {
-        /* next */
       }
     }
   }

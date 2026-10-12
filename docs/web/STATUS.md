@@ -25,6 +25,7 @@
 | **P1p** | `GET /api/pilots/dossier` + guest + drag-drop `.stpilot` |
 | **G1** | Tetris + Breakout + `lounge_scores` + touch |
 | **H1** | Help drawer, welcome-тур, Ctrl+K, space profiles frost/light/full |
+| **S7 skins** | Per-skin FX wav + image backdrop (sonar/gears/candles/rain/zen) по `theme.background.engine` |
 
 ## API (Surpass)
 

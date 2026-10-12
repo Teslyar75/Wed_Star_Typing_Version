@@ -10,6 +10,8 @@ const SHELL = [
   "/sounds/error.wav",
   "/sounds/finish.wav",
   "/sounds/start.wav",
+  "/sounds/skins/spaceship/click.wav",
+  "/skins/spaceship/bg1.jpg",
 ];
 
 self.addEventListener("install", (event) => {

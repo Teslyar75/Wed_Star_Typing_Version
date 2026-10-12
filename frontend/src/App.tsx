@@ -6,16 +6,16 @@ import SpeedReadPanel from "./speedread/SpeedReadPanel";
 import AuthPanel from "./auth/AuthPanel";
 import SkinPicker from "./theme/SkinPicker";
 import SpaceCanvas from "./fx/SpaceCanvas";
+import SkinBackdrop from "./fx/SkinBackdrop";
 import RadioPanel from "./radio/RadioPanel";
 import RadioMinibar from "./radio/RadioMinibar";
 import LibraryPanel from "./library/LibraryPanel";
 import LoungePanel from "./lounge/LoungePanel";
 import HelpDrawer from "./shell/HelpDrawer";
 import CommandPalette from "./shell/CommandPalette";
-import { applyTheme } from "./theme/applyTheme";
+import { bootSkin, useSkin } from "./theme/skinStore";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import { getFxVolume, setFxVolume, setSoundsMuted, soundsMuted, setFxBank, getFxBank } from "./fx/sounds";
-import spaceship from "../../packages/themes/spaceship.json";
 
 type Tab = "bridge" | "reader" | "library" | "english" | "speed" | "auth" | "skins" | "radio" | "lounge";
 type SpaceProfile = "frost" | "light" | "full";
@@ -35,9 +35,11 @@ export default function App() {
   const [muted, setMuted] = useState(() => soundsMuted());
   const [fxBank, setBank] = useState(() => getFxBank());
   const [, bump] = useState(0);
+  const skin = useSkin((s) => s.skin);
+  const bgEngine = skin.background?.engine || "living_space";
 
   useEffect(() => {
-    applyTheme(spaceship);
+    bootSkin();
     fetch("/api/health")
       .then((r) => r.json())
       .then((j) => setHealth(!!j.ok))
@@ -107,7 +109,16 @@ export default function App() {
   return (
     <div className="cockpit">
       <div className={`space-bg space-bg-${spaceProfile}`} aria-hidden>
-        <SpaceCanvas profile={spaceProfile === "full" ? "full" : spaceProfile} fullBleed className="space-canvas full" />
+        {bgEngine === "living_space" ? (
+          <SpaceCanvas profile={spaceProfile === "full" ? "full" : spaceProfile} fullBleed className="space-canvas full" />
+        ) : (
+          <SkinBackdrop
+            themeId={skin.id}
+            engine={bgEngine}
+            profile={spaceProfile === "full" ? "full" : spaceProfile}
+            className="space-canvas full"
+          />
+        )}
       </div>
       <header className="hud-bar">
         <span className="logo">★</span>
