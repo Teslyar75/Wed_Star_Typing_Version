@@ -1,7 +1,7 @@
 # Star Typing Web — статус (Excellence / Parity / Surpass)
 
 Репозиторий: [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)  
-Планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md)
+Планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md); UI ← десктоп: монорепо `docs/web/UI_DESKTOP_PARITY.md`
 
 ## Готово
 
@@ -27,6 +27,12 @@
 | **H1** | Help drawer, welcome-тур, Ctrl+K, space profiles frost/light/full |
 | **S7 skins** | Per-skin FX + hard-reset при смене; эталон Звездолёт; image-сцены отложены |
 | **W-fast** | Lazy-вкладки, auto frost на слабых CPU, ContinueHub + 7d-сводка на мостике |
+
+## На будущее
+
+| Тема | Заметка |
+| --- | --- |
+| **S8 Deep skins** | Не только цвета: формы кнопок/панелей, свой нарратив и роли на скин (дзен → наставник/послушник). Спека: монорепо `docs/skins/SKINS_DEEP.md` |
 
 ## API (Surpass)
 

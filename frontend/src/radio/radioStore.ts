@@ -41,6 +41,7 @@ type RadioState = {
   setAudio: (el: HTMLAudioElement | null) => void;
   play: (s: Station) => void;
   pause: () => void;
+  stop: () => void;
   resume: () => void;
   toggle: () => void;
   setVolume: (v: number) => void;
@@ -137,7 +138,9 @@ export const useRadio = create<RadioState>((set, get) => ({
   audio: null,
 
   setAudio: (el) => {
-    if (el) el.volume = get().volume;
+    /* не затираем живой элемент null-ом при смене вкладок */
+    if (!el && get().audio) return;
+    if (el) el.volume = get().duck ? get().volume * 0.15 : get().volume;
     set({ audio: el });
   },
 
@@ -164,6 +167,18 @@ export const useRadio = create<RadioState>((set, get) => ({
     set({ playing: false });
     stopIcyPoll();
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
+  },
+
+  stop: () => {
+    const a = get().audio;
+    if (a) {
+      a.pause();
+      a.removeAttribute("src");
+      a.load();
+    }
+    set({ playing: false, station: null, nowPlaying: null });
+    stopIcyPoll();
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "none";
   },
 
   resume: () => {

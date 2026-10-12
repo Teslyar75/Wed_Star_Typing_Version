@@ -1,29 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
-import { listenOnce } from "./asr";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useRadio } from "../radio/radioStore";
 import { useReadingPos } from "../reading/positionStore";
+import EnglishOverview, { type EnProgress } from "./EnglishOverview";
 
 type Word = { id: number; word: string; translation: string; example: string };
 type Bin = "due" | "favorite" | "learned" | "inbox";
-type Page = "overview" | "practice" | "review" | "warehouse" | "book" | "lists" | "log" | "settings";
-type Progress = {
-  xp: number;
-  rank: string;
-  favorite: number;
-  learned: number;
-  inbox: number;
-  due: number;
-  streak_days?: number;
-};
+type Page = "overview" | "sets" | "scanner" | "practice" | "review" | "warehouse" | "book" | "lists" | "log" | "settings";
+type Progress = EnProgress;
 type LogRow = { id: number; word: string; grade: number; at: string | null };
 
 const PAGES: { id: Page; labelKey: string }[] = [
   { id: "overview", labelKey: "en_overview" },
-  { id: "practice", labelKey: "en_practice" },
-  { id: "review", labelKey: "en_review" },
-  { id: "warehouse", labelKey: "bin_due" },
-  { id: "book", labelKey: "from_book" },
+  { id: "sets", labelKey: "en_star_maps" },
+  { id: "scanner", labelKey: "en_scanner" },
+  { id: "practice", labelKey: "en_missions" },
+  { id: "review", labelKey: "en_systems_check" },
   { id: "lists", labelKey: "en_lists" },
   { id: "log", labelKey: "en_log" },
   { id: "settings", labelKey: "en_settings" },
@@ -45,22 +37,80 @@ export default function EnglishPanel() {
   const [prog, setProg] = useState<Progress | null>(null);
   const [log, setLog] = useState<LogRow[]>([]);
   const [msg, setMsg] = useState("");
+  const [scanQ, setScanQ] = useState("");
+  const [bookTitle, setBookTitle] = useState("");
+  const [bookSegments, setBookSegments] = useState(0);
   const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem("st_en_auto_speak") === "1");
   const setDuck = useRadio((s) => s.setDuck);
+  const duckOnType = useRadio((s) => s.duckOnType);
+
+  useEffect(() => {
+    if (textId == null) {
+      setBookTitle("");
+      setBookSegments(0);
+      return;
+    }
+    void (async () => {
+      try {
+        const shelf = await (await fetch("/api/library", { credentials: "include" })).json();
+        const hit = Array.isArray(shelf) ? shelf.find((x: { text_id: number }) => x.text_id === textId) : null;
+        if (hit) {
+          setBookTitle(hit.title || `#${textId}`);
+          setBookSegments(Number(hit.segments) || 0);
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      setBookTitle(`#${textId}`);
+      setBookSegments(0);
+    })();
+  }, [textId]);
+
+  const seedBusy = useRef(false);
+
+  /** Досев словаря порциями в фоне — UI не ждёт 20k. */
+  useEffect(() => {
+    let cancelled = false;
+    const pump = async () => {
+      if (seedBusy.current) return;
+      seedBusy.current = true;
+      try {
+        while (!cancelled) {
+          const r = await fetch("/api/english/seed?limit=20000&batch=400", {
+            method: "POST",
+            credentials: "include",
+          });
+          if (!r.ok) break;
+          const j = (await r.json()) as { done?: boolean; added?: number };
+          if (j.done) break;
+          await new Promise((res) => setTimeout(res, 80));
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        seedBusy.current = false;
+      }
+    };
+    void pump();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const reload = useCallback(async () => {
-    await fetch("/api/english/seed?limit=20000", { method: "POST" });
     const warehouseBin = page === "review" ? "due" : page === "lists" ? bin : page === "practice" ? "inbox" : bin;
-    const list = await (
-      await fetch(`/api/english/warehouse?limit=30&bin=${warehouseBin}`, { credentials: "include" })
-    ).json();
-    setWords(list);
+    const [listRes, progRes, logRes] = await Promise.all([
+      fetch(`/api/english/warehouse?limit=30&bin=${warehouseBin}`, { credentials: "include" }),
+      fetch("/api/english/progress", { credentials: "include" }),
+      page === "log"
+        ? fetch("/api/english/log?limit=40", { credentials: "include" })
+        : Promise.resolve(null),
+    ]);
+    setWords(await listRes.json());
     setI(0);
-    const p = await (await fetch("/api/english/progress", { credentials: "include" })).json();
-    setProg(p);
-    if (page === "log") {
-      setLog(await (await fetch("/api/english/log?limit=40", { credentials: "include" })).json());
-    }
+    setProg(await progRes.json());
+    if (logRes) setLog(await logRes.json());
   }, [bin, page]);
 
   useEffect(() => {
@@ -72,12 +122,12 @@ export default function EnglishPanel() {
   const speak = () => {
     if (!w || !window.speechSynthesis) return;
     setSpeaking(true);
-    setDuck(true);
+    if (duckOnType) setDuck(true);
     const u = new SpeechSynthesisUtterance(w.word);
     u.lang = "en-US";
     u.onend = () => {
       setSpeaking(false);
-      setDuck(false);
+      if (duckOnType) setDuck(false);
     };
     window.speechSynthesis.speak(u);
   };
@@ -85,9 +135,10 @@ export default function EnglishPanel() {
   const listen = async () => {
     if (!w) return;
     setListening(true);
-    setDuck(true);
+    if (duckOnType) setDuck(true);
     setHeard("");
     setScore(null);
+    const { listenOnce } = await import("./asr");
     const res = await listenOnce({
       expected: w.example || w.word,
       targetWord: w.word,
@@ -95,7 +146,7 @@ export default function EnglishPanel() {
       onLevel: setLevel,
     });
     setListening(false);
-    setDuck(false);
+    if (duckOnType) setDuck(false);
     setHeard(res.transcript || (res.engine === "none" ? t("asr_unavailable") : ""));
     setScore(res.engine === "none" ? null : res.score);
     setLevel(0);
@@ -206,41 +257,105 @@ export default function EnglishPanel() {
     </div>
   );
 
+  const runScan = () => {
+    const q = scanQ.trim().toLowerCase();
+    if (!q) {
+      setPage("scanner");
+      return;
+    }
+    const hit = words.find((x) => x.word.toLowerCase() === q || x.word.toLowerCase().startsWith(q));
+    if (hit) {
+      setWords([hit, ...words.filter((x) => x.id !== hit.id)]);
+      setI(0);
+      setPage("scanner");
+      setShow(false);
+    } else {
+      setPage("scanner");
+      setMsg(`${t("en_scan")}: ${q}`);
+    }
+  };
+
   return (
     <div className="english">
-      {prog && (
-        <p className="muted">
-          {prog.rank} · XP {prog.xp} · streak {prog.streak_days ?? 0}d · ★{prog.favorite} · ✓{prog.learned} · due{" "}
-          {prog.due}
-        </p>
-      )}
-      <div className="bridge-actions en-nav">
-        {PAGES.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`hud-btn ${page === p.id ? "amber" : ""}`}
-            onClick={() => setPage(p.id)}
-          >
-            {t(p.labelKey)}
-          </button>
-        ))}
+      <div className="en-nav-row">
+        <div className="bridge-actions en-nav">
+          {PAGES.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`hud-btn ${page === p.id ? "amber" : ""}`}
+              onClick={() => setPage(p.id)}
+            >
+              {t(p.labelKey)}
+            </button>
+          ))}
+        </div>
+        <form
+          className="en-scan-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            runScan();
+          }}
+        >
+          <input
+            className="en-scan-input"
+            value={scanQ}
+            onChange={(e) => setScanQ(e.target.value)}
+            placeholder={t("en_scan_ph")}
+            aria-label={t("en_scan")}
+          />
+        </form>
       </div>
       {msg && <p className="muted">{msg}</p>}
 
       {page === "overview" && prog && (
-        <div className="en-overview">
-          <p>
-            {t("en_overview_body")} — due {prog.due}, inbox {prog.inbox}, learned {prog.learned}.
-          </p>
-          <div className="bridge-actions">
-            <button type="button" className="hud-btn amber" onClick={() => setPage("review")}>
-              {t("en_review")}
-            </button>
-            <button type="button" className="hud-btn" onClick={() => setPage("book")}>
-              {t("from_book")}
-            </button>
-          </div>
+        <EnglishOverview
+          prog={prog}
+          book={
+            textId != null
+              ? {
+                  title: bookTitle || `#${textId}`,
+                  meta: t("en_book_meta")
+                    .replace("{0}", String(Math.max(0, sentenceId)))
+                    .replace("{1}", String(bookSegments || "—")),
+                  sample: t("en_book_sample_ready"),
+                  hasBook: true,
+                }
+              : {
+                  title: t("en_book_none"),
+                  meta: t("en_book_none_hint"),
+                  sample: "",
+                  hasBook: false,
+                }
+          }
+          onStartLesson={() => setPage("review")}
+          onQuickMission={() => {
+            setBin("inbox");
+            setPage("practice");
+          }}
+          onFromBook={() => setPage("book")}
+          onFormBook={() => void fromBook()}
+          onPracticeBook={() => {
+            setBin("inbox");
+            setPage("practice");
+          }}
+          onOpenBookSection={() => setPage("book")}
+          onScanWord={(word) => {
+            setScanQ(word);
+            setPage("scanner");
+            const hit = words.find((x) => x.word.toLowerCase() === word.toLowerCase());
+            if (hit) {
+              setWords([hit, ...words.filter((x) => x.id !== hit.id)]);
+              setI(0);
+            }
+          }}
+        />
+      )}
+
+      {(page === "sets" || page === "scanner") && (
+        <div className="panel-inset">
+          <p className="muted">{page === "sets" ? t("en_sets_soon") : t("en_scanner_hint")}</p>
+          {page === "scanner" && cardUi}
         </div>
       )}
 

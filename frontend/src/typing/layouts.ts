@@ -64,3 +64,8 @@ export function keyForChar(char: string | null, lang = "en"): string | null {
 export const FINGER_COLORS = [
   "#FF4FA3", "#FFD84A", "#4CFF8F", "#2ED8FF", "#B76BFF", "#4CFF8F", "#FFD84A", "#FF4FA3", "#8FA6BF", "#4A6580",
 ];
+
+/** stamina/layouts.HOME_BUMPS — рисочки на F/J */
+export const HOME_BUMPS = new Set(["f", "j"]);
+
+export const MOD_FINGER = 9;

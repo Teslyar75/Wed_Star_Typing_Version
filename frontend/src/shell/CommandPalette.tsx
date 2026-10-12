@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { t } from "../i18n";
-
-type Tab = "bridge" | "reader" | "library" | "english" | "speed" | "auth" | "skins" | "radio" | "lounge";
+import type { Tab } from "./tabs";
 
 type Props = {
   open: boolean;
@@ -11,14 +10,14 @@ type Props = {
 
 const ITEMS: { id: Tab; labelKey: string }[] = [
   { id: "bridge", labelKey: "bridge" },
-  { id: "library", labelKey: "library" },
-  { id: "reader", labelKey: "reader" },
+  { id: "missions", labelKey: "missions" },
+  { id: "cargo", labelKey: "own_text" },
+  { id: "log", labelKey: "flight_log" },
   { id: "english", labelKey: "english" },
   { id: "speed", labelKey: "speed" },
-  { id: "radio", labelKey: "radio" },
   { id: "lounge", labelKey: "lounge" },
-  { id: "auth", labelKey: "crew" },
-  { id: "skins", labelKey: "skins" },
+  { id: "radio", labelKey: "radio" },
+  { id: "settings", labelKey: "settings" },
 ];
 
 export default function CommandPalette({ open, onClose, onJump }: Props) {
@@ -27,7 +26,9 @@ export default function CommandPalette({ open, onClose, onJump }: Props) {
     if (open) setQ("");
   }, [open]);
   if (!open) return null;
-  const filtered = ITEMS.filter((x) => t(x.labelKey).toLowerCase().includes(q.toLowerCase()) || x.id.includes(q.toLowerCase()));
+  const filtered = ITEMS.filter(
+    (x) => t(x.labelKey).toLowerCase().includes(q.toLowerCase()) || x.id.includes(q.toLowerCase()),
+  );
   return (
     <div className="cmd-palette" role="dialog" aria-label={t("command_palette")}>
       <input
