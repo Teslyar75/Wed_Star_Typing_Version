@@ -10,7 +10,7 @@ export default function SkinPicker() {
   return (
     <div className="skins">
       <p className="muted">
-        При каждом выборе — полный сброс прошлого скина (CSS, звуки, фон), затем чистая палитра. Базовый — «Звездолёт».
+        Эталон — «Звездолёт» (звёздное небо). При смене — полный сброс артефактов. Другие скины: пока только палитра.
       </p>
       <div className="skin-grid">
         {ALL_SKINS.map((s) => (

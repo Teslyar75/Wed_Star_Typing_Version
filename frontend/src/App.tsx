@@ -1,23 +1,35 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import BridgeScreen from "./bridge/BridgeScreen";
-import BilingualReader from "./reader/BilingualReader";
-import EnglishPanel from "./english/EnglishPanel";
-import SpeedReadPanel from "./speedread/SpeedReadPanel";
-import AuthPanel from "./auth/AuthPanel";
-import SkinPicker from "./theme/SkinPicker";
 import SpaceCanvas from "./fx/SpaceCanvas";
-import RadioPanel from "./radio/RadioPanel";
 import RadioMinibar from "./radio/RadioMinibar";
-import LibraryPanel from "./library/LibraryPanel";
-import LoungePanel from "./lounge/LoungePanel";
 import HelpDrawer from "./shell/HelpDrawer";
 import CommandPalette from "./shell/CommandPalette";
+import ContinueHub from "./bridge/ContinueHub";
 import { bootSkin, useSkin } from "./theme/skinStore";
+import { detectSpaceProfile } from "./fx/canvasBudget";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import { getFxVolume, setFxVolume, setSoundsMuted, soundsMuted, setFxBank, getFxBank } from "./fx/sounds";
 
 type Tab = "bridge" | "reader" | "library" | "english" | "speed" | "auth" | "skins" | "radio" | "lounge";
 type SpaceProfile = "frost" | "light" | "full";
+
+const BilingualReader = lazy(() => import("./reader/BilingualReader"));
+const EnglishPanel = lazy(() => import("./english/EnglishPanel"));
+const SpeedReadPanel = lazy(() => import("./speedread/SpeedReadPanel"));
+const AuthPanel = lazy(() => import("./auth/AuthPanel"));
+const SkinPicker = lazy(() => import("./theme/SkinPicker"));
+const RadioPanel = lazy(() => import("./radio/RadioPanel"));
+const LibraryPanel = lazy(() => import("./library/LibraryPanel"));
+const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
+
+function TabFallback() {
+  return <p className="muted">…</p>;
+}
+
+function LazyTab({ when, children }: { when: boolean; children: ReactNode }) {
+  if (!when) return null;
+  return <Suspense fallback={<TabFallback />}>{children}</Suspense>;
+}
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("bridge");
@@ -27,8 +39,8 @@ export default function App() {
   const [onboardStep, setOnboardStep] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [spaceProfile, setSpaceProfile] = useState<SpaceProfile>(
-    () => (localStorage.getItem("st_space_profile") as SpaceProfile) || "light",
+  const [spaceProfile, setSpaceProfile] = useState<SpaceProfile>(() =>
+    detectSpaceProfile(localStorage.getItem("st_space_profile")),
   );
   const [fxVol, setFxVol] = useState(() => getFxVolume());
   const [muted, setMuted] = useState(() => soundsMuted());
@@ -38,8 +50,12 @@ export default function App() {
   const skinGen = useSkin((s) => s.gen);
 
   useEffect(() => {
-    // базовый вид кабины — Звездолёт; новые backdrop-сцены пока отключены
     bootSkin({ preferBase: true });
+    if (!localStorage.getItem("st_space_profile")) {
+      const auto = detectSpaceProfile(null);
+      setSpaceProfile(auto);
+      localStorage.setItem("st_space_profile", auto);
+    }
     fetch("/api/health")
       .then((r) => r.json())
       .then((j) => setHealth(!!j.ok))
@@ -110,7 +126,7 @@ export default function App() {
     <div className="cockpit" data-skin={skin.id}>
       <div className={`space-bg space-bg-${spaceProfile}`} aria-hidden key={`bg-${skin.id}-${skinGen}`}>
         <SpaceCanvas
-          key={`space-${skin.id}-${skinGen}`}
+          key={`space-${skin.id}-${skinGen}-${spaceProfile}`}
           profile={spaceProfile === "full" ? "full" : spaceProfile}
           fullBleed
           className="space-canvas full"
@@ -147,13 +163,13 @@ export default function App() {
         ))}
       </nav>
       <div className="bridge-actions shell-fx" style={{ padding: "0.25rem 0.75rem" }}>
-        <button type="button" className="hud-btn" onClick={() => setProfile("frost")}>
+        <button type="button" className={`hud-btn ${spaceProfile === "frost" ? "amber" : ""}`} onClick={() => setProfile("frost")}>
           {t("space_frost")}
         </button>
-        <button type="button" className="hud-btn" onClick={() => setProfile("light")}>
+        <button type="button" className={`hud-btn ${spaceProfile === "light" ? "amber" : ""}`} onClick={() => setProfile("light")}>
           {t("space_light")}
         </button>
-        <button type="button" className="hud-btn" onClick={() => setProfile("full")}>
+        <button type="button" className={`hud-btn ${spaceProfile === "full" ? "amber" : ""}`} onClick={() => setProfile("full")}>
           {t("space_full")}
         </button>
         <label className="muted">
@@ -219,13 +235,7 @@ export default function App() {
                 {t("onboard_go")}
               </button>
             )}
-            <button
-              type="button"
-              className="hud-btn"
-              onClick={() => {
-                setTab(onboardCopy[onboardStep]!.go);
-              }}
-            >
+            <button type="button" className="hud-btn" onClick={() => setTab(onboardCopy[onboardStep]!.go)}>
               {onboardCopy[onboardStep]!.title}
             </button>
             <button type="button" className="hud-btn" onClick={dismissOnboard}>
@@ -233,22 +243,47 @@ export default function App() {
             </button>
           </div>
         )}
-        {tab === "bridge" && <BridgeScreen />}
-        {tab === "reader" && <BilingualReader />}
-        {tab === "library" && (
+        {tab === "bridge" && (
+          <>
+            <ContinueHub
+              onOpenLibrary={() => setTab("library")}
+              onOpenReader={() => setTab("reader")}
+              onOpenEnglish={() => setTab("english")}
+              onOpenSpeed={() => setTab("speed")}
+              onOpenAuth={() => setTab("auth")}
+            />
+            <BridgeScreen />
+          </>
+        )}
+        <LazyTab when={tab === "reader"}>
+          <BilingualReader />
+        </LazyTab>
+        <LazyTab when={tab === "library"}>
           <LibraryPanel
             onOpenReader={() => setTab("reader")}
             onOpenBridge={() => setTab("bridge")}
             onOpenEnglish={() => setTab("english")}
             onOpenSpeed={() => setTab("speed")}
           />
-        )}
-        {tab === "english" && <EnglishPanel />}
-        {tab === "speed" && <SpeedReadPanel />}
-        {tab === "radio" && <RadioPanel />}
-        {tab === "lounge" && <LoungePanel />}
-        {tab === "auth" && <AuthPanel />}
-        {tab === "skins" && <SkinPicker />}
+        </LazyTab>
+        <LazyTab when={tab === "english"}>
+          <EnglishPanel />
+        </LazyTab>
+        <LazyTab when={tab === "speed"}>
+          <SpeedReadPanel />
+        </LazyTab>
+        <LazyTab when={tab === "radio"}>
+          <RadioPanel />
+        </LazyTab>
+        <LazyTab when={tab === "lounge"}>
+          <LoungePanel />
+        </LazyTab>
+        <LazyTab when={tab === "auth"}>
+          <AuthPanel />
+        </LazyTab>
+        <LazyTab when={tab === "skins"}>
+          <SkinPicker />
+        </LazyTab>
       </main>
       <HelpDrawer tab={tab} open={helpOpen} onClose={() => setHelpOpen(false)} />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x)} />
