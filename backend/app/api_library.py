@@ -37,6 +37,13 @@ class LibraryItem(BaseModel):
     sentence_id: int
     mode: str
     segments: int
+    progress_pct: float = 0.0
+
+
+def _pct(sentence_id: int, segments: int) -> float:
+    if segments <= 1:
+        return 100.0 if sentence_id > 0 else 0.0
+    return round(min(100.0, max(0.0, 100.0 * sentence_id / (segments - 1))), 1)
 
 
 class PositionIn(BaseModel):
@@ -68,6 +75,7 @@ def list_shelf(
                     sentence_id=0,
                     mode="reader",
                     segments=n,
+                    progress_pct=0.0,
                 )
             )
         return out
@@ -88,6 +96,7 @@ def list_shelf(
                 sentence_id=row.sentence_id,
                 mode=row.mode,
                 segments=n,
+                progress_pct=_pct(row.sentence_id, n),
             )
         )
     return out
@@ -117,6 +126,7 @@ def add_to_shelf(
         sentence_id=row.sentence_id,
         mode=row.mode,
         segments=n,
+        progress_pct=_pct(row.sentence_id, n),
     )
 
 
@@ -147,6 +157,7 @@ def put_position(
         sentence_id=row.sentence_id,
         mode=row.mode,
         segments=n,
+        progress_pct=_pct(row.sentence_id, n),
     )
 
 

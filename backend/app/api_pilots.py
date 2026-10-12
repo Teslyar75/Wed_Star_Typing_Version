@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import base64
 import io
+import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
@@ -34,6 +36,7 @@ class PilotOut(BaseModel):
     skin: str
     xp: int
     avatar_data: str = ""
+    is_guest: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -82,6 +85,17 @@ def logout(response: Response) -> dict[str, bool]:
     return {"ok": True}
 
 
+@router.post("/guest", response_model=PilotOut)
+def guest_login(response: Response, db: Session = Depends(get_db)) -> Pilot:
+    cs = f"Guest-{uuid.uuid4().hex[:6]}"
+    p = Pilot(callsign=cs, display_name=cs, pin_hash="", skin="spaceship", is_guest=True)
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+    _set_cookie(response, make_token(p.id))
+    return p
+
+
 @router.get("/me", response_model=PilotOut | None)
 def me(pilot: Pilot | None = Depends(get_optional_pilot)) -> Pilot | None:
     return pilot
@@ -127,6 +141,49 @@ async def upload_avatar(
     db.commit()
     db.refresh(pilot)
     return pilot
+
+
+@router.get("/dossier")
+def dossier(
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
+    """Сводка за 7 дней: сессии, книги, english reviews."""
+    since = datetime.now(timezone.utc) - timedelta(days=7)
+    sessions = (
+        db.query(TypingSession)
+        .filter(TypingSession.pilot_id == pilot.id, TypingSession.created_at >= since)
+        .all()
+    )
+    from app.api_library import PilotText
+    from app.api_english import ReviewLog, CardProgress
+    from app.api_speedread import SpeedResult
+
+    books = db.query(PilotText).filter_by(pilot_id=pilot.id).count()
+    reviews = (
+        db.query(ReviewLog)
+        .filter(ReviewLog.pilot_id == pilot.id, ReviewLog.created_at >= since)
+        .count()
+    )
+    cards = db.query(CardProgress).filter_by(pilot_id=pilot.id).count()
+    speed = (
+        db.query(SpeedResult)
+        .filter(SpeedResult.pilot_id == pilot.id, SpeedResult.created_at >= since)
+        .count()
+    )
+    cpm_vals = [s.cpm for s in sessions if s.cpm]
+    return {
+        "days": 7,
+        "sessions": len(sessions),
+        "best_cpm": max(cpm_vals) if cpm_vals else 0.0,
+        "avg_cpm": (sum(cpm_vals) / len(cpm_vals)) if cpm_vals else 0.0,
+        "books_on_shelf": books,
+        "english_reviews": reviews,
+        "english_cards": cards,
+        "speed_runs": speed,
+        "xp": pilot.xp,
+        "is_guest": bool(pilot.is_guest),
+    }
 
 
 @router.get("/me/export")

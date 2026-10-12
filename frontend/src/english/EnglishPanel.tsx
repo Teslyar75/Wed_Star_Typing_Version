@@ -6,6 +6,7 @@ import { useReadingPos } from "../reading/positionStore";
 
 type Word = { id: number; word: string; translation: string; example: string };
 type Bin = "due" | "favorite" | "learned" | "inbox";
+type Page = "overview" | "practice" | "review" | "warehouse" | "book" | "lists" | "log" | "settings";
 type Progress = {
   xp: number;
   rank: string;
@@ -13,11 +14,25 @@ type Progress = {
   learned: number;
   inbox: number;
   due: number;
+  streak_days?: number;
 };
+type LogRow = { id: number; word: string; grade: number; at: string | null };
+
+const PAGES: { id: Page; labelKey: string }[] = [
+  { id: "overview", labelKey: "en_overview" },
+  { id: "practice", labelKey: "en_practice" },
+  { id: "review", labelKey: "en_review" },
+  { id: "warehouse", labelKey: "bin_due" },
+  { id: "book", labelKey: "from_book" },
+  { id: "lists", labelKey: "en_lists" },
+  { id: "log", labelKey: "en_log" },
+  { id: "settings", labelKey: "en_settings" },
+];
 
 export default function EnglishPanel() {
   const textId = useReadingPos((s) => s.textId);
   const sentenceId = useReadingPos((s) => s.sentenceId);
+  const [page, setPage] = useState<Page>("overview");
   const [bin, setBin] = useState<Bin>("due");
   const [words, setWords] = useState<Word[]>([]);
   const [i, setI] = useState(0);
@@ -28,19 +43,25 @@ export default function EnglishPanel() {
   const [score, setScore] = useState<number | null>(null);
   const [level, setLevel] = useState(0);
   const [prog, setProg] = useState<Progress | null>(null);
+  const [log, setLog] = useState<LogRow[]>([]);
   const [msg, setMsg] = useState("");
+  const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem("st_en_auto_speak") === "1");
   const setDuck = useRadio((s) => s.setDuck);
 
   const reload = useCallback(async () => {
     await fetch("/api/english/seed?limit=20000", { method: "POST" });
+    const warehouseBin = page === "review" ? "due" : page === "lists" ? bin : page === "practice" ? "inbox" : bin;
     const list = await (
-      await fetch(`/api/english/warehouse?limit=30&bin=${bin}`, { credentials: "include" })
+      await fetch(`/api/english/warehouse?limit=30&bin=${warehouseBin}`, { credentials: "include" })
     ).json();
     setWords(list);
     setI(0);
     const p = await (await fetch("/api/english/progress", { credentials: "include" })).json();
     setProg(p);
-  }, [bin]);
+    if (page === "log") {
+      setLog(await (await fetch("/api/english/log?limit=40", { credentials: "include" })).json());
+    }
+  }, [bin, page]);
 
   useEffect(() => {
     void reload();
@@ -115,7 +136,7 @@ export default function EnglishPanel() {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text_id: textId, up_to_sentence_id: sentenceId + 20, limit: 24 }),
+      body: JSON.stringify({ text_id: textId, up_to_sentence_id: Math.max(sentenceId + 20, 5), limit: 24 }),
     });
     if (!r.ok) {
       setMsg(await r.text());
@@ -124,32 +145,16 @@ export default function EnglishPanel() {
     const j = await r.json();
     setMsg(`${t("from_book")}: ${j.cards}`);
     setBin("inbox");
+    setPage("practice");
   };
 
-  return (
-    <div className="english">
-      {prog && (
-        <p className="muted">
-          {prog.rank} · XP {prog.xp} · ★{prog.favorite} · ✓{prog.learned} · due {prog.due}
-        </p>
-      )}
-      <div className="bridge-actions">
-        {(["due", "inbox", "favorite", "learned"] as Bin[]).map((b) => (
-          <button key={b} type="button" className={`hud-btn ${bin === b ? "amber" : ""}`} onClick={() => setBin(b)}>
-            {t(`bin_${b}`)}
-          </button>
-        ))}
-        <button type="button" className="hud-btn" onClick={() => void fromBook()}>
-          {t("from_book")}
-        </button>
-      </div>
-      {msg && <p className="muted">{msg}</p>}
-
+  const cardUi = (
+    <div className="card">
       {!w ? (
         <p className="lead">{t("vocab_loading")}</p>
       ) : (
-        <div className="card">
-          <h2>{w.word}</h2>
+        <>
+          <h2>{show ? w.translation || w.word : w.word}</h2>
           {speaking && <span className="badge ok">{t("reading")}</span>}
           {listening && (
             <span className="badge ok">
@@ -163,7 +168,14 @@ export default function EnglishPanel() {
             <button type="button" className="hud-btn" onClick={() => void listen()}>
               {t("mic")}
             </button>
-            <button type="button" className="hud-btn amber" onClick={() => setShow(true)}>
+            <button
+              type="button"
+              className="hud-btn amber"
+              onClick={() => {
+                setShow((s) => !s);
+                if (!show && autoSpeak) speak();
+              }}
+            >
               {t("show")}
             </button>
             <button type="button" className="hud-btn" onClick={() => void move("favorite")}>
@@ -179,7 +191,6 @@ export default function EnglishPanel() {
           )}
           {show && (
             <>
-              <p>{w.translation}</p>
               <p className="muted">{w.example}</p>
               <div className="bridge-actions">
                 {[1, 2, 3, 4].map((g) => (
@@ -190,7 +201,119 @@ export default function EnglishPanel() {
               </div>
             </>
           )}
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="english">
+      {prog && (
+        <p className="muted">
+          {prog.rank} · XP {prog.xp} · streak {prog.streak_days ?? 0}d · ★{prog.favorite} · ✓{prog.learned} · due{" "}
+          {prog.due}
+        </p>
+      )}
+      <div className="bridge-actions en-nav">
+        {PAGES.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`hud-btn ${page === p.id ? "amber" : ""}`}
+            onClick={() => setPage(p.id)}
+          >
+            {t(p.labelKey)}
+          </button>
+        ))}
+      </div>
+      {msg && <p className="muted">{msg}</p>}
+
+      {page === "overview" && prog && (
+        <div className="en-overview">
+          <p>
+            {t("en_overview_body")} — due {prog.due}, inbox {prog.inbox}, learned {prog.learned}.
+          </p>
+          <div className="bridge-actions">
+            <button type="button" className="hud-btn amber" onClick={() => setPage("review")}>
+              {t("en_review")}
+            </button>
+            <button type="button" className="hud-btn" onClick={() => setPage("book")}>
+              {t("from_book")}
+            </button>
+          </div>
         </div>
+      )}
+
+      {(page === "practice" || page === "review" || page === "warehouse") && (
+        <>
+          {page === "warehouse" && (
+            <div className="bridge-actions">
+              {(["due", "inbox", "favorite", "learned"] as Bin[]).map((b) => (
+                <button key={b} type="button" className={`hud-btn ${bin === b ? "amber" : ""}`} onClick={() => setBin(b)}>
+                  {t(`bin_${b}`)}
+                </button>
+              ))}
+            </div>
+          )}
+          {cardUi}
+        </>
+      )}
+
+      {page === "book" && (
+        <div>
+          <p className="muted">
+            {textId != null
+              ? `${t("from_book_pos")}: #${textId} · s${sentenceId}`
+              : t("from_book_need")}
+          </p>
+          <button type="button" className="hud-btn amber" onClick={() => void fromBook()} disabled={textId == null}>
+            {t("from_book")}
+          </button>
+        </div>
+      )}
+
+      {page === "lists" && (
+        <>
+          <div className="bridge-actions">
+            {(["inbox", "favorite", "learned"] as Bin[]).map((b) => (
+              <button key={b} type="button" className={`hud-btn ${bin === b ? "amber" : ""}`} onClick={() => setBin(b)}>
+                {t(`bin_${b}`)}
+              </button>
+            ))}
+          </div>
+          <ul className="mission-list">
+            {words.map((x) => (
+              <li key={x.id}>
+                <strong>{x.word}</strong> <span className="muted">{x.translation}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {page === "log" && (
+        <ul className="mission-list">
+          {log.map((r) => (
+            <li key={r.id}>
+              {r.word} · grade {r.grade} <span className="muted">{r.at}</span>
+            </li>
+          ))}
+          {!log.length && <li className="muted">{t("en_log_empty")}</li>}
+        </ul>
+      )}
+
+      {page === "settings" && (
+        <label className="muted">
+          <input
+            type="checkbox"
+            checked={autoSpeak}
+            onChange={(e) => {
+              setAutoSpeak(e.target.checked);
+              localStorage.setItem("st_en_auto_speak", e.target.checked ? "1" : "0");
+            }}
+          />{" "}
+          {t("en_auto_speak")}
+        </label>
       )}
     </div>
   );

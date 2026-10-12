@@ -1,6 +1,16 @@
 /* PWA shell + offline vocab/locales */
-const CACHE = "st-shell-v3";
-const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
+const CACHE = "st-shell-v4";
+const SHELL = [
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/sounds/click.wav",
+  "/sounds/error.wav",
+  "/sounds/finish.wav",
+  "/sounds/start.wav",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

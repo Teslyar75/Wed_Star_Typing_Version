@@ -1,4 +1,4 @@
-# Star Typing Web — статус (Excellence / Parity)
+# Star Typing Web — статус (Excellence / Parity / Surpass)
 
 Репозиторий: [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)  
 Планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md)
@@ -17,22 +17,22 @@
 | P7 | Радио: приёмник prev/next, шкала избранного, duck при наборе, автозапуск last |
 | P8 | Кают-компания: Snake MVP (Esc пауза / рестарт) |
 | Фазы 0–8 | MVP: набор, читалка, english/vosk, speed, radio, PWA, Caddy |
+| **E1** | English-хаб (подстраницы) + `GET /api/english/log` + streak + from-book с полки |
+| **L1** | Bilinguis list/import + полка с % / продолжить / english / speed |
+| **S1** | Горбов + WPM ramp + текст с полки + график журнала |
+| **A1** | Реальные wav в `public/sounds` + микшер FX + SW prefetch |
+| **R1** | Shortwave-фильтры + server favs + IndexedDB cache + Space/←→/+/- |
+| **P1p** | `GET /api/pilots/dossier` + guest + drag-drop `.stpilot` |
+| **G1** | Tetris + Breakout + `lounge_scores` + touch |
+| **H1** | Help drawer, welcome-тур, Ctrl+K, space profiles frost/light/full |
 
-## Опциональные хвосты
+## API (Surpass)
 
-| Тема | Заметка |
-| --- | --- |
-| P2+ | Bilinguis-каталог |
-| P4+ | Горбов, разгон WPM |
-| P8+ | Tetris / Breakout |
-
-## API (новые маршруты)
-
-- `GET/POST /api/missions/drills*`, `/repair/start`, `/key-errors`
-- `GET/PUT /api/library…`, `GET/POST /api/catalog/gutenberg…`
-- `GET /api/english/warehouse?bin=`, `POST /move`, `/from-book`, `GET /progress`
-- `GET /api/speedread/results?mode=`
-- `POST /api/pilots/me/avatar`, `GET /api/pilots/me/export`
+- `GET /api/english/log`, streak в `/progress`
+- `GET /api/catalog/bilinguis/list`, `POST /api/catalog/bilinguis/import`
+- `GET/PUT /api/radio/favs`
+- `GET /api/pilots/dossier`, `POST /api/pilots/guest`
+- `GET/POST /api/lounge/scores`
 
 ## Проверки
 

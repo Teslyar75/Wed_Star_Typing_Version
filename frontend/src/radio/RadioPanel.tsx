@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { searchStations, type Station } from "./api";
 import { useRadio } from "./radioStore";
+import { cacheStations, loadCachedStations } from "./stationCache";
 
 export default function RadioPanel() {
   const [q, setQ] = useState("ambient");
   const [tag, setTag] = useState("");
   const [country, setCountry] = useState("");
+  const [lang, setLang] = useState("");
   const [stations, setStations] = useState<Station[]>([]);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState<"air" | "favs" | "rx">("air");
@@ -32,6 +34,7 @@ export default function RadioPanel() {
     setDuckOnType,
     setAutoLast,
     tryAutoplayLast,
+    syncFavsFromServer,
   } = useRadio();
 
   useEffect(() => {
@@ -41,22 +44,60 @@ export default function RadioPanel() {
 
   useEffect(() => {
     const tmr = window.setTimeout(() => tryAutoplayLast(), 400);
+    void syncFavsFromServer();
     return () => clearTimeout(tmr);
-  }, [tryAutoplayLast]);
+  }, [tryAutoplayLast, syncFavsFromServer]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (tab !== "rx") return;
+      const tagName = (e.target as HTMLElement)?.tagName;
+      if (tagName === "INPUT" || tagName === "TEXTAREA") return;
+      if (e.key === " ") {
+        e.preventDefault();
+        playing ? pause() : resume();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prevFav();
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        nextFav();
+      }
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        setVolume(Math.min(1, volume + 0.05));
+      }
+      if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        setVolume(Math.max(0, volume - 0.05));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tab, playing, pause, resume, prevFav, nextFav, setVolume, volume]);
 
   const search = async () => {
     setErr("");
+    const cacheKey = `q:${q}|t:${tag}|c:${country}|l:${lang}`;
     try {
       const data = await searchStations({
         name: q || undefined,
         tag: tag || undefined,
         country: country || undefined,
+        language: lang || undefined,
         limit: 12,
       });
       setStations(data);
+      void cacheStations(cacheKey, data);
       if (!data.length) setErr(t("radio_empty"));
     } catch {
-      setErr(t("radio_err_net"));
+      const cached = (await loadCachedStations(cacheKey)) as Station[] | null;
+      if (cached?.length) {
+        setStations(cached);
+        setErr(t("radio_cache"));
+      } else setErr(t("radio_err_net"));
     }
   };
 
@@ -113,6 +154,7 @@ export default function RadioPanel() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("radio_search")} />
           <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder={t("radio_tag")} />
           <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder={t("radio_country")} />
+          <input value={lang} onChange={(e) => setLang(e.target.value)} placeholder="lang" />
           <button type="button" className="hud-btn amber" onClick={() => void search()}>
             {t("radio_find")}
           </button>

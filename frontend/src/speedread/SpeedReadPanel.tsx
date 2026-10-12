@@ -3,8 +3,10 @@ import { msPerWord } from "./timing";
 import { t } from "../i18n";
 import { makeQuiz, type QuizItem } from "./quiz";
 import { buildPyramid } from "./epyr";
+import { gorbovSequence, shuffleGorbovGrid } from "./gorbov";
+import { useReadingPos } from "../reading/positionStore";
 
-type Mode = "rsvp" | "schulte" | "quiz" | "tachi" | "epyr" | "journal";
+type Mode = "rsvp" | "schulte" | "gorbov" | "quiz" | "tachi" | "epyr" | "journal" | "ramp";
 
 type JournalRow = { id: number; mode: string; wpm: number; words: number; elapsed: number; score: number };
 
@@ -15,7 +17,24 @@ function orpIndex(word: string) {
   return 3;
 }
 
+const RAMP_KEY = "st_speed_ramp";
+
+function loadRampPreset() {
+  try {
+    const j = JSON.parse(localStorage.getItem(RAMP_KEY) || "{}");
+    return {
+      start: Number(j.start) || 200,
+      target: Number(j.target) || 500,
+      wordsPerStep: Number(j.wordsPerStep) || 8,
+    };
+  } catch {
+    return { start: 200, target: 500, wordsPerStep: 8 };
+  }
+}
+
 export default function SpeedReadPanel() {
+  const textId = useReadingPos((s) => s.textId);
+  const sentenceId = useReadingPos((s) => s.sentenceId);
   const [text, setText] = useState("Star Typing teaches you to read faster and type with rhythm.");
   const [wpm, setWpm] = useState(300);
   const [i, setI] = useState(0);
@@ -29,13 +48,19 @@ export default function SpeedReadPanel() {
     Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5),
   );
   const [nextNum, setNextNum] = useState(1);
+  const [gorbovN] = useState(5);
+  const [gorbovGrid, setGorbovGrid] = useState(() => shuffleGorbovGrid(5));
+  const [gorbovStep, setGorbovStep] = useState(0);
   const [flash, setFlash] = useState("");
   const [flashOn, setFlashOn] = useState(false);
   const [pyrLevel, setPyrLevel] = useState(0);
   const [journal, setJournal] = useState<JournalRow[]>([]);
   const [filterMode, setFilterMode] = useState("");
+  const [ramp, setRamp] = useState(loadRampPreset);
+  const [liveWpm, setLiveWpm] = useState(200);
   const words = text.split(/\s+/).filter(Boolean);
   const pyramid = buildPyramid(text, 8);
+  const gorbovOrder = gorbovSequence(gorbovN);
   const raf = useRef(0);
   const last = useRef(0);
   const started = useRef(0);
@@ -62,20 +87,48 @@ export default function SpeedReadPanel() {
     setJournal(rows);
   };
 
+  const loadFromShelf = async () => {
+    if (!textId) {
+      setMsg(t("from_book_need"));
+      return;
+    }
+    const r = await fetch(`/api/reader/${textId}/bilingual?offset=${sentenceId}&limit=40`, { credentials: "include" });
+    if (!r.ok) {
+      setMsg(await r.text());
+      return;
+    }
+    const segs = (await r.json()) as { original?: string }[];
+    const body = segs.map((s) => s.original || "").filter(Boolean).join(" ");
+    if (body) {
+      setText(body);
+      setMsg(`${t("from_shelf")} · s${sentenceId}`);
+    }
+  };
+
   useEffect(() => {
-    if (!run || mode !== "rsvp") return;
-    const ms = msPerWord(wpm);
+    if (!run || (mode !== "rsvp" && mode !== "ramp")) return;
+    const effective = mode === "ramp" ? liveWpm : wpm;
+    const ms = msPerWord(effective);
     if (!started.current) started.current = performance.now();
     const loop = (t0: number) => {
       if (t0 - last.current >= ms) {
         last.current = t0;
         setI((x) => {
+          if (mode === "ramp" && x > 0 && x % ramp.wordsPerStep === 0) {
+            setLiveWpm((w) => Math.min(ramp.target, w + Math.max(10, Math.round((ramp.target - ramp.start) / 10))));
+          }
           if (x + 1 >= words.length) {
             setRun(false);
             const elapsed = (performance.now() - started.current) / 1000;
-            void saveResult({ mode: "rsvp", wpm, words: words.length, elapsed, score: wpm });
+            void saveResult({
+              mode: mode === "ramp" ? "ramp" : "rsvp",
+              wpm: effective,
+              words: words.length,
+              elapsed,
+              score: effective,
+            });
             const items = makeQuiz(text, "en");
-            if (items.length) {
+            if (items.length && mode === "rsvp") {
               setQuiz(items);
               setQi(0);
               setScore(0);
@@ -91,9 +144,8 @@ export default function SpeedReadPanel() {
     };
     raf.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf.current);
-  }, [run, wpm, mode, words.length]);
+  }, [run, wpm, liveWpm, mode, words.length, ramp]);
 
-  // Тахистоскоп: вспышка слова на ~80–150 мс
   useEffect(() => {
     if (!run || mode !== "tachi") return;
     let cancelled = false;
@@ -123,7 +175,6 @@ export default function SpeedReadPanel() {
     };
   }, [run, mode, wpm, words]);
 
-  // E-Pyr: пошаговый показ уровней
   useEffect(() => {
     if (!run || mode !== "epyr") return;
     let cancelled = false;
@@ -169,14 +220,38 @@ export default function SpeedReadPanel() {
     setNextNum((x) => x + 1);
   };
 
+  const onGorbov = (cell: { color: "b" | "r"; value: number }) => {
+    const expect = gorbovOrder[gorbovStep];
+    if (!expect || expect.color !== cell.color || expect.value !== cell.value) return;
+    if (gorbovStep === 0) started.current = performance.now();
+    if (gorbovStep + 1 >= gorbovOrder.length) {
+      const elapsed = (performance.now() - started.current) / 1000;
+      void saveResult({ mode: "gorbov", wpm: 0, words: gorbovOrder.length, elapsed, score: elapsed });
+      setGorbovStep(0);
+      setGorbovGrid(shuffleGorbovGrid(gorbovN));
+      started.current = 0;
+      return;
+    }
+    setGorbovStep((x) => x + 1);
+  };
+
   const modes: { id: Mode; label: string }[] = [
     { id: "rsvp", label: t("hyperdrive") },
+    { id: "ramp", label: t("ramp") },
     { id: "tachi", label: t("tachi") },
     { id: "epyr", label: t("epyr") },
     { id: "schulte", label: t("schulte") },
+    { id: "gorbov", label: t("gorbov") },
     { id: "quiz", label: t("quiz") },
     { id: "journal", label: t("journal") },
   ];
+
+  const chartPoints = journal
+    .filter((r) => r.wpm > 0)
+    .slice(0, 20)
+    .reverse()
+    .map((r) => r.wpm);
+  const maxW = Math.max(100, ...chartPoints);
 
   return (
     <div className="speed">
@@ -193,11 +268,18 @@ export default function SpeedReadPanel() {
                 setNextNum(1);
                 setSchulte(Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5));
               }
+              if (m.id === "gorbov") {
+                setGorbovStep(0);
+                setGorbovGrid(shuffleGorbovGrid(gorbovN));
+              }
               if (m.id === "quiz") {
                 const items = makeQuiz(text, "en");
                 setQuiz(items);
                 setQi(0);
                 setScore(0);
+              }
+              if (m.id === "ramp") {
+                setLiveWpm(ramp.start);
               }
             }}
           >
@@ -213,11 +295,25 @@ export default function SpeedReadPanel() {
             <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)}>
               <option value="">{t("all_modes")}</option>
               <option value="rsvp">RSVP</option>
+              <option value="ramp">Ramp</option>
               <option value="tachi">Tachi</option>
               <option value="epyr">E-Pyr</option>
               <option value="schulte">Schulte</option>
+              <option value="gorbov">Gorbov</option>
             </select>
           </div>
+          {chartPoints.length > 1 && (
+            <svg viewBox="0 0 200 60" className="speed-chart" style={{ width: "100%", maxWidth: 360, height: 60 }}>
+              <polyline
+                fill="none"
+                stroke="var(--amber, #f0a030)"
+                strokeWidth="2"
+                points={chartPoints
+                  .map((w, idx) => `${(idx / (chartPoints.length - 1)) * 200},${60 - (w / maxW) * 55}`)
+                  .join(" ")}
+              />
+            </svg>
+          )}
           <table className="honor">
             <thead>
               <tr>
@@ -279,14 +375,58 @@ export default function SpeedReadPanel() {
             ))}
           </div>
         </>
+      ) : mode === "gorbov" ? (
+        <>
+          <p className="muted">
+            {gorbovOrder[gorbovStep]
+              ? `${gorbovOrder[gorbovStep]!.color === "b" ? "●" : "○"} ${gorbovOrder[gorbovStep]!.value}`
+              : "OK"}
+          </p>
+          <div className="schulte gorbov" style={{ gridTemplateColumns: `repeat(${gorbovN}, 1fr)` }}>
+            {gorbovGrid.map((cell, idx) => (
+              <button
+                key={`${cell.color}-${cell.value}-${idx}`}
+                type="button"
+                className="schulte-cell"
+                style={{ color: cell.color === "r" ? "#e05050" : "#e8e8e8", fontWeight: 700 }}
+                onClick={() => onGorbov(cell)}
+              >
+                {cell.value}
+              </button>
+            ))}
+          </div>
+        </>
       ) : (
         <>
           <textarea className="cargo-input" rows={2} value={text} onChange={(e) => setText(e.target.value)} />
           <div className="bridge-actions">
-            <label>
-              WPM{" "}
-              <input type="number" value={wpm} min={100} max={1200} onChange={(e) => setWpm(Number(e.target.value))} />
-            </label>
+            <button type="button" className="hud-btn" onClick={() => void loadFromShelf()}>
+              {t("from_shelf")}
+            </button>
+            {mode === "ramp" ? (
+              <>
+                <label>
+                  {t("ramp")} {ramp.start}→
+                  <input
+                    type="number"
+                    value={ramp.target}
+                    min={150}
+                    max={1200}
+                    onChange={(e) => {
+                      const next = { ...ramp, target: Number(e.target.value) };
+                      setRamp(next);
+                      localStorage.setItem(RAMP_KEY, JSON.stringify(next));
+                    }}
+                  />
+                </label>
+                <span className="muted">{Math.round(liveWpm)} WPM</span>
+              </>
+            ) : (
+              <label>
+                WPM{" "}
+                <input type="number" value={wpm} min={100} max={1200} onChange={(e) => setWpm(Number(e.target.value))} />
+              </label>
+            )}
             <button
               type="button"
               className="hud-btn amber"
@@ -294,6 +434,7 @@ export default function SpeedReadPanel() {
                 setI(0);
                 started.current = 0;
                 setMsg("");
+                if (mode === "ramp") setLiveWpm(ramp.start);
                 setRun(true);
               }}
             >
@@ -303,7 +444,7 @@ export default function SpeedReadPanel() {
               {t("pause")}
             </button>
           </div>
-          {mode === "rsvp" && (
+          {(mode === "rsvp" || mode === "ramp") && (
             <div className="rsvp">
               <span>{word.slice(0, oi)}</span>
               <span className="orp">{word[oi] ?? ""}</span>

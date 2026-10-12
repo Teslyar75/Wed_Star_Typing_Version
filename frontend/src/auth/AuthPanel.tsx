@@ -8,6 +8,18 @@ type Pilot = {
   skin: string;
   xp: number;
   avatar_data?: string;
+  is_guest?: boolean;
+};
+type Dossier = {
+  sessions: number;
+  best_cpm: number;
+  avg_cpm: number;
+  books_on_shelf: number;
+  english_reviews: number;
+  english_cards: number;
+  speed_runs: number;
+  xp: number;
+  is_guest: boolean;
 };
 type Honor = { callsign: string; xp: number; best_cpm: number; sessions: number };
 type Mission = {
@@ -44,6 +56,7 @@ export default function AuthPanel() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [msg, setMsg] = useState("");
   const [recent, setRecent] = useState<string[]>(() => loadRecent());
+  const [dossier, setDossier] = useState<Dossier | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +69,10 @@ export default function AuthPanel() {
     }
     setHonor(await (await fetch("/api/pilots/honor")).json());
     setMissions(await (await fetch("/api/missions", { credentials: "include" })).json());
+    if (m?.id) {
+      const d = await fetch("/api/pilots/dossier", { credentials: "include" });
+      setDossier(d.ok ? await d.json() : null);
+    } else setDossier(null);
   };
 
   useEffect(() => {
@@ -87,7 +104,14 @@ export default function AuthPanel() {
   const logout = async () => {
     await fetch("/api/pilots/logout", { method: "POST", credentials: "include" });
     setMe(null);
+    setDossier(null);
     setMsg(t("logout_ok"));
+  };
+
+  const guest = async () => {
+    const r = await fetch("/api/pilots/guest", { method: "POST", credentials: "include" });
+    setMsg(r.ok ? `${t("guest_mode")} — ${t("guest_warn")}` : await r.text());
+    void refresh();
   };
 
   const claim = async (id: string) => {
@@ -163,6 +187,9 @@ export default function AuthPanel() {
         <button type="button" className="hud-btn amber" onClick={() => void login()}>
           {t("login")}
         </button>
+        <button type="button" className="hud-btn" onClick={() => void guest()}>
+          {t("guest_mode")}
+        </button>
         {me && (
           <button type="button" className="hud-btn" onClick={() => void logout()}>
             {t("logout")}
@@ -221,16 +248,34 @@ export default function AuthPanel() {
       {me && (
         <div className="pilot-dossier">
           {me.avatar_data ? (
-            <img className="pilot-avatar" src={me.avatar_data} alt="" width={64} height={64} />
+            <img className="pilot-avatar" src={me.avatar_data} alt="" width={256} height={256} style={{ maxWidth: 96, height: "auto" }} />
           ) : (
             <div className="pilot-avatar placeholder">★</div>
           )}
           <p>
             {t("pilot_line")}: <strong>{me.callsign}</strong> · XP {me.xp} · {t("skin_label")} {me.skin}
+            {me.is_guest ? ` · ${t("guest_mode")}` : ""}
           </p>
+          {dossier && (
+            <p className="muted">
+              {t("dossier")}: {dossier.sessions} sess · CPM {Math.round(dossier.best_cpm)} · {dossier.books_on_shelf}{" "}
+              books · EN {dossier.english_reviews}/{dossier.english_cards} · speed {dossier.speed_runs}
+            </p>
+          )}
         </div>
       )}
       {msg && <p className="muted">{msg}</p>}
+      <div
+        className="drop-zone muted"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const f = e.dataTransfer.files?.[0];
+          if (f) void importJson(f);
+        }}
+      >
+        .stpilot drag & drop
+      </div>
       <h3>{t("missions")}</h3>
       <ul className="station-list">
         {missions.map((m) => (

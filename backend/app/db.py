@@ -42,6 +42,8 @@ def init_db() -> None:
     from app import api_speedread as _sr  # noqa: F401
     from app import api_missions as _mi  # noqa: F401
     from app import api_library as _lib  # noqa: F401
+    from app import api_radio as _radio  # noqa: F401
+    from app import api_lounge as _lounge  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     _sqlite_ensure_columns()
@@ -57,6 +59,7 @@ def _sqlite_ensure_columns() -> None:
         ("card_progress", "bin", "VARCHAR(32) DEFAULT 'inbox'"),
         ("card_progress", "english_xp", "INTEGER DEFAULT 0"),
         ("pilots", "avatar_data", "TEXT DEFAULT ''"),
+        ("pilots", "is_guest", "BOOLEAN DEFAULT 0"),
     ]
     with engine.begin() as conn:
         for table, col, typedef in alters:

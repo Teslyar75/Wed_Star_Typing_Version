@@ -29,6 +29,7 @@ export async function searchStations(opts: {
   name?: string;
   country?: string;
   tag?: string;
+  language?: string;
   limit?: number;
 }): Promise<Station[]> {
   await pickRadioServer();
@@ -36,6 +37,7 @@ export async function searchStations(opts: {
   if (opts.name) q.set("name", opts.name);
   if (opts.country) q.set("country", opts.country);
   if (opts.tag) q.set("tag", opts.tag);
+  if (opts.language) q.set("language", opts.language);
   q.set("limit", String(opts.limit ?? 12));
   q.set("hidebroken", "true");
   q.set("order", "clickcount");

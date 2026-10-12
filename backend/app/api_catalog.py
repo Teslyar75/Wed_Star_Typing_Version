@@ -13,9 +13,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth_deps import get_optional_pilot
+from app.bilinguis import BilinguisError, download_pair, list_bilingual_pairs
 from app.db import get_db
 from app.pilots import Pilot
-from app.texts_service import import_text
+from app.texts_service import import_bilingual, import_text
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
@@ -43,6 +44,13 @@ class ImportIn(BaseModel):
     gutenberg_id: int
     title: str = ""
     lang: str = "en"
+
+
+class BilinguisImportIn(BaseModel):
+    slug: str
+    lang_a: str = "en"
+    lang_b: str = "ru"
+    title: str = ""
 
 
 def _get_json(url: str) -> dict:
@@ -174,3 +182,46 @@ def import_gutenberg(
             db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
             db.commit()
     return {"text_id": doc.id, "title": doc.title, "chars": len(text)}
+
+
+@router.get("/bilinguis/list")
+def bilinguis_list(lang_a: str = "en", lang_b: str = "ru") -> dict:
+    return list_bilingual_pairs(lang_a=lang_a, lang_b=lang_b)
+
+
+@router.post("/bilinguis/import")
+def bilinguis_import(
+    body: BilinguisImportIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    book = {
+        "slug": body.slug.strip(),
+        "lang_a": body.lang_a,
+        "lang_b": body.lang_b,
+        "title": body.title,
+    }
+    try:
+        text_a, text_b = download_pair(book)
+    except BilinguisError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if len(text_a) > 400_000:
+        text_a = text_a[:400_000]
+    if len(text_b) > 400_000:
+        text_b = text_b[:400_000]
+    title = body.title or f"{body.slug} ({body.lang_a}→{body.lang_b})"
+    doc = import_bilingual(
+        db,
+        title=title,
+        lang_src=body.lang_a,
+        lang_tgt=body.lang_b,
+        original=text_a,
+        translation=text_b,
+    )
+    if pilot is not None:
+        from app.api_library import PilotText
+
+        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
+            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
+            db.commit()
+    return {"text_id": doc.id, "title": doc.title, "chars": len(text_a), "source": "bilinguis"}

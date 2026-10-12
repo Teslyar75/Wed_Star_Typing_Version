@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import Date, Float, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Float, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from app.auth_deps import get_optional_pilot
@@ -50,6 +50,16 @@ class CardProgress(Base):
     due: Mapped[date] = mapped_column(Date, default=date.today)
     bin: Mapped[str] = mapped_column(String(32), default="inbox")  # inbox|favorite|learned
     english_xp: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ReviewLog(Base):
+    __tablename__ = "english_review_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    pilot_id: Mapped[int] = mapped_column(Integer, index=True)
+    word_id: Mapped[int] = mapped_column(Integer)
+    grade: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 ENGLISH_RANKS = [
@@ -316,6 +326,22 @@ def english_progress(
     cards = db.query(CardProgress).filter_by(pilot_id=pid).all()
     xp = sum(c.english_xp for c in cards)
     name, thr, nxt = rank_for_xp(xp)
+    today = date.today()
+    streak = 0
+    for i in range(30):
+        day = today - timedelta(days=i)
+        start = datetime.combine(day, datetime.min.time())
+        end = datetime.combine(day, datetime.max.time())
+        n = (
+            db.query(ReviewLog)
+            .filter(ReviewLog.pilot_id == pid, ReviewLog.created_at >= start, ReviewLog.created_at <= end)
+            .count()
+        )
+        if n == 0:
+            if i == 0:
+                continue
+            break
+        streak += 1
     return {
         "xp": xp,
         "rank": name,
@@ -325,7 +351,37 @@ def english_progress(
         "learned": sum(1 for c in cards if c.bin == "learned"),
         "inbox": sum(1 for c in cards if c.bin == "inbox"),
         "due": sum(1 for c in cards if c.bin != "learned" and c.due <= date.today()),
+        "streak_days": streak,
     }
+
+
+@router.get("/log")
+def english_log(
+    limit: int = 40,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> list[dict]:
+    pid = pilot.id if pilot else 0
+    rows = (
+        db.query(ReviewLog)
+        .filter_by(pilot_id=pid)
+        .order_by(ReviewLog.id.desc())
+        .limit(max(1, min(limit, 100)))
+        .all()
+    )
+    out = []
+    for r in rows:
+        w = db.get(VocabWord, r.word_id)
+        out.append(
+            {
+                "id": r.id,
+                "word_id": r.word_id,
+                "word": w.word if w else "?",
+                "grade": r.grade,
+                "at": r.created_at.isoformat() if r.created_at else None,
+            }
+        )
+    return out
 
 
 @router.post("/review")
@@ -350,6 +406,7 @@ def review(
     card.english_xp = (card.english_xp or 0) + gain
     if body.grade >= 4 and card.reps >= 3:
         card.bin = "learned"
+    db.add(ReviewLog(pilot_id=pid, word_id=body.word_id, grade=body.grade))
     if pilot is not None:
         pilot.xp += 2 if body.grade >= 3 else 1
     db.commit()

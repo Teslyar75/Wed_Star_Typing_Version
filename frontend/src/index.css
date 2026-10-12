@@ -698,3 +698,68 @@ code {
     animation: none;
   }
 }
+
+.help-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(360px, 92vw);
+  height: 100%;
+  z-index: 40;
+  background: color-mix(in srgb, var(--st-panel, #121a22) 92%, transparent);
+  border-left: 1px solid var(--st-line);
+  padding: 1rem;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+}
+
+.cmd-palette {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, 92vw);
+  z-index: 50;
+  background: var(--st-panel, #121a22);
+  border: 1px solid var(--st-line);
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.cmd-palette input {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.cmd-palette ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.cmd-palette li {
+  margin: 0.25rem 0;
+}
+
+.drop-zone {
+  border: 1px dashed var(--st-line);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.shell-fx {
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.lounge-canvas {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--st-line);
+  border-radius: 4px;
+  touch-action: none;
+}

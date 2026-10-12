@@ -279,7 +279,7 @@ P1 Миссии+ремонт+heatmap
 
 **Критерий:** одна вкладка «Кают-компания», одна игра (Snake) MVP → Tetris → Breakout; очки в `pilot` XP опционально.
 
-**Сделано:** вкладка Lounge + Snake (Esc пауза/рестарт, WASD, рекорд). Tetris/Breakout — опционально позже.
+**Сделано:** вкладка Lounge + Snake (Esc пауза/рестарт, WASD, рекорд). **Surpass G1:** Tetris + Breakout + `lounge_scores` + touch.
 
 **Commit:** `feat(lounge): snake mvp` (и далее)
 
@@ -332,3 +332,22 @@ P1 Миссии+ремонт+heatmap
 2. **Inline** — делать эпик в этом чате по `executing-plans`, чекпоинты после каждого Task.
 
 Напиши **«делай P1»** (или номер эпика) / **«subagent P1»** — начну с миссий.
+
+---
+
+## Surpass Desktop (E1→H1) ✅
+
+Веб не только догнал «дыры», а выиграл за счёт sync / аналитики / PWA:
+
+| Эпик | Web-win |
+|---|---|
+| E1 English hub | `/api/english/log` + streak между устройствами |
+| L1 Bilinguis shelf | прогресс % + продолжить + импорт пар → Gale–Church |
+| S1 Speed depth | Горбов + ramp + график журнала + книга с `sentence_id` |
+| A1 Samples | реальные wav + FX mixer + SW prefetch |
+| R1 Radio | server favs + IndexedDB + клавиши приёмника |
+| P1p Pilots | dossier 7d + guest + drag-drop |
+| G1 Lounge | Tetris/Breakout + server scores |
+| H1 Shell | HelpDrawer, Ctrl+K, welcome-тур, space profiles |
+
+См. [STATUS.md](./STATUS.md).

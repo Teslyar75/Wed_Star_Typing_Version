@@ -54,6 +54,7 @@ type RadioState = {
   setNowPlaying: (title: string | null) => void;
   pushHistory: (title: string) => void;
   tryAutoplayLast: () => void;
+  syncFavsFromServer: () => Promise<void>;
 };
 
 let icyTimer: ReturnType<typeof setInterval> | null = null;
@@ -218,6 +219,22 @@ export const useRadio = create<RadioState>((set, get) => ({
       : [...cur, s];
     localStorage.setItem(FAV_KEY, JSON.stringify(next));
     set({ favs: next });
+    void fetch("/api/radio/favs", {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        next.map((x) => ({
+          stationuuid: x.stationuuid || "",
+          name: x.name,
+          url_resolved: x.url_resolved,
+          country: x.country || "",
+          favicon: x.favicon || "",
+          tags: x.tags || "",
+          language: x.language || "",
+        })),
+      ),
+    }).catch(() => undefined);
   },
 
   isFav: (s) => {
@@ -255,5 +272,18 @@ export const useRadio = create<RadioState>((set, get) => ({
     if (!last || get().playing) return;
     if (!get().audio) return;
     get().play(last);
+  },
+
+  syncFavsFromServer: async () => {
+    try {
+      const r = await fetch("/api/radio/favs", { credentials: "include" });
+      if (!r.ok) return;
+      const remote = (await r.json()) as Station[];
+      if (!Array.isArray(remote) || !remote.length) return;
+      localStorage.setItem(FAV_KEY, JSON.stringify(remote));
+      set({ favs: remote });
+    } catch {
+      /* offline */
+    }
   },
 }));
