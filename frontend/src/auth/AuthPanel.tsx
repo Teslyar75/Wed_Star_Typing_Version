@@ -78,7 +78,7 @@ export default function AuthPanel() {
         </p>
       )}
       {msg && <p className="muted">{msg}</p>}
-      <h3>Миссии</h3>
+      <h3>{t("missions")}</h3>
       <ul className="station-list">
         {missions.map((m) => (
           <li key={m.id}>
@@ -95,10 +95,10 @@ export default function AuthPanel() {
       <table className="honor">
         <thead>
           <tr>
-            <th>Пилот</th>
+            <th>{t("pilot")}</th>
             <th>XP</th>
             <th>CPM</th>
-            <th>Сессии</th>
+            <th>{t("sessions")}</th>
           </tr>
         </thead>
         <tbody>

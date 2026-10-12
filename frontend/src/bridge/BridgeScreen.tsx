@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DONE, ERROR, TypingEngine } from "../typing/engine";
 import { FINGER_COLORS, keyForChar, ROWS } from "../typing/layouts";
+import { t, onLangChange } from "../i18n";
 
 type Segment = { idx: number; original: string; translation: string; status: string };
 
@@ -14,19 +15,22 @@ export default function BridgeScreen() {
   const [engine, setEngine] = useState(() => new TypingEngine(draft));
   const [tick, setTick] = useState(0);
   const [flash, setFlash] = useState(false);
-  const [status, setStatus] = useState("К ЗАПУСКУ ГОТОВ");
+  const [status, setStatus] = useState(() => t("ready"));
+  const [, bumpLang] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const now = () => performance.now() / 1000;
 
-  const reloadEngine = useCallback((t: string) => {
-    setEngine(new TypingEngine(t));
-    setStatus("К ЗАПУСКУ ГОТОВ");
+  const reloadEngine = useCallback((text: string) => {
+    setEngine(new TypingEngine(text));
+    setStatus(t("ready"));
     setTick((x) => x + 1);
   }, []);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, [engine]);
+
+  useEffect(() => onLangChange(() => bumpLang((x) => x + 1)), []);
 
   const loadPractice = async () => {
     const content = draft.trim() || "hello world";
@@ -69,7 +73,7 @@ export default function BridgeScreen() {
       e.preventDefault();
       if (engine.paused) engine.resume();
       else engine.pause(now());
-      setStatus(engine.paused ? "❚❚ ПАУЗА" : "● В ПОЛЁТЕ");
+      setStatus(engine.paused ? t("pause") : t("flying"));
       setTick((x) => x + 1);
       return;
     }
@@ -83,7 +87,7 @@ export default function BridgeScreen() {
       setFlash(true);
       setTimeout(() => setFlash(false), 120);
     } else {
-      setStatus(res === DONE ? "ФИНИШ" : "● В ПОЛЁТЕ");
+      setStatus(res === DONE ? t("finish") : t("flying"));
     }
     setTick((x) => x + 1);
     if (res === DONE) void saveSession(engine);
@@ -117,7 +121,7 @@ export default function BridgeScreen() {
           rows={3}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Вставьте текст для набора…"
+          placeholder={t("paste_text")}
         />
         <div className="bridge-actions">
           <select value={lang} onChange={(e) => setLang(e.target.value)}>
@@ -125,12 +129,14 @@ export default function BridgeScreen() {
             <option value="ru">RU</option>
           </select>
           <button type="button" className="hud-btn" onClick={() => void loadPractice()}>
-            На борт
+            {t("board")}
           </button>
           <button type="button" className="hud-btn amber" onClick={() => reloadEngine(draft.includes("… (+") ? engine.text : draft)}>
-            Заново
+            {t("again")}
           </button>
-          <span className="muted">{stats.len} симв.</span>
+          <span className="muted">
+            {stats.len} {t("chars")}
+          </span>
         </div>
       </div>
 
@@ -152,12 +158,12 @@ export default function BridgeScreen() {
       </div>
 
       <div className="telemetry">
-        <div><span className="lab">статус</span> {status}</div>
+        <div><span className="lab">{t("status")}</span> {status}</div>
         <div><span className="lab">CPM</span> {stats.cpm} <span className="muted">мгн {stats.inst}</span></div>
-        <div><span className="lab">точн.</span> {stats.acc}%</div>
-        <div><span className="lab">ошибки</span> {stats.err}</div>
-        <div><span className="lab">время</span> {stats.el}с</div>
-        <div><span className="lab">прогресс</span> {Math.round(engine.progress * 100)}%</div>
+        <div><span className="lab">{t("accuracy")}</span> {stats.acc}%</div>
+        <div><span className="lab">{t("errors")}</span> {stats.err}</div>
+        <div><span className="lab">{t("time")}</span> {stats.el}с</div>
+        <div><span className="lab">{t("progress")}</span> {Math.round(engine.progress * 100)}%</div>
       </div>
 
       <div className="keyboard" aria-hidden>
@@ -181,7 +187,7 @@ export default function BridgeScreen() {
           </div>
         ))}
       </div>
-      <p className="hint">Esc — пауза · клик по иллюминатору — фокус · после финиша сессия уходит на сервер</p>
+      <p className="hint">{t("hint_bridge")}</p>
     </section>
   );
 }

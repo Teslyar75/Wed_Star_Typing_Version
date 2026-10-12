@@ -18,7 +18,7 @@ test("вход → набор → доска почёта", async ({ page }) => 
   await page.getByRole("button", { name: /Заново|Restart|Neu|Знову/ }).click();
   await page.getByLabel("typing").focus();
   await page.keyboard.type("hi");
-  await expect(page.locator(".telemetry")).toContainText("ФИНИШ", { timeout: 15_000 });
+  await expect(page.locator(".telemetry")).toContainText(/ФИНИШ|FINISH|ФІНІШ|ZIEL/, { timeout: 15_000 });
 
   await page.getByRole("button", { name: /Экипаж|Crew|Екіпаж/ }).click();
   await expect(page.getByRole("heading", { name: /Доска|Honor|пошани|Ehren/ })).toBeVisible();

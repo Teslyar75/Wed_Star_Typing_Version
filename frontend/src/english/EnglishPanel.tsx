@@ -78,13 +78,13 @@ export default function EnglishPanel() {
         )}
         <div className="bridge-actions" style={{ justifyContent: "center" }}>
           <button type="button" className="hud-btn" onClick={speak}>
-            🔊 Голос
+            🔊 {t("voice")}
           </button>
           <button type="button" className="hud-btn" onClick={() => void listen()}>
-            🎤 Микрофон
+            🎤 {t("mic")}
           </button>
           <button type="button" className="hud-btn amber" onClick={() => setShow(true)}>
-            Показать
+            {t("show")}
           </button>
         </div>
         {heard && <p className="muted">Услышано: {heard}</p>}

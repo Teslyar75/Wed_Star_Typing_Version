@@ -16,6 +16,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("bridge");
   const [health, setHealth] = useState(false);
   const [lang, setLangState] = useState(getLang());
+  const [, bump] = useState(0);
 
   useEffect(() => {
     applyTheme(spaceship);
@@ -23,12 +24,16 @@ export default function App() {
       .then((r) => r.json())
       .then((j) => setHealth(!!j.ok))
       .catch(() => setHealth(false));
-    return onLangChange(() => setLangState(getLang()));
+    return onLangChange(() => {
+      setLangState(getLang());
+      bump((x) => x + 1);
+    });
   }, []);
 
   const switchLang = (code: string) => {
     setLang(code);
     setLangState(code);
+    bump((x) => x + 1);
   };
 
   const tabs: { id: Tab; label: string }[] = [
@@ -42,13 +47,13 @@ export default function App() {
 
   return (
     <div className="cockpit">
-      <div className="space-bg" aria-hidden>
-        <SpaceCanvas />
+      <div className="space-bg space-bg-full" aria-hidden>
+        <SpaceCanvas profile="light" fullBleed className="space-canvas full" />
       </div>
       <header className="hud-bar">
         <span className="logo">★</span>
         <h1>Star Typing Web</h1>
-        <span className={`badge ${health ? "ok" : ""}`}>{health ? "API ok" : "…"}</span>
+        <span className={`badge ${health ? "ok" : ""}`}>{health ? t("api_ok") : "…"}</span>
         <select className="lang-select" value={lang} onChange={(e) => switchLang(e.target.value)}>
           <option value="ru">RU</option>
           <option value="en">EN</option>

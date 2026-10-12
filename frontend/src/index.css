@@ -16,8 +16,14 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
   min-height: 100vh;
   font-family: var(--st-font-ui);
   color: var(--st-text);
@@ -27,6 +33,7 @@ body {
 .cockpit {
   position: relative;
   max-width: 960px;
+  width: 100%;
   margin: 0 auto;
   padding: 1.25rem 1rem 2.5rem;
 }
@@ -38,6 +45,21 @@ body {
   z-index: 0;
   pointer-events: none;
   opacity: 0.55;
+}
+
+.space-bg-full {
+  inset: 0;
+  height: auto;
+  opacity: 0.35;
+}
+
+.space-canvas.full {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: none;
+  border-radius: 0;
+  margin: 0;
 }
 
 .cockpit > *:not(.space-bg) {
@@ -267,6 +289,8 @@ code {
   flex-direction: column;
   gap: 0.25rem;
   margin-top: 0.5rem;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .kb-row {

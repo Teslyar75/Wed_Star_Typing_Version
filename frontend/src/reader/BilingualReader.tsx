@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
+import { t } from "../i18n";
 
 type Row = { idx: number; original: string; translation: string; status: string; sentence_id: number };
 
@@ -64,13 +65,13 @@ export default function BilingualReader() {
           onChange={(e) => setTextId(e.target.value ? Number(e.target.value) : "")}
         />
         <button type="button" className="hud-btn" onClick={() => void load()}>
-          Загрузить
+          {t("load")}
         </button>
         <button type="button" className={`hud-btn ${mode === "bi" ? "amber" : ""}`} onClick={() => setMode("bi")}>
-          2 языка
+          {t("reader")}
         </button>
         <button type="button" className={`hud-btn ${mode === "screen" ? "amber" : ""}`} onClick={() => setMode("screen")}>
-          Экран
+          {t("screen")}
         </button>
       </div>
       {status && <p className="muted">{status}</p>}

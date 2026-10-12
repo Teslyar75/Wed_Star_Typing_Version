@@ -10,7 +10,8 @@
     "test": "vitest run --dir src",
     "test:e2e": "playwright test",
     "lint": "eslint src --ext ts,tsx",
-    "fetch:vosk": "node scripts/fetch-vosk-model.mjs"
+    "fetch:vosk": "node scripts/fetch-vosk-model.mjs",
+    "lighthouse:pwa": "npm run build && node scripts/lighthouse-pwa.mjs"
   },
   "dependencies": {
     "i18next": "^26.4.3",
@@ -27,11 +28,13 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "chrome-launcher": "^1.2.2",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
+    "lighthouse": "^11.7.1",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.18.0",
     "vite": "^6.0.0",

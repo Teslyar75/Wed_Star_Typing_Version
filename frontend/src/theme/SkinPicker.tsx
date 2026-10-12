@@ -7,6 +7,7 @@ import scriptorium from "../../../packages/themes/scriptorium.json";
 import neonCity from "../../../packages/themes/neon_city.json";
 import zenGarden from "../../../packages/themes/zen_garden.json";
 import RadioPanel from "../radio/RadioPanel";
+import { t } from "../i18n";
 
 const SKINS = [spaceship, bathyscaphe, steampunk, scriptorium, neonCity, zenGarden] as SkinTheme[];
 
@@ -35,7 +36,7 @@ export default function SkinPicker() {
           </button>
         ))}
       </div>
-      <h3>Звук / радио</h3>
+      <h3>{t("sound_radio")}</h3>
       <div className="bridge-actions">
         <button
           type="button"
@@ -52,7 +53,7 @@ export default function SkinPicker() {
             o.stop(ctx.currentTime + 0.05);
           }}
         >
-          Тест щелчка
+          {t("click_test")}
         </button>
       </div>
       <RadioPanel />

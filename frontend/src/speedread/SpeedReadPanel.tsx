@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { msPerWord } from "./timing";
+import { t } from "../i18n";
 
 function orpIndex(word: string) {
   if (word.length <= 1) return 0;
@@ -37,7 +38,7 @@ export default function SpeedReadPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (r.ok) setMsg("Результат сохранён");
+    if (r.ok) setMsg(t("result_saved"));
   };
 
   useEffect(() => {
@@ -85,7 +86,7 @@ export default function SpeedReadPanel() {
     <div className="speed">
       <div className="bridge-actions">
         <button type="button" className={`hud-btn ${mode === "rsvp" ? "amber" : ""}`} onClick={() => setMode("rsvp")}>
-          Гипердрайв
+          {t("hyperdrive")}
         </button>
         <button
           type="button"
@@ -96,7 +97,7 @@ export default function SpeedReadPanel() {
             setSchulte(Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5));
           }}
         >
-          Шульте 5×5
+          {t("schulte")}
         </button>
       </div>
       {msg && <p className="muted">{msg}</p>}
@@ -118,10 +119,10 @@ export default function SpeedReadPanel() {
                 setRun(true);
               }}
             >
-              ▶ Старт
+              {t("start")}
             </button>
             <button type="button" className="hud-btn" onClick={() => setRun(false)}>
-              Пауза
+              {t("pause")}
             </button>
           </div>
           <div className="rsvp">
@@ -132,7 +133,9 @@ export default function SpeedReadPanel() {
         </>
       ) : (
         <>
-          <p className="muted">Следующее число: {nextNum}</p>
+          <p className="muted">
+            {t("next_num")}: {nextNum}
+          </p>
           <div className="schulte">
             {schulte.map((n) => (
               <button key={n} type="button" className="schulte-cell" onClick={() => onSchulte(n)}>
