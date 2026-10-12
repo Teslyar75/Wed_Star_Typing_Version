@@ -1,4 +1,4 @@
-"""Точка входа FastAPI. Фаза 1: тексты / сегменты (docs/web/WEB_PLAN.md)."""
+"""Star Typing Web API."""
 
 from __future__ import annotations
 
@@ -8,6 +8,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api_english import router as english_router
+from app.api_migrate import router as migrate_router
+from app.api_pilots import router as pilots_router
+from app.api_reader import router as reader_router
+from app.api_sessions import router as sessions_router
 from app.api_texts import router as texts_router
 from app.config import settings
 from app.db import init_db
@@ -23,7 +28,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Star Typing Web", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Star Typing Web", version="0.8.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,6 +39,11 @@ app.add_middleware(
 )
 
 app.include_router(texts_router)
+app.include_router(sessions_router)
+app.include_router(pilots_router)
+app.include_router(reader_router)
+app.include_router(english_router)
+app.include_router(migrate_router)
 
 
 @app.get("/api/health")

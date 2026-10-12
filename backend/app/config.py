@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "sqlite:///./star_typing_web.db"
+    secret_key: str = "dev-star-typing-change-me-32bytes!!"
     stamina_repo_root: Path | None = None
 
     def repo_root(self) -> Path:

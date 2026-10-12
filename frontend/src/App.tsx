@@ -1,52 +1,75 @@
 import { useEffect, useState } from "react";
+import BridgeScreen from "./bridge/BridgeScreen";
+import BilingualReader from "./reader/BilingualReader";
+import EnglishPanel from "./english/EnglishPanel";
+import SpeedReadPanel from "./speedread/SpeedReadPanel";
+import AuthPanel from "./auth/AuthPanel";
+import SkinPicker from "./theme/SkinPicker";
+import { applyTheme } from "./theme/applyTheme";
+import { t, setLang, getLang } from "./i18n";
+import spaceship from "../../packages/themes/spaceship.json";
 
-type Health = { ok: boolean };
-type Meta = { app: string; desktop_version: string };
+type Tab = "bridge" | "reader" | "english" | "speed" | "auth" | "skins";
 
 export default function App() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [meta, setMeta] = useState<Meta | null>(null);
+  const [tab, setTab] = useState<Tab>("bridge");
+  const [health, setHealth] = useState(false);
+  const [lang, setLangState] = useState(getLang());
 
   useEffect(() => {
+    applyTheme(spaceship);
     fetch("/api/health")
       .then((r) => r.json())
-      .then(setHealth)
-      .catch(() => setHealth(null));
-    fetch("/api/meta")
-      .then((r) => r.json())
-      .then(setMeta)
-      .catch(() => setMeta(null));
+      .then((j) => setHealth(!!j.ok))
+      .catch(() => setHealth(false));
   }, []);
+
+  const switchLang = (code: string) => {
+    setLang(code);
+    setLangState(code);
+  };
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "bridge", label: t("bridge") },
+    { id: "reader", label: t("reader") },
+    { id: "english", label: t("english") },
+    { id: "speed", label: t("speed") },
+    { id: "auth", label: t("crew") },
+    { id: "skins", label: t("skins") },
+  ];
 
   return (
     <div className="cockpit">
       <header className="hud-bar">
         <span className="logo">★</span>
         <h1>Star Typing Web</h1>
-        <span className="badge">фаза 0</span>
+        <span className={`badge ${health ? "ok" : ""}`}>{health ? "API ok" : "…"}</span>
+        <select className="lang-select" value={lang} onChange={(e) => switchLang(e.target.value)}>
+          <option value="ru">RU</option>
+          <option value="en">EN</option>
+          <option value="uk">UK</option>
+          <option value="de">DE</option>
+        </select>
       </header>
-      <main className="panel">
-        <p className="lead">
-          Браузерный пульт Star Typing. Каркас готов — дальше по{" "}
-          <code>docs/web/WEB_PLAN.md</code> (промпты 2…9).
-        </p>
-        <ul className="status-list">
-          <li>
-            API <code>/api/health</code>:{" "}
-            {health?.ok ? <strong className="ok">ok</strong> : "…"}
-          </li>
-          <li>
-            Десктоп:{" "}
-            {meta ? (
-              <>
-                {meta.app} {meta.desktop_version}
-              </>
-            ) : (
-              "бэкенд не запущен"
-            )}
-          </li>
-          <li>Скин: тема «Звездолёт» через CSS-переменные из <code>packages/themes/</code></li>
-        </ul>
+      <nav className="tabs">
+        {tabs.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            className={`tab ${tab === x.id ? "on" : ""}`}
+            onClick={() => setTab(x.id)}
+          >
+            {x.label}
+          </button>
+        ))}
+      </nav>
+      <main className="panel wide">
+        {tab === "bridge" && <BridgeScreen />}
+        {tab === "reader" && <BilingualReader />}
+        {tab === "english" && <EnglishPanel />}
+        {tab === "speed" && <SpeedReadPanel />}
+        {tab === "auth" && <AuthPanel />}
+        {tab === "skins" && <SkinPicker />}
       </main>
     </div>
   );

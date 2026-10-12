@@ -2,6 +2,7 @@
 
 export type SkinTheme = {
   id: string;
+  name?: Record<string, string> | string;
   colors: Record<string, string>;
   fonts?: { ui?: string[]; title?: string[]; typing?: string[] };
 };

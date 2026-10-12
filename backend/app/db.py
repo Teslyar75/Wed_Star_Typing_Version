@@ -35,5 +35,9 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     from app import models  # noqa: F401
+    from app import pilots as _pilots  # noqa: F401
+    from app import sessions as _sessions  # noqa: F401
+    from app import translate_cache as _tr  # noqa: F401
+    from app import api_english as _en  # noqa: F401
 
     Base.metadata.create_all(bind=engine)

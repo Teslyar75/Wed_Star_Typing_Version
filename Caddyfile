@@ -1,0 +1,12 @@
+# Деплой-заготовка (фаза 8): HTTPS через Caddy
+:443 {
+	encode gzip
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+	}
+}
