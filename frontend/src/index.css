@@ -27,7 +27,12 @@ body {
   min-height: 100vh;
   font-family: var(--st-font-ui);
   color: var(--st-text);
-  background: radial-gradient(ellipse at 50% 0%, #0a1628 0%, var(--st-bg) 55%);
+  /* только токены темы — без жёсткого #0a1628, иначе после других скинов «плывёт» */
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    color-mix(in srgb, var(--st-cyan) 14%, var(--st-bg)) 0%,
+    var(--st-bg) 55%
+  );
 }
 
 .cockpit {

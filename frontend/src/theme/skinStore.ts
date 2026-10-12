@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { applyTheme, type SkinTheme } from "./applyTheme";
-import { setSkinSounds } from "../fx/sounds";
+import { applyTheme, clearSkinArtifacts, type SkinTheme } from "./applyTheme";
+import { clearSkinAudio, setSkinSounds } from "../fx/sounds";
 import spaceship from "../../../packages/themes/spaceship.json";
 import bathyscaphe from "../../../packages/themes/bathyscaphe.json";
 import steampunk from "../../../packages/themes/steampunk.json";
@@ -18,33 +18,46 @@ function byId(id: string): SkinTheme {
 
 type SkinState = {
   skin: SkinTheme;
+  /** Счётчик смены — remount фона/оболочки без артефактов. */
+  gen: number;
   setSkin: (id: string) => void;
 };
 
-function applySkin(skin: SkinTheme) {
+/**
+ * Единая точка смены скина: полный сброс артефактов → чистая тема → звуки → persist.
+ */
+function switchSkinHard(skin: SkinTheme) {
+  clearSkinArtifacts();
+  clearSkinAudio();
   applyTheme(skin);
-  setSkinSounds(skin.sounds || null);
-  if (typeof localStorage !== "undefined") localStorage.setItem(KEY, skin.id);
-  if (typeof document !== "undefined") {
-    document.documentElement.dataset.skin = skin.id;
-    document.documentElement.dataset.bgEngine = skin.background?.engine || "living_space";
+  // пока альтернативные скины сырые — FX-банк как у Звездолёта (без чужих сэмплов)
+  const sounds =
+    skin.id === "spaceship" ? skin.sounds || null : (spaceship as SkinTheme).sounds || null;
+  setSkinSounds(sounds);
+  try {
+    localStorage.setItem(KEY, skin.id);
+  } catch {
+    /* ignore */
   }
 }
 
-const initial = byId(
-  typeof localStorage !== "undefined" ? localStorage.getItem(KEY) || "spaceship" : "spaceship",
-);
-
 export const useSkin = create<SkinState>((set) => ({
-  skin: initial,
+  skin: spaceship as SkinTheme,
+  gen: 0,
   setSkin: (id) => {
     const skin = byId(id);
-    applySkin(skin);
-    set({ skin });
+    switchSkinHard(skin);
+    set((s) => ({ skin, gen: s.gen + 1 }));
   },
 }));
 
-/** Вызвать один раз при старте App. */
-export function bootSkin() {
-  applySkin(useSkin.getState().skin);
+/** Старт кабины. preferBase=true — всегда «Звездолёт». */
+export function bootSkin(opts?: { preferBase?: boolean }) {
+  const id = opts?.preferBase ? "spaceship" : useSkin.getState().skin.id;
+  try {
+    if (opts?.preferBase) localStorage.setItem(KEY, "spaceship");
+  } catch {
+    /* ignore */
+  }
+  useSkin.getState().setSkin(id);
 }

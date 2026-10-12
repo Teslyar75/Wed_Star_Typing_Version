@@ -65,11 +65,17 @@ export function getFxBank() {
   return bank;
 }
 
-/** Пути из theme.sounds (абсолютные URL вроде /sounds/skins/…). */
-export function setSkinSounds(s: SkinSounds | null) {
-  skinSounds = s;
+/** Полный сброс аудио-кэша скина (буферы + пути). */
+export function clearSkinAudio() {
+  skinSounds = null;
   buffers.clear();
   tried.clear();
+}
+
+/** Пути из theme.sounds (абсолютные URL вроде /sounds/skins/…). */
+export function setSkinSounds(s: SkinSounds | null) {
+  clearSkinAudio();
+  skinSounds = s;
 }
 
 export function applyQuietMode() {
