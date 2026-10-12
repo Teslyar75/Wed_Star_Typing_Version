@@ -18,6 +18,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("bridge");
   const [health, setHealth] = useState(false);
   const [lang, setLangState] = useState(getLang());
+  const [showOnboard, setShowOnboard] = useState(() => localStorage.getItem("st_onboard") !== "1");
   const [, bump] = useState(0);
 
   useEffect(() => {
@@ -31,6 +32,11 @@ export default function App() {
       bump((x) => x + 1);
     });
   }, []);
+
+  const dismissOnboard = () => {
+    localStorage.setItem("st_onboard", "1");
+    setShowOnboard(false);
+  };
 
   const switchLang = (code: string) => {
     setLang(code);
@@ -78,6 +84,27 @@ export default function App() {
         ))}
       </nav>
       <main className="panel wide">
+        {showOnboard && (
+          <div className="onboard" role="status">
+            <div>
+              <strong>{t("onboard_title")}</strong>
+              <p className="muted">{t("onboard_body")}</p>
+            </div>
+            <button
+              type="button"
+              className="hud-btn amber"
+              onClick={() => {
+                dismissOnboard();
+                setTab("auth");
+              }}
+            >
+              {t("onboard_go")}
+            </button>
+            <button type="button" className="hud-btn" onClick={dismissOnboard}>
+              {t("onboard_skip")}
+            </button>
+          </div>
+        )}
         {tab === "bridge" && <BridgeScreen />}
         {tab === "reader" && <BilingualReader />}
         {tab === "english" && <EnglishPanel />}

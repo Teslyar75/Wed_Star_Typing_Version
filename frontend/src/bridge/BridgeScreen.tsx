@@ -4,6 +4,8 @@ import { FINGER_COLORS, keyForChar, ROWS } from "../typing/layouts";
 import { t, onLangChange } from "../i18n";
 import { useReadingPos } from "../reading/positionStore";
 import { playClick, playError, playFinish } from "../fx/sounds";
+import MissionRail, { type Drill } from "./MissionRail";
+import Heatmap, { type KeyRate } from "./Heatmap";
 
 type Segment = { idx: number; original: string; translation: string; status: string; char_start?: number };
 
@@ -21,8 +23,13 @@ export default function BridgeScreen() {
   const [flash, setFlash] = useState(false);
   const [status, setStatus] = useState(() => t("ready"));
   const [segStarts, setSegStarts] = useState<number[]>([]);
+  const [drills, setDrills] = useState<Drill[]>([]);
+  const [activeDrill, setActiveDrill] = useState<string | null>(null);
+  const [lastStars, setLastStars] = useState<number | null>(null);
+  const [keyRates, setKeyRates] = useState<KeyRate[]>([]);
   const [, bumpLang] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const activeDrillRef = useRef<string | null>(null);
   const now = () => performance.now() / 1000;
 
   const reloadEngine = useCallback((text: string) => {
@@ -31,11 +38,34 @@ export default function BridgeScreen() {
     setTick((x) => x + 1);
   }, []);
 
+  const refreshDrills = useCallback(async () => {
+    const list = await (await fetch(`/api/missions/drills?lang=${lang}`, { credentials: "include" })).json();
+    setDrills(list);
+  }, [lang]);
+
+  const refreshHeatmap = useCallback(async () => {
+    const r = await fetch("/api/missions/key-errors", { credentials: "include" });
+    if (!r.ok) {
+      setKeyRates([]);
+      return;
+    }
+    setKeyRates(await r.json());
+  }, []);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, [engine]);
 
   useEffect(() => onLangChange(() => bumpLang((x) => x + 1)), []);
+
+  useEffect(() => {
+    void refreshDrills();
+    void refreshHeatmap();
+  }, [refreshDrills, refreshHeatmap]);
+
+  useEffect(() => {
+    activeDrillRef.current = activeDrill;
+  }, [activeDrill]);
 
   const loadPractice = async () => {
     const content = draft.trim() || "hello world";
@@ -59,13 +89,41 @@ export default function BridgeScreen() {
     setSegStarts(starts);
     jump(doc.id, segs[0]?.idx ?? 0);
     const joined = parts.join(" ");
-    // длинный текст не дублируем в textarea — только в engine
     if (joined.length > 4000) {
       setDraft(joined.slice(0, 400) + `… (+${joined.length - 400} симв.)`);
     } else {
       setDraft(joined);
     }
+    setActiveDrill(null);
     reloadEngine(joined);
+  };
+
+  const startDrill = async (id: string) => {
+    const r = await fetch(`/api/missions/drills/${id}/start`, { method: "POST", credentials: "include" });
+    if (!r.ok) return;
+    const j = await r.json();
+    setActiveDrill(id);
+    setLastStars(null);
+    setDraft(j.text);
+    setSegStarts([]);
+    setTextId(null);
+    reloadEngine(j.text);
+    inputRef.current?.focus();
+  };
+
+  const startRepair = async () => {
+    const r = await fetch("/api/missions/repair/start", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lang }),
+    });
+    if (!r.ok) return;
+    const j = await r.json();
+    setActiveDrill("repair");
+    setDraft(j.text);
+    reloadEngine(j.text);
+    inputRef.current?.focus();
   };
 
   const sentenceAt = (charIndex: number) => {
@@ -82,6 +140,8 @@ export default function BridgeScreen() {
 
   const saveSession = async (eng: TypingEngine) => {
     const seg = eng.segment(now());
+    const key_stats: Record<string, number[]> = {};
+    for (const [k, v] of Object.entries(eng.keyStats)) key_stats[k] = [v[0], v[1]];
     await fetch("/api/sessions", {
       method: "POST",
       credentials: "include",
@@ -89,10 +149,33 @@ export default function BridgeScreen() {
       body: JSON.stringify({
         text_id: textId,
         ...seg,
-        mode: "cargo",
+        mode: activeDrillRef.current ? "drill" : "cargo",
         lang,
+        key_stats,
       }),
     });
+
+    const drillId = activeDrillRef.current;
+    if (drillId && drillId !== "repair") {
+      const done = await fetch(`/api/missions/drills/${drillId}/complete`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          acc: seg.acc,
+          cpm: seg.cpm,
+          chars: seg.chars,
+          errors: seg.errors,
+          key_stats,
+        }),
+      });
+      if (done.ok) {
+        const j = await done.json();
+        setLastStars(j.stars);
+        void refreshDrills();
+      }
+    }
+    void refreshHeatmap();
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -134,13 +217,13 @@ export default function BridgeScreen() {
   const highlight = keyForChar(engine.current, lang);
 
   const stats = useMemo(() => {
-    const t = now();
+    const t0 = now();
     return {
-      cpm: Math.round(engine.cpm(t)),
+      cpm: Math.round(engine.cpm(t0)),
       inst: Math.round(engine.instantCpm()),
       acc: engine.accuracy != null ? Math.round(engine.accuracy) : "—",
       err: engine.errors,
-      el: engine.elapsed(t).toFixed(1),
+      el: engine.elapsed(t0).toFixed(1),
       len: engine.text.length,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,6 +231,14 @@ export default function BridgeScreen() {
 
   return (
     <section className="bridge">
+      <MissionRail
+        drills={drills}
+        activeId={activeDrill}
+        lastStars={lastStars}
+        onStart={(id) => void startDrill(id)}
+        onRepair={() => void startRepair()}
+      />
+
       <div className="bridge-toolbar">
         <textarea
           className="cargo-input"
@@ -157,14 +248,24 @@ export default function BridgeScreen() {
           placeholder={t("paste_text")}
         />
         <div className="bridge-actions">
-          <select value={lang} onChange={(e) => setLang(e.target.value)}>
+          <select
+            value={lang}
+            onChange={(e) => {
+              setLang(e.target.value);
+              setActiveDrill(null);
+            }}
+          >
             <option value="en">EN</option>
             <option value="ru">RU</option>
           </select>
           <button type="button" className="hud-btn" onClick={() => void loadPractice()}>
             {t("board")}
           </button>
-          <button type="button" className="hud-btn amber" onClick={() => reloadEngine(draft.includes("… (+") ? engine.text : draft)}>
+          <button
+            type="button"
+            className="hud-btn amber"
+            onClick={() => reloadEngine(draft.includes("… (+") ? engine.text : draft)}
+          >
             {t("again")}
           </button>
           <span className="muted">
@@ -191,12 +292,24 @@ export default function BridgeScreen() {
       </div>
 
       <div className="telemetry">
-        <div><span className="lab">{t("status")}</span> {status}</div>
-        <div><span className="lab">CPM</span> {stats.cpm} <span className="muted">мгн {stats.inst}</span></div>
-        <div><span className="lab">{t("accuracy")}</span> {stats.acc}%</div>
-        <div><span className="lab">{t("errors")}</span> {stats.err}</div>
-        <div><span className="lab">{t("time")}</span> {stats.el}с</div>
-        <div><span className="lab">{t("progress")}</span> {Math.round(engine.progress * 100)}%</div>
+        <div>
+          <span className="lab">{t("status")}</span> {status}
+        </div>
+        <div>
+          <span className="lab">CPM</span> {stats.cpm} <span className="muted">мгн {stats.inst}</span>
+        </div>
+        <div>
+          <span className="lab">{t("accuracy")}</span> {stats.acc}%
+        </div>
+        <div>
+          <span className="lab">{t("errors")}</span> {stats.err}
+        </div>
+        <div>
+          <span className="lab">{t("time")}</span> {stats.el}с
+        </div>
+        <div>
+          <span className="lab">{t("progress")}</span> {Math.round(engine.progress * 100)}%
+        </div>
       </div>
 
       <div className="keyboard" aria-hidden>
@@ -220,6 +333,8 @@ export default function BridgeScreen() {
           </div>
         ))}
       </div>
+
+      {keyRates.length > 0 && <Heatmap rates={keyRates} lang={lang} />}
       <p className="hint">{t("hint_bridge")}</p>
     </section>
   );

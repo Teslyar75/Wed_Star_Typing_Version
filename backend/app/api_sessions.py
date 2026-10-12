@@ -24,6 +24,7 @@ class SessionIn(BaseModel):
     acc: float = 0.0
     rhythm: float = 0.0
     best_streak: int = Field(0, alias="best_streak")
+    key_stats: dict[str, list[int]] = Field(default_factory=dict)
 
     model_config = {"populate_by_name": True}
 
@@ -72,6 +73,10 @@ def save_session(
     db.add(row)
     if pilot is not None:
         pilot.xp += _xp_for_session(body.chars, body.acc, body.cpm)
+        if body.key_stats:
+            from app.api_missions import _merge_key_stats
+
+            _merge_key_stats(db, pilot.id, body.key_stats)
     db.commit()
     db.refresh(row)
     return row
