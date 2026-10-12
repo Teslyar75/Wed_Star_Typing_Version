@@ -60,17 +60,34 @@ async def upload_text(
     lang: str = Form("und"),
     db: Session = Depends(get_db),
 ) -> TextDoc:
+    import tempfile
+    from pathlib import Path
+
     raw = await file.read()
     name = (file.filename or "").lower()
     if name.endswith(".pdf"):
+        content = ""
         try:
-            from stamina.pdf_import import extract_text  # type: ignore
-            content = extract_text(raw)
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp.write(raw)
+                path = Path(tmp.name)
+            try:
+                from stamina.pdf_import import load as pdf_load
+
+                result = pdf_load(path)
+                content = result.text or ""
+                if result.scanned and not content.strip():
+                    raise HTTPException(400, "PDF looks scanned (no text layer)")
+            finally:
+                path.unlink(missing_ok=True)
+        except HTTPException:
+            raise
         except Exception as exc:  # noqa: BLE001
-            # fallback: pypdf
             try:
                 import io
+
                 from pypdf import PdfReader
+
                 reader = PdfReader(io.BytesIO(raw))
                 content = "\n".join((p.extract_text() or "") for p in reader.pages)
             except Exception as exc2:  # noqa: BLE001

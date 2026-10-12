@@ -8,7 +8,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api_catalog import router as catalog_router
 from app.api_english import router as english_router
+from app.api_library import router as library_router
 from app.api_migrate import router as migrate_router
 from app.api_missions import router as missions_router
 from app.api_pilots import router as pilots_router
@@ -34,7 +36,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Star Typing Web", version="0.8.0", lifespan=lifespan)
+app = FastAPI(title="Star Typing Web", version="0.9.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,6 +52,8 @@ app.add_middleware(
 )
 
 app.include_router(texts_router)
+app.include_router(library_router)
+app.include_router(catalog_router)
 app.include_router(sessions_router)
 app.include_router(pilots_router)
 app.include_router(reader_router)

@@ -8,11 +8,12 @@ import SkinPicker from "./theme/SkinPicker";
 import SpaceCanvas from "./fx/SpaceCanvas";
 import RadioPanel from "./radio/RadioPanel";
 import RadioMinibar from "./radio/RadioMinibar";
+import LibraryPanel from "./library/LibraryPanel";
 import { applyTheme } from "./theme/applyTheme";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import spaceship from "../../packages/themes/spaceship.json";
 
-type Tab = "bridge" | "reader" | "english" | "speed" | "auth" | "skins" | "radio";
+type Tab = "bridge" | "reader" | "library" | "english" | "speed" | "auth" | "skins" | "radio";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("bridge");
@@ -47,6 +48,7 @@ export default function App() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "bridge", label: t("bridge") },
     { id: "reader", label: t("reader") },
+    { id: "library", label: t("library") },
     { id: "english", label: t("english") },
     { id: "speed", label: t("speed") },
     { id: "radio", label: t("radio") },
@@ -107,6 +109,9 @@ export default function App() {
         )}
         {tab === "bridge" && <BridgeScreen />}
         {tab === "reader" && <BilingualReader />}
+        {tab === "library" && (
+          <LibraryPanel onOpenReader={() => setTab("reader")} onOpenBridge={() => setTab("bridge")} />
+        )}
         {tab === "english" && <EnglishPanel />}
         {tab === "speed" && <SpeedReadPanel />}
         {tab === "radio" && <RadioPanel />}

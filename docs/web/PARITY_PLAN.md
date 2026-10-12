@@ -105,11 +105,13 @@ P1 Миссии+ремонт+heatmap
 
 ---
 
-### Эпик P2: Библиотека книг (PDF, полка, каталоги, позиции)
+### Эпик P2: Библиотека книг (PDF, полка, каталоги, позиции) — ядро ✅
 
 **Проблема:** тексты только через paste/API; нет PDF UI, Gutenberg/bilinguis, единой полки и sync «чтение ↔ печать».
 
 **Критерий:** загрузка PDF → сегменты в БД; полка списка текстов пилота; поиск Gutenberg/bilinguis (прокси API); позиция чтения и набора по одному `sentence_id` (уже есть store — привязать к library item).
+
+**Сделано:** `/api/library` + position debounce, PDF/TXT upload через `stamina.pdf_import`, Gutendex search/import, вкладка Библиотека. Bilinguis — следующий инкремент.
 
 #### Task P2.1 — PDF upload UI + сервер
 

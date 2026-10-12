@@ -41,5 +41,6 @@ def init_db() -> None:
     from app import api_english as _en  # noqa: F401
     from app import api_speedread as _sr  # noqa: F401
     from app import api_missions as _mi  # noqa: F401
+    from app import api_library as _lib  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
