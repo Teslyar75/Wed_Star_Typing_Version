@@ -44,3 +44,22 @@ def init_db() -> None:
     from app import api_library as _lib  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _sqlite_ensure_columns()
+
+
+def _sqlite_ensure_columns() -> None:
+    """Лёгкие ALTER для уже существующих SQLite-файлов (create_all не добавляет колонки)."""
+    if not _engine_url().startswith("sqlite"):
+        return
+    from sqlalchemy import text
+
+    alters = [
+        ("card_progress", "bin", "VARCHAR(32) DEFAULT 'inbox'"),
+        ("card_progress", "english_xp", "INTEGER DEFAULT 0"),
+    ]
+    with engine.begin() as conn:
+        for table, col, typedef in alters:
+            rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
+            names = {r[1] for r in rows}
+            if col not in names:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}"))
