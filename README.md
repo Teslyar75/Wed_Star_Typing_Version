@@ -64,4 +64,6 @@ docker compose up --build
 ## Текущий статус
 
 - **Фаза 0** — каркас (Vite/React, FastAPI health, темы, Docker Compose).
-- Дальше — фаза 1 (модель текста / сегменты) по промпту 2 в WEB_PLAN.
+- **Фаза 1** — модель текста: `POST /api/texts`, `POST /api/texts/bilingual`, `GET /api/texts/{id}/segments`; сегментация + Gale–Church; Alembic `001`.
+
+Дальше — фаза 2 (тренажёр набора) по WEB_PLAN.
