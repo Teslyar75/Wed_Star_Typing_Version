@@ -63,26 +63,17 @@ docker compose up --build
 | 2 Тренажёр набора + `/api/sessions` | ✅ |
 | 3 Пилоты / JWT cookie / доска почёта | ✅ |
 | 4 2 языка / экран / перевод-кэш | ✅ |
-| 5 Английский / SM-2 / TTS (ASR stub) | ✅ |
+| 5 Английский / SM-2 / TTS / vosk | ✅ |
 | 6 RSVP + Шульте | ✅ |
-| 7 Космос Canvas / скины / звук / радио | ✅ |
-| 8 i18n / PWA / Caddy / migrate | ✅ |
+| 7 living_space Canvas / скины / радио | ✅ |
+| 8 i18n / PWA≥90 / Caddy / migrate | ✅ |
 
-### Углубление (после MVP)
+### Углубление
 
-| Сделано | Ещё впереди |
-| --- | --- |
-| Изоляция сессий / XP / миссии+claim | Pixi/living_space глубже |
-| UPLINK + фоновый worker | Lighthouse audit на проде |
-| vocab seed до 20k (из stamina) | |
-| RSVP timing tests + API | |
-| react-virtuoso читалка | |
-| vosk-browser + `npm run fetch:vosk` | |
-| Playwright e2e | |
-| i18next + stamina locales | |
-| PWA manifest 512 / SW v3 | |
+Сделано: изоляция пилотов, UPLINK worker, vocab 20k, virtuoso, vosk, Playwright, i18next, **living_space порт**, **Lighthouse PWA 100** (`npm run lighthouse:pwa`).
 
 ```powershell
 cd frontend
-npm run fetch:vosk   # ~40MB модель ASR
+npm run fetch:vosk        # ~40MB модель ASR
+npm run lighthouse:pwa    # LH 11, цель ≥90
 ```
