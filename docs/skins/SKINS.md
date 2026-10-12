@@ -5,16 +5,24 @@
 | Артеfact | Путь |
 | --- | --- |
 | Спека и промпты | этот файл (`docs/skins/SKINS.md`) |
-| JSON тем (канон для web + sync в desktop) | `web_star_typing/packages/themes/<id>.json` |
-| Картинки | `docs/skins/images/<id>/` |
-| Десктоп (после S1) | `stamina/themes/<id>.json` — копия или symlink на `packages/themes` |
-| Веб | CSS-переменные через `frontend/src/theme/applyTheme.ts` |
+| JSON тем (канон для web + sync в desktop) | веб-репо `packages/themes/<id>.json` |
+| Картинки | `docs/skins/images/<id>/` (и копия в веб-репо) |
+| Десктоп (после S1) | `stamina/themes/<id>.json` |
+| Веб | [Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version) — CSS через `applyTheme.ts` |
 
-План веб-версии и узкие места (2 языка, сегментация): [docs/web/WEB_PLAN.md](../web/WEB_PLAN.md).
+План веба: [docs/web/WEB_PLAN.md](../web/WEB_PLAN.md) · репозиторий: [Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version).
+
+## Статус (десктоп)
+
+| Шаг | Состояние |
+| --- | --- |
+| **S1** движок тем | сделано: `stamina/theme.py` (`load_theme` / `c` / `on_change`), JSON в `stamina/themes/`, выбор в **Настройки**, живая перекраска |
+| **S0** выбор на «ВХОД В КАБИНУ» | сделано: ряд скинов, предпросмотр, сохранение в `settings.json` пилота |
+| **S2–S6** палитры 5 скинов | сделано (JSON). Фоны: `living_space` для Звездолёта; остальные — `stamina/backgrounds/image_backdrop.py` (bg.jpg + частицы); полные sonar/gears/candles — следующие итерации |
 
 ## 1. Движок тем (десктоп)
-Сейчас цвета (`AMBER`, `GREEN` и др.), шрифты и рамки заданы константами в модулях (`hud.py`, `cockpit.py`, `english/ui.py`, `speedread/ui.py`), фон — `living_space.py`.
-**Цель:** вынести всё в токены темы.
+Цвета (`AMBER`, `GREEN` и др.) загружаются из JSON; модульные имена обновляются при смене скина.
+**Цель:** токены темы + предпросмотр без перезапуска.
 
 - `stamina/themes/<id>.json`:
 ```json
