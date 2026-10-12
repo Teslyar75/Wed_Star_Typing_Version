@@ -209,6 +209,28 @@ body {
   white-space: pre;
 }
 
+.pilot-dossier {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+.pilot-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--st-line);
+}
+
+.pilot-avatar.placeholder {
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--st-accent) 20%, transparent);
+  font-size: 1.5rem;
+}
+
 @media (max-width: 640px) {
   .hud-bar {
     gap: 0.4rem;

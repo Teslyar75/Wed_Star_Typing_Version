@@ -10,6 +10,8 @@
 
 | Документ | Содержание |
 | --- | --- |
+| [docs/web/STATUS.md](docs/web/STATUS.md) | **актуальный статус** Excellence/Parity |
+| [docs/web/PARITY_PLAN.md](docs/web/PARITY_PLAN.md) | эпики P1–P8 паритета с десктопом |
 | [docs/web/WEB_PLAN.md](docs/web/WEB_PLAN.md) | стек, фазы 0–8, промпты Cursor |
 | [docs/skins/SKINS.md](docs/skins/SKINS.md) | скины (десктоп + веб) |
 
@@ -71,9 +73,9 @@ docker compose up --build
 | 7 living_space Canvas / скины / радио | ✅ |
 | 8 i18n / PWA≥90 / Caddy / migrate | ✅ |
 
-### Углубление
+### Углубление + Excellence (W0–P6)
 
-Сделано: фазы 0–8 + углубление (IndexedDB vosk, i18n UI, migrate UI, читалка sync, радиорубка+минибар, Web Audio, Caddy `DOMAIN` HTTPS).
+Сделано: фазы 0–8 + углубление + паритет **W0–P6** (миссии★★★, библиотека/Gutenberg, english bins, tachi/E-Pyr, аватар/.stpilot, сэмплы-fallback). Подробности — [STATUS.md](docs/web/STATUS.md). Опционально дальше: P7 радио-глубина, P8 lounge.
 
 ```powershell
 # прод с HTTPS (Let's Encrypt):

@@ -23,6 +23,7 @@ class PilotMigrateIn(BaseModel):
     xp: int = 0
     skin: str = "spaceship"
     accent: str = "cyan"
+    avatar_data: str = ""
     sessions: list[dict[str, Any]] = Field(default_factory=list)
 
 
@@ -41,6 +42,8 @@ def import_pilot(body: PilotMigrateIn, db: Session = Depends(get_db)) -> dict:
             existing.display_name = display
         if body.pin:
             existing.pin_hash = hash_pin(body.pin)
+        if body.avatar_data:
+            existing.avatar_data = body.avatar_data
         pilot = existing
         updated = True
     else:
@@ -51,6 +54,7 @@ def import_pilot(body: PilotMigrateIn, db: Session = Depends(get_db)) -> dict:
             skin=body.skin,
             accent=body.accent,
             xp=body.xp,
+            avatar_data=body.avatar_data or "",
         )
         db.add(pilot)
         db.flush()

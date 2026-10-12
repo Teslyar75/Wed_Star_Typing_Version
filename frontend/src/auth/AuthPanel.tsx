@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 
-type Pilot = { id: number; callsign: string; display_name: string; skin: string; xp: number };
+type Pilot = {
+  id: number;
+  callsign: string;
+  display_name: string;
+  skin: string;
+  xp: number;
+  avatar_data?: string;
+};
 type Honor = { callsign: string; xp: number; best_cpm: number; sessions: number };
 type Mission = {
   id: string;
@@ -13,6 +20,22 @@ type Mission = {
   reward_xp: number;
 };
 
+const RECENT_KEY = "st_recent_callsigns";
+
+function loadRecent(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+    return Array.isArray(raw) ? raw.filter((x) => typeof x === "string").slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberCallsign(cs: string) {
+  const next = [cs, ...loadRecent().filter((x) => x !== cs)].slice(0, 8);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+}
+
 export default function AuthPanel() {
   const [callsign, setCallsign] = useState("Cadet");
   const [pin, setPin] = useState("1234");
@@ -20,11 +43,17 @@ export default function AuthPanel() {
   const [honor, setHonor] = useState<Honor[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [msg, setMsg] = useState("");
+  const [recent, setRecent] = useState<string[]>(() => loadRecent());
   const fileRef = useRef<HTMLInputElement>(null);
+  const avatarRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
     const m = await (await fetch("/api/pilots/me", { credentials: "include" })).json();
     setMe(m);
+    if (m?.callsign) {
+      rememberCallsign(m.callsign);
+      setRecent(loadRecent());
+    }
     setHonor(await (await fetch("/api/pilots/honor")).json());
     setMissions(await (await fetch("/api/missions", { credentials: "include" })).json());
   };
@@ -53,6 +82,12 @@ export default function AuthPanel() {
     });
     setMsg(r.ok ? t("in_cabin") : t("login_fail"));
     void refresh();
+  };
+
+  const logout = async () => {
+    await fetch("/api/pilots/logout", { method: "POST", credentials: "include" });
+    setMe(null);
+    setMsg(t("logout_ok"));
   };
 
   const claim = async (id: string) => {
@@ -92,6 +127,31 @@ export default function AuthPanel() {
     }
   };
 
+  const exportStpilot = async () => {
+    const r = await fetch("/api/pilots/me/export", { credentials: "include" });
+    if (!r.ok) {
+      setMsg(await r.text());
+      return;
+    }
+    const j = await r.json();
+    const blob = new Blob([JSON.stringify(j, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${j.callsign || "pilot"}.stpilot.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setMsg(t("export_ok"));
+  };
+
+  const uploadAvatar = async (file: File | null) => {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch("/api/pilots/me/avatar", { method: "POST", credentials: "include", body: fd });
+    setMsg(r.ok ? t("avatar_ok") : await r.text());
+    void refresh();
+  };
+
   return (
     <div className="auth">
       <div className="bridge-actions">
@@ -103,7 +163,24 @@ export default function AuthPanel() {
         <button type="button" className="hud-btn amber" onClick={() => void login()}>
           {t("login")}
         </button>
+        {me && (
+          <button type="button" className="hud-btn" onClick={() => void logout()}>
+            {t("logout")}
+          </button>
+        )}
       </div>
+
+      {recent.length > 0 && (
+        <div className="bridge-actions">
+          <span className="muted">{t("recent_pilots")}:</span>
+          {recent.map((cs) => (
+            <button key={cs} type="button" className="hud-btn" onClick={() => setCallsign(cs)}>
+              {cs}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="bridge-actions">
         <input
           ref={fileRef}
@@ -119,11 +196,39 @@ export default function AuthPanel() {
         <button type="button" className="hud-btn" onClick={() => fileRef.current?.click()}>
           {t("import_pilot")}
         </button>
+        {me && (
+          <>
+            <button type="button" className="hud-btn" onClick={() => void exportStpilot()}>
+              {t("export_pilot")}
+            </button>
+            <input
+              ref={avatarRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                void uploadAvatar(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+            <button type="button" className="hud-btn" onClick={() => avatarRef.current?.click()}>
+              {t("avatar_upload")}
+            </button>
+          </>
+        )}
       </div>
+
       {me && (
-        <p>
-          {t("pilot_line")}: <strong>{me.callsign}</strong> · XP {me.xp} · {t("skin_label")} {me.skin}
-        </p>
+        <div className="pilot-dossier">
+          {me.avatar_data ? (
+            <img className="pilot-avatar" src={me.avatar_data} alt="" width={64} height={64} />
+          ) : (
+            <div className="pilot-avatar placeholder">★</div>
+          )}
+          <p>
+            {t("pilot_line")}: <strong>{me.callsign}</strong> · XP {me.xp} · {t("skin_label")} {me.skin}
+          </p>
+        </div>
       )}
       {msg && <p className="muted">{msg}</p>}
       <h3>{t("missions")}</h3>

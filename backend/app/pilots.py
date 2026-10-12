@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config import settings
@@ -26,6 +26,7 @@ class Pilot(Base):
     accent: Mapped[str] = mapped_column(String(32), default="cyan")
     skin: Mapped[str] = mapped_column(String(32), default="spaceship")
     xp: Mapped[int] = mapped_column(Integer, default=0)
+    avatar_data: Mapped[str] = mapped_column(Text, default="")  # data:image/...;base64,...
     is_guest: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

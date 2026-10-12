@@ -56,6 +56,7 @@ def _sqlite_ensure_columns() -> None:
     alters = [
         ("card_progress", "bin", "VARCHAR(32) DEFAULT 'inbox'"),
         ("card_progress", "english_xp", "INTEGER DEFAULT 0"),
+        ("pilots", "avatar_data", "TEXT DEFAULT ''"),
     ]
     with engine.begin() as conn:
         for table, col, typedef in alters:

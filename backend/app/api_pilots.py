@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+import base64
+import io
+
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth_deps import COOKIE, get_optional_pilot
+from app.auth_deps import COOKIE, get_current_pilot, get_optional_pilot
 from app.db import get_db
 from app.pilots import Pilot, hash_pin, make_token, verify_pin
 from app.sessions import TypingSession
@@ -30,6 +33,7 @@ class PilotOut(BaseModel):
     display_name: str
     skin: str
     xp: int
+    avatar_data: str = ""
 
     model_config = {"from_attributes": True}
 
@@ -92,3 +96,75 @@ def honor_board(db: Session = Depends(get_db)) -> list[HonorRow]:
         best = max((s.cpm for s in sess), default=0.0)
         rows.append(HonorRow(callsign=p.callsign, xp=p.xp, best_cpm=best, sessions=len(sess)))
     return rows
+
+
+@router.post("/me/avatar", response_model=PilotOut)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> Pilot:
+    raw = await file.read()
+    if len(raw) > 400_000:
+        raise HTTPException(400, "avatar too large")
+    mime = file.content_type or "image/png"
+    if not mime.startswith("image/"):
+        raise HTTPException(400, "image required")
+    # лёгкая нормализация через Pillow, если есть
+    try:
+        from PIL import Image
+
+        im = Image.open(io.BytesIO(raw)).convert("RGBA")
+        im.thumbnail((256, 256))
+        out = io.BytesIO()
+        im.save(out, format="PNG")
+        raw = out.getvalue()
+        mime = "image/png"
+    except Exception:  # noqa: BLE001
+        pass
+    b64 = base64.b64encode(raw).decode("ascii")
+    pilot.avatar_data = f"data:{mime};base64,{b64}"
+    db.commit()
+    db.refresh(pilot)
+    return pilot
+
+
+@router.get("/me/export")
+def export_stpilot(
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
+    """JSON-профиль совместимый с migrate/import (.stpilot)."""
+    sess = (
+        db.query(TypingSession)
+        .filter(TypingSession.pilot_id == pilot.id)
+        .order_by(TypingSession.id.desc())
+        .limit(200)
+        .all()
+    )
+    return {
+        "format": "stpilot",
+        "version": 1,
+        "callsign": pilot.callsign,
+        "display_name": pilot.display_name,
+        "name": pilot.display_name,
+        "xp": pilot.xp,
+        "skin": pilot.skin,
+        "accent": pilot.accent,
+        "avatar_data": pilot.avatar_data or "",
+        "sessions": [
+            {
+                "mode": s.mode,
+                "lang": s.lang,
+                "chars": s.chars,
+                "typed": s.typed,
+                "errors": s.errors,
+                "elapsed": s.elapsed,
+                "cpm": s.cpm,
+                "acc": s.acc,
+                "rhythm": s.rhythm,
+                "best_streak": s.best_streak,
+            }
+            for s in sess
+        ],
+    }

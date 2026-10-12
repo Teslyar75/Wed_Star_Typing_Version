@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { playClick, playError, playFinish, setSoundsMuted, soundsMuted } from "./sounds";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  setSoundsMuted(false);
+});
 
 describe("sounds", () => {
   it("mute flag", () => {
@@ -19,7 +24,8 @@ describe("sounds", () => {
     window.AudioContext = orig;
   });
 
-  it("uses oscillator when context available", () => {
+  it("falls back to oscillator when samples missing", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
     const stop = vi.fn();
     const start = vi.fn();
     const connect = vi.fn();
@@ -34,12 +40,13 @@ describe("sounds", () => {
       createGain = () => g;
       destination = {};
       resume = vi.fn(async () => undefined);
+      decodeAudioData = vi.fn();
     }
     // @ts-expect-error stub
     window.AudioContext = FakeCtx;
     setSoundsMuted(false);
     playClick();
-    expect(start).toHaveBeenCalled();
+    await vi.waitFor(() => expect(start).toHaveBeenCalled());
     expect(stop).toHaveBeenCalled();
   });
 });

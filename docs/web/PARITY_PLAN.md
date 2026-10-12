@@ -212,11 +212,13 @@ P1 Миссии+ремонт+heatmap
 
 ---
 
-### Эпик P5: Пилоты — аватары, личное дело, .stpilot, мультипилот
+### Эпик P5: Пилоты — аватары, личное дело, .stpilot, мультипилот — ядро ✅
 
 **Проблема:** callsign+PIN; нет аватара, карточки пилота, экспорта архива, удобной смены пилота.
 
 **Критерий:** загрузка аватара 256×256; экран «Личное дело»; `GET/POST` export/import `.stpilot` (zip/json совместимый с десктопом по возможности); переключатель пилота без очистки чужих данных (уже JWT isolation — добавить UI switch).
+
+**Сделано:** avatar upload, export `.stpilot.json`, import migrate, recent callsigns + logout.
 
 #### Task P5.1 — Аватар + личное дело
 
@@ -234,11 +236,13 @@ P1 Миссии+ремонт+heatmap
 
 ---
 
-### Эпик P6: Звук — сэмплы десктопа
+### Эпик P6: Звук — сэмплы десктопа — каркас ✅
 
 **Проблема:** только oscillator beeps.
 
 **Критерий:** click / error / finish / UI hover из `stamina/sounds/` (конвертировать в mp3/ogg → `frontend/public/sounds/`); fallback на synth если файла нет; mute сохраняется.
+
+**Сделано:** `sounds.ts` грузит `/sounds/{click,error,finish}.{ogg|mp3|wav}` с synth fallback; папка + README. Файлы сэмплов — добавить когда появятся в десктопе.
 
 #### Task P6.1
 
