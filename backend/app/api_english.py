@@ -78,18 +78,20 @@ class ReviewIn(BaseModel):
     grade: int = Field(ge=1, le=4)
 
 
-def _vocab_candidates() -> list[Path]:
+def _vocab_candidates(limit: int) -> list[Path]:
     here = Path(__file__).resolve().parent
     root = settings.repo_root()
-    return [
-        here / "data" / "vocab_seed.json",
-        root / "stamina" / "english" / "data" / "vocab_dev.json",
-        root / "stamina" / "english" / "data" / "vocab.json",
-    ]
+    bundled = here / "data" / "vocab_seed.json"
+    full = root / "stamina" / "english" / "data" / "vocab.json"
+    dev = root / "stamina" / "english" / "data" / "vocab_dev.json"
+    # для больших лимитов сначала полный словарь десктопа
+    if limit > 2500:
+        return [full, dev, bundled]
+    return [bundled, full, dev]
 
 
 def _iter_seed_rows(limit: int) -> list[tuple[str, str, str]]:
-    for path in _vocab_candidates():
+    for path in _vocab_candidates(limit):
         if not path.is_file():
             continue
         try:
@@ -113,7 +115,7 @@ def _iter_seed_rows(limit: int) -> list[tuple[str, str, str]]:
                 break
         if rows:
             return rows
-    return list(FALLBACK_SEED)
+    return [(w, tr, ex) for w, tr, ex in FALLBACK_SEED]
 
 
 @router.post("/seed")
