@@ -90,9 +90,11 @@ export function setLang(code: string) {
   listeners.forEach((fn) => fn());
 }
 
-export function onLangChange(fn: () => void) {
+export function onLangChange(fn: () => void): () => void {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 export function t(key: string): string {

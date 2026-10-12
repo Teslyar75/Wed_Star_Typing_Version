@@ -23,6 +23,7 @@ export default function App() {
       .then((r) => r.json())
       .then((j) => setHealth(!!j.ok))
       .catch(() => setHealth(false));
+    return onLangChange(() => setLangState(getLang()));
   }, []);
 
   const switchLang = (code: string) => {
@@ -41,6 +42,9 @@ export default function App() {
 
   return (
     <div className="cockpit">
+      <div className="space-bg" aria-hidden>
+        <SpaceCanvas />
+      </div>
       <header className="hud-bar">
         <span className="logo">★</span>
         <h1>Star Typing Web</h1>
