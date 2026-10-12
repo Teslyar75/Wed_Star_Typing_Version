@@ -45,7 +45,7 @@ export default function EnglishPanel() {
       onLevel: setLevel,
     });
     setListening(false);
-    setHeard(res.transcript || (res.engine === "none" ? "(ASR недоступен)" : ""));
+    setHeard(res.transcript || (res.engine === "none" ? t("asr_unavailable") : ""));
     setScore(res.engine === "none" ? null : res.score);
     setLevel(0);
   };
@@ -64,7 +64,7 @@ export default function EnglishPanel() {
     setI((x) => (x + 1) % Math.max(words.length, 1));
   };
 
-  if (!w) return <p className="lead">Загрузка словаря…</p>;
+  if (!w) return <p className="lead">{t("vocab_loading")}</p>;
 
   return (
     <div className="english">

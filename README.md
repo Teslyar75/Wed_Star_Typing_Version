@@ -73,7 +73,7 @@ docker compose up --build
 
 ### Углубление
 
-Сделано: изоляция пилотов, UPLINK worker, vocab 20k, virtuoso, vosk, Playwright, i18next, living_space, Lighthouse PWA 100, **читалка 1/2 стр + `sentence_id` sync**, **Caddy compose**, **`/api/migrate/pilot|bundle`**, **speedread quiz**.
+Сделано: изоляция пилотов, UPLINK worker, vocab 20k, virtuoso, vosk(+IndexedDB), Playwright, i18next UI, living_space, Lighthouse PWA 100, читалка sync, Caddy, migrate API+UI, speedread quiz.
 
 ```powershell
 cd frontend

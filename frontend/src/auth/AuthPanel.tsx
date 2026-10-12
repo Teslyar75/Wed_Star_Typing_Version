@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 
 type Pilot = { id: number; callsign: string; display_name: string; skin: string; xp: number };
@@ -20,6 +20,7 @@ export default function AuthPanel() {
   const [honor, setHonor] = useState<Honor[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [msg, setMsg] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
     const m = await (await fetch("/api/pilots/me", { credentials: "include" })).json();
@@ -39,7 +40,7 @@ export default function AuthPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ callsign, pin, display_name: callsign }),
     });
-    setMsg(r.ok ? "Зачислен" : await r.text());
+    setMsg(r.ok ? t("enrolled") : await r.text());
     void refresh();
   };
 
@@ -50,20 +51,51 @@ export default function AuthPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ callsign, pin }),
     });
-    setMsg(r.ok ? "В кабине" : "Ошибка входа");
+    setMsg(r.ok ? t("in_cabin") : t("login_fail"));
     void refresh();
   };
 
   const claim = async (id: string) => {
     const r = await fetch(`/api/missions/${id}/claim`, { method: "POST", credentials: "include" });
-    setMsg(r.ok ? `Награда +${(await r.json()).reward_xp} XP` : await r.text());
+    if (r.ok) {
+      const j = await r.json();
+      setMsg(`${t("reward_xp")} +${j.reward_xp} XP`);
+    } else {
+      setMsg(await r.text());
+    }
     void refresh();
+  };
+
+  const importJson = async (file: File) => {
+    try {
+      const raw = JSON.parse(await file.text()) as Record<string, unknown>;
+      const path = Array.isArray(raw.pilots) ? "/api/migrate/bundle" : "/api/migrate/pilot";
+      const r = await fetch(path, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(raw),
+      });
+      if (!r.ok) {
+        setMsg(`${t("import_fail")}: ${await r.text()}`);
+        return;
+      }
+      const j = await r.json();
+      const detail =
+        typeof j.sessions_imported === "number"
+          ? `${j.sessions_imported} sessions · XP ${j.xp}`
+          : `pilots ${j.imported ?? 1}`;
+      setMsg(`${t("import_ok")}: ${detail}`);
+      void refresh();
+    } catch (e) {
+      setMsg(`${t("import_fail")}: ${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   return (
     <div className="auth">
       <div className="bridge-actions">
-        <input value={callsign} onChange={(e) => setCallsign(e.target.value)} placeholder="позывной / callsign" />
+        <input value={callsign} onChange={(e) => setCallsign(e.target.value)} placeholder={t("callsign_ph")} />
         <input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" type="password" />
         <button type="button" className="hud-btn" onClick={() => void register()}>
           {t("enroll")}
@@ -72,9 +104,25 @@ export default function AuthPanel() {
           {t("login")}
         </button>
       </div>
+      <div className="bridge-actions">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json,.stpilot"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void importJson(f);
+            e.target.value = "";
+          }}
+        />
+        <button type="button" className="hud-btn" onClick={() => fileRef.current?.click()}>
+          {t("import_pilot")}
+        </button>
+      </div>
       {me && (
         <p>
-          Пилот: <strong>{me.callsign}</strong> · XP {me.xp} · скин {me.skin}
+          {t("pilot_line")}: <strong>{me.callsign}</strong> · XP {me.xp} · {t("skin_label")} {me.skin}
         </p>
       )}
       {msg && <p className="muted">{msg}</p>}

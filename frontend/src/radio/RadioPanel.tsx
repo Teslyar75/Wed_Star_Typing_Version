@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 
 type Station = { name: string; url_resolved: string; favicon?: string; country?: string };
 
@@ -16,7 +17,7 @@ export default function RadioPanel() {
       const data = (await (await fetch(url)).json()) as Station[];
       setStations(data.filter((s) => s.url_resolved));
     } catch {
-      setErr("Сеть radio-browser недоступна — вставьте URL вручную");
+      setErr(t("radio_err_net"));
     }
   };
 
@@ -25,7 +26,7 @@ export default function RadioPanel() {
     const a = audioRef.current;
     if (!a) return;
     a.src = s.url_resolved;
-    void a.play().catch(() => setErr("Не удалось открыть поток"));
+    void a.play().catch(() => setErr(t("radio_err_stream")));
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: s.name,
@@ -50,9 +51,9 @@ export default function RadioPanel() {
   return (
     <div className="radio">
       <div className="bridge-actions">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="поиск станции…" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("radio_search")} />
         <button type="button" className="hud-btn amber" onClick={() => void search()}>
-          Найти
+          {t("radio_find")}
         </button>
       </div>
       {err && <p className="muted">{err}</p>}
@@ -66,7 +67,11 @@ export default function RadioPanel() {
         ))}
       </ul>
       <audio ref={audioRef} controls className="radio-audio" />
-      {current && <p className="muted">Эфир: {current.name}</p>}
+      {current && (
+        <p className="muted">
+          {t("radio_on_air")}: {current.name}
+        </p>
+      )}
     </div>
   );
 }

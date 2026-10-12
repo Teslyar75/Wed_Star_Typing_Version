@@ -121,13 +121,13 @@ export default function SpeedReadPanel() {
             setMode("quiz");
           }}
         >
-          Quiz
+          {t("quiz")}
         </button>
       </div>
       {msg && <p className="muted">{msg}</p>}
       {mode === "quiz" ? (
         quiz.length === 0 ? (
-          <p className="muted">Нужен более длинный текст для викторины.</p>
+          <p className="muted">{t("quiz_need_text")}</p>
         ) : qi >= quiz.length ? (
           <p>
             {score}/{quiz.length} —{" "}

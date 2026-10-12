@@ -39,7 +39,7 @@ export default function BilingualReader() {
     if (!textId) return;
     const id = Number(textId);
     jump(id, sentenceId);
-    setStatus("перевод в очереди…");
+    setStatus(t("translate_queued"));
     setRows([]);
     setOffset(0);
     await fetch("/api/reader/translate", {
@@ -60,7 +60,7 @@ export default function BilingualReader() {
   const loadMore = useCallback(async () => {
     if (!textId) return;
     const n = await fetchRows(Number(textId), offset, true);
-    if (n === 0) setStatus("конец текста");
+    if (n === 0) setStatus(t("end_of_text"));
   }, [textId, offset]);
 
   const speak = (text: string) => {

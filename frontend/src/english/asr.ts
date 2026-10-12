@@ -1,8 +1,9 @@
 /**
  * ASR: vosk-browser (если есть модель) → fallback Web Speech API.
- * Модель: public/models/vosk-model-small-en-us.tar.gz (см. scripts/fetch-vosk-model.mjs)
+ * Модель: public/models/vosk-model-small-en-us.tar.gz → кэш IndexedDB (voskCache).
  */
 import { scoreSentence } from "./textutil";
+import { resolveVoskModelUrl, voskCachedOrRemote } from "./voskCache";
 
 export type AsrResult = { transcript: string; score: number; engine: "webspeech" | "vosk" | "none" };
 
@@ -33,15 +34,11 @@ function getSpeechRecognition(): (new () => SR) | null {
 }
 
 export async function voskModelAvailable(): Promise<boolean> {
-  try {
-    const r = await fetch(modelUrl(), { method: "HEAD" });
-    return r.ok;
-  } catch {
-    return false;
-  }
+  return voskCachedOrRemote(modelUrl());
 }
 
 let modelPromise: Promise<unknown> | null = null;
+let objectUrl: string | null = null;
 
 async function getVoskModel(): Promise<{
   KaldiRecognizer: new (sampleRate: number) => {
@@ -54,7 +51,8 @@ async function getVoskModel(): Promise<{
   if (!modelPromise) {
     modelPromise = (async () => {
       const { createModel } = await import("vosk-browser");
-      return createModel(modelUrl());
+      objectUrl = await resolveVoskModelUrl(modelUrl());
+      return createModel(objectUrl);
     })();
   }
   return modelPromise as Promise<{
