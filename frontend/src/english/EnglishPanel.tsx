@@ -1,26 +1,8 @@
 import { useEffect, useState } from "react";
-import { scoreSentence } from "./textutil";
+import { listenOnce } from "./asr";
+import { t } from "../i18n";
 
 type Word = { id: number; word: string; translation: string; example: string };
-
-type SR = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult: ((ev: { results: { [i: number]: { [j: number]: { transcript: string } }; length: number; isFinal?: boolean } }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-};
-
-function getSpeechRecognition(): (new () => SR) | null {
-  const w = window as unknown as {
-    SpeechRecognition?: new () => SR;
-    webkitSpeechRecognition?: new () => SR;
-  };
-  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
-}
 
 export default function EnglishPanel() {
   const [words, setWords] = useState<Word[]>([]);
@@ -51,42 +33,21 @@ export default function EnglishPanel() {
     window.speechSynthesis.speak(u);
   };
 
-  const listen = () => {
-    const Ctor = getSpeechRecognition();
-    if (!Ctor || !w) {
-      setHeard("(SpeechRecognition недоступен — нужен Chrome/Edge; vosk-browser — следующий шаг)");
-      return;
-    }
-    const rec = new Ctor();
-    rec.lang = "en-US";
-    rec.continuous = false;
-    rec.interimResults = true;
+  const listen = async () => {
+    if (!w) return;
     setListening(true);
     setHeard("");
     setScore(null);
-    // уровень микрофона — приближение через interim пульс
-    const pulse = window.setInterval(() => setLevel((x) => (x + 17) % 100), 120);
-    rec.onresult = (ev) => {
-      const last = ev.results[ev.results.length - 1];
-      const text = last?.[0]?.transcript || "";
-      setHeard(text);
-      if ((last as { isFinal?: boolean })?.isFinal || ev.results.length) {
-        const expected = w.example || w.word;
-        const { score: sc } = scoreSentence(expected, text, w.word);
-        setScore(sc);
-      }
-    };
-    rec.onerror = () => {
-      setListening(false);
-      window.clearInterval(pulse);
-      setLevel(0);
-    };
-    rec.onend = () => {
-      setListening(false);
-      window.clearInterval(pulse);
-      setLevel(0);
-    };
-    rec.start();
+    const res = await listenOnce({
+      expected: w.example || w.word,
+      targetWord: w.word,
+      onInterim: setHeard,
+      onLevel: setLevel,
+    });
+    setListening(false);
+    setHeard(res.transcript || (res.engine === "none" ? "(ASR недоступен)" : ""));
+    setScore(res.engine === "none" ? null : res.score);
+    setLevel(0);
   };
 
   const grade = async (g: number) => {
@@ -109,13 +70,17 @@ export default function EnglishPanel() {
     <div className="english">
       <div className="card">
         <h2>{w.word}</h2>
-        {speaking && <span className="badge ok">ЧИТАЕТ…</span>}
-        {listening && <span className="badge ok">СЛУШАЮ… {level}%</span>}
+        {speaking && <span className="badge ok">{t("reading")}</span>}
+        {listening && (
+          <span className="badge ok">
+            {t("listening")} {Math.round(level)}%
+          </span>
+        )}
         <div className="bridge-actions" style={{ justifyContent: "center" }}>
           <button type="button" className="hud-btn" onClick={speak}>
             🔊 Голос
           </button>
-          <button type="button" className="hud-btn" onClick={listen}>
+          <button type="button" className="hud-btn" onClick={() => void listen()}>
             🎤 Микрофон
           </button>
           <button type="button" className="hud-btn amber" onClick={() => setShow(true)}>

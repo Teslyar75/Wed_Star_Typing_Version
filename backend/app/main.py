@@ -26,6 +26,9 @@ if str(_repo) not in sys.path:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    from app.translate_jobs import ensure_worker
+
+    ensure_worker()
     yield
 
 

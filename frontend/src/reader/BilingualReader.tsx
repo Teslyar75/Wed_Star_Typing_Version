@@ -7,17 +7,31 @@ export default function BilingualReader() {
   const [rows, setRows] = useState<Row[]>([]);
   const [active, setActive] = useState(0);
   const [mode, setMode] = useState<"bi" | "screen">("bi");
+  const [status, setStatus] = useState("");
+
+  const fetchRows = async (id: number) => {
+    const data = await (await fetch(`/api/reader/${id}/bilingual?limit=200`)).json();
+    setRows(data);
+    setActive(data[0]?.sentence_id ?? 0);
+  };
 
   const load = async () => {
     if (!textId) return;
+    setStatus("перевод в очереди…");
     await fetch("/api/reader/translate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text_id: Number(textId), src_lang: "en", dst_lang: "ru" }),
+      body: JSON.stringify({ text_id: Number(textId), src_lang: "en", dst_lang: "ru", async_mode: true }),
     });
-    const data = await (await fetch(`/api/reader/${textId}/bilingual?limit=200`)).json();
-    setRows(data);
-    setActive(data[0]?.sentence_id ?? 0);
+    await fetchRows(Number(textId));
+    // короткий полл фонового воркера
+    for (let k = 0; k < 8; k++) {
+      await new Promise((r) => setTimeout(r, 400));
+      await fetchRows(Number(textId));
+      const st = await (await fetch("/api/reader/translate/status")).json();
+      setStatus(`очередь: pending ${st.pending}, done ${st.done}`);
+      if (st.pending === 0 && st.done > 0) break;
+    }
   };
 
   const speak = (text: string) => {
@@ -46,6 +60,7 @@ export default function BilingualReader() {
           Экран
         </button>
       </div>
+      {status && <p className="muted">{status}</p>}
       {mode === "bi" ? (
         <div className="bi-grid">
           {rows.map((r) => (

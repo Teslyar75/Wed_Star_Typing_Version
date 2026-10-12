@@ -46,7 +46,7 @@ export default function AuthPanel() {
   return (
     <div className="auth">
       <div className="bridge-actions">
-        <input value={callsign} onChange={(e) => setCallsign(e.target.value)} placeholder="позывной" />
+        <input value={callsign} onChange={(e) => setCallsign(e.target.value)} placeholder="позывной / callsign" />
         <input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" type="password" />
         <button type="button" className="hud-btn" onClick={() => void register()}>
           {t("enroll")}

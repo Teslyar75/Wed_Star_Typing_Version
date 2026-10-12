@@ -72,10 +72,12 @@ docker compose up --build
 
 | Сделано | Ещё впереди |
 | --- | --- |
-| Изоляция сессий пилота + XP | Playwright UI e2e |
-| UPLINK Google/MyMemory + кэш | Очередь переводов в фоне (worker) |
-| vocab seed 500 + склад due | Полный vocab 20k + миссии |
-| RSVP/Шульте → `/api/speedread` | Тесты таймера <5 мс |
-| Окно набора (не DOM 100k) | react-virtuoso для читалки |
-| textutil TS + SpeechRecognition | vosk-browser WASM |
-| API e2e регистрация→сессия→доска | Lighthouse PWA ≥90, полный i18next |
+| Изоляция сессий пилота + XP | Полный vocab 20k + миссии |
+| UPLINK + фоновый worker очереди | Рейтинг CPU космоса / Pixi |
+| vocab seed 500 + склад due | Тесты таймера RSVP <5 мс |
+| RSVP/Шульте → `/api/speedread` | react-virtuoso для читалки |
+| Окно набора (не DOM 100k) | Lighthouse PWA ≥90 |
+| textutil + Web Speech ASR | vosk-browser WASM (каркас готов) |
+| Playwright e2e вход→набор→доска | |
+| i18next + stamina/i18n JSON | |
+| PWA кэш словаря/локалей | |

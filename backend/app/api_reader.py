@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Segment, TextDoc
+from app import translate_jobs
 from app.translate_cache import fill_missing_translations
 
 router = APIRouter(prefix="/api/reader", tags=["reader"])
@@ -18,6 +19,7 @@ class TranslateJob(BaseModel):
     src_lang: str = "en"
     dst_lang: str = "ru"
     limit: int = 50
+    async_mode: bool = True
 
 
 @router.get("/{text_id}/bilingual")
@@ -46,8 +48,16 @@ def bilingual_view(text_id: int, offset: int = 0, limit: int = 100, db: Session 
 
 
 @router.post("/translate")
-def queue_translate(body: TranslateJob, db: Session = Depends(get_db)) -> dict[str, int]:
+def queue_translate(body: TranslateJob, db: Session = Depends(get_db)) -> dict:
     if db.get(TextDoc, body.text_id) is None:
         raise HTTPException(404, "not found")
+    if body.async_mode:
+        info = translate_jobs.enqueue(body.text_id, body.src_lang, body.dst_lang, body.limit)
+        return {"mode": "async", **info}
     n = fill_missing_translations(db, body.text_id, body.src_lang, body.dst_lang, body.limit)
-    return {"filled": n}
+    return {"mode": "sync", "filled": n}
+
+
+@router.get("/translate/status")
+def translate_status() -> dict[str, int]:
+    return translate_jobs.status()

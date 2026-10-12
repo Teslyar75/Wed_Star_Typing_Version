@@ -1,102 +1,25 @@
-const DICT: Record<string, Record<string, string>> = {
-  ru: {
-    bridge: "Мостик",
-    reader: "2 языка",
-    english: "Английский",
-    speed: "Скорочтение",
-    crew: "Экипаж",
-    skins: "Скины",
-    ready: "К ЗАПУСКУ ГОТОВ",
-    flying: "● В ПОЛЁТЕ",
-    pause: "❚❚ ПАУЗА",
-    finish: "ФИНИШ",
-    board: "На борт",
-    again: "Заново",
-    enroll: "Зачислить",
-    login: "Войти",
-    honor: "Доска почёта",
-    reading: "ЧИТАЕТ…",
-    listening: "СЛУШАЮ…",
-  },
-  en: {
-    bridge: "Bridge",
-    reader: "Bilingual",
-    english: "English",
-    speed: "Speed-read",
-    crew: "Crew",
-    skins: "Skins",
-    ready: "READY TO LAUNCH",
-    flying: "● IN FLIGHT",
-    pause: "❚❚ PAUSED",
-    finish: "FINISH",
-    board: "Load",
-    again: "Restart",
-    enroll: "Enroll",
-    login: "Login",
-    honor: "Honor board",
-    reading: "READING…",
-    listening: "LISTENING…",
-  },
-  uk: {
-    bridge: "Місток",
-    reader: "2 мови",
-    english: "Англійська",
-    speed: "Швидкочитання",
-    crew: "Екіпаж",
-    skins: "Скіни",
-    ready: "ДО СТАРТУ ГОТОВИЙ",
-    flying: "● У ПОЛЬОТІ",
-    pause: "❚❚ ПАУЗА",
-    finish: "ФІНІШ",
-    board: "На борт",
-    again: "Знову",
-    enroll: "Зарахувати",
-    login: "Увійти",
-    honor: "Дошка пошани",
-    reading: "ЧИТАЄ…",
-    listening: "СЛУХАЮ…",
-  },
-  de: {
-    bridge: "Brücke",
-    reader: "Zweisprachig",
-    english: "Englisch",
-    speed: "Schnelllesen",
-    crew: "Crew",
-    skins: "Skins",
-    ready: "STARTBEREIT",
-    flying: "● IM FLUG",
-    pause: "❚❚ PAUSE",
-    finish: "ZIEL",
-    board: "Laden",
-    again: "Neu",
-    enroll: "Anmelden",
-    login: "Login",
-    honor: "Ehrenliste",
-    reading: "LIEST…",
-    listening: "HÖRT…",
-  },
-};
-
-let lang = localStorage.getItem("st_lang") || "ru";
-const listeners = new Set<() => void>();
+/** Совместимый фасад над i18next (старые вызовы t/getLang/setLang). */
+import { i18n, switchAppLang } from "./i18n/setup";
 
 export function getLang() {
-  return lang;
+  return i18n.language || localStorage.getItem("st_lang") || "ru";
 }
 
 export function setLang(code: string) {
-  lang = code;
-  localStorage.setItem("st_lang", code);
-  listeners.forEach((fn) => fn());
+  void switchAppLang(code);
 }
 
 export function onLangChange(fn: () => void): () => void {
-  listeners.add(fn);
+  const handler = () => fn();
+  i18n.on("languageChanged", handler);
   return () => {
-    listeners.delete(fn);
+    i18n.off("languageChanged", handler);
   };
 }
 
 export function t(key: string): string {
-  return DICT[lang]?.[key] ?? DICT.en?.[key] ?? key;
+  // сначала ui-ключ, иначе фраза из stamina (русский ключ)
+  if (i18n.exists(key, { ns: "ui" })) return i18n.t(key, { ns: "ui" });
+  if (i18n.exists(key, { ns: "stamina" })) return i18n.t(key, { ns: "stamina" });
+  return i18n.t(key, { ns: "ui", defaultValue: key });
 }
