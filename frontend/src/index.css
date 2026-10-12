@@ -188,6 +188,27 @@ body {
   font-size: 0.95rem;
 }
 
+.rsvp.tachi {
+  min-height: 3rem;
+  opacity: 0.15;
+  transition: opacity 0.05s linear;
+}
+
+.rsvp.tachi.on {
+  opacity: 1;
+}
+
+.epyr {
+  text-align: center;
+  margin-top: 1rem;
+  font-family: var(--st-mono, ui-monospace, monospace);
+  line-height: 1.45;
+}
+
+.epyr-line {
+  white-space: pre;
+}
+
 @media (max-width: 640px) {
   .hud-bar {
     gap: 0.4rem;

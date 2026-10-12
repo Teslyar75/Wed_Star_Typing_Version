@@ -101,6 +101,10 @@ const UI: Record<string, Record<string, string>> = {
     bin_learned: "Выучено",
     from_book: "Из книги",
     from_book_need: "Откройте книгу в Библиотеке / Читалке",
+    tachi: "Тахистоскоп",
+    epyr: "E-Pyr",
+    journal: "Журнал",
+    all_modes: "Все режимы",
   },
   en: {
     bridge: "Bridge",
@@ -200,6 +204,10 @@ const UI: Record<string, Record<string, string>> = {
     bin_learned: "Learned",
     from_book: "From book",
     from_book_need: "Open a book in Library / Reader first",
+    tachi: "Tachistoscope",
+    epyr: "E-Pyr",
+    journal: "Journal",
+    all_modes: "All modes",
   },
   uk: {
     bridge: "Місток",
@@ -299,6 +307,10 @@ const UI: Record<string, Record<string, string>> = {
     bin_learned: "Вивчено",
     from_book: "З книги",
     from_book_need: "Відкрийте книгу в Бібліотеці",
+    tachi: "Тахістоскоп",
+    epyr: "E-Pyr",
+    journal: "Журнал",
+    all_modes: "Усі режими",
   },
   de: {
     bridge: "Brücke",
@@ -398,6 +410,10 @@ const UI: Record<string, Record<string, string>> = {
     bin_learned: "Gelernt",
     from_book: "Aus Buch",
     from_book_need: "Zuerst Buch in Bibliothek öffnen",
+    tachi: "Tachistoskop",
+    epyr: "E-Pyr",
+    journal: "Tagebuch",
+    all_modes: "Alle Modi",
   },
 };
 

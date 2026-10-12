@@ -73,6 +73,7 @@ def save_result(
 @router.get("/results", response_model=list[ResultOut])
 def list_results(
     limit: int = 30,
+    mode: str | None = None,
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> list[SpeedResult]:
@@ -81,4 +82,6 @@ def list_results(
         q = q.filter(SpeedResult.pilot_id.is_(None))
     else:
         q = q.filter(SpeedResult.pilot_id == pilot.id)
+    if mode:
+        q = q.filter(SpeedResult.mode == mode)
     return q.order_by(SpeedResult.id.desc()).limit(max(1, min(limit, 100))).all()
