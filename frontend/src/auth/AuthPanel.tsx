@@ -3,13 +3,22 @@ import { t } from "../i18n";
 
 type Pilot = { id: number; callsign: string; display_name: string; skin: string; xp: number };
 type Honor = { callsign: string; xp: number; best_cpm: number; sessions: number };
+type Mission = {
+  id: string;
+  title: string;
+  done: boolean;
+  claimed: boolean;
+  progress: number;
+  target: number;
+  reward_xp: number;
+};
 
 export default function AuthPanel() {
   const [callsign, setCallsign] = useState("Cadet");
   const [pin, setPin] = useState("1234");
   const [me, setMe] = useState<Pilot | null>(null);
   const [honor, setHonor] = useState<Honor[]>([]);
-  const [missions, setMissions] = useState<{ id: string; title: string; done: boolean; progress: number; target: number }[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [msg, setMsg] = useState("");
 
   const refresh = async () => {
@@ -45,6 +54,12 @@ export default function AuthPanel() {
     void refresh();
   };
 
+  const claim = async (id: string) => {
+    const r = await fetch(`/api/missions/${id}/claim`, { method: "POST", credentials: "include" });
+    setMsg(r.ok ? `Награда +${(await r.json()).reward_xp} XP` : await r.text());
+    void refresh();
+  };
+
   return (
     <div className="auth">
       <div className="bridge-actions">
@@ -67,7 +82,12 @@ export default function AuthPanel() {
       <ul className="station-list">
         {missions.map((m) => (
           <li key={m.id}>
-            {m.done ? "✓" : "·"} {m.title} ({m.progress}/{m.target})
+            {m.claimed ? "★" : m.done ? "✓" : "·"} {m.title} ({m.progress}/{m.target})
+            {m.done && !m.claimed && me && (
+              <button type="button" className="hud-btn amber" style={{ marginLeft: 8 }} onClick={() => void claim(m.id)}>
+                +{m.reward_xp} XP
+              </button>
+            )}
           </li>
         ))}
       </ul>

@@ -1,6 +1,6 @@
-/* PWA: shell + офлайн-кэш словаря / локалей */
-const CACHE = "st-shell-v2";
-const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-192.png"];
+/* PWA shell + offline vocab/locales */
+const CACHE = "st-shell-v3";
+const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -8,7 +8,10 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -16,11 +19,11 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET") return;
 
-  // словарь и локали — cache-first после первого ответа
   const cacheableApi =
     url.pathname.startsWith("/api/english/words") ||
     url.pathname.startsWith("/api/english/warehouse") ||
-    url.pathname.startsWith("/locales/");
+    url.pathname.startsWith("/locales/") ||
+    url.pathname.startsWith("/models/");
 
   if (cacheableApi) {
     event.respondWith(
@@ -42,6 +45,22 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
-    caches.match(event.request).then((hit) => hit || fetch(event.request).catch(() => caches.match("/"))),
+    caches.match(event.request).then(async (hit) => {
+      if (hit) return hit;
+      try {
+        const net = await fetch(event.request);
+        if (net.ok && (url.origin === self.location.origin)) {
+          const cache = await caches.open(CACHE);
+          cache.put(event.request, net.clone());
+        }
+        return net;
+      } catch {
+        if (event.request.mode === "navigate") {
+          const shell = await caches.match("/index.html");
+          if (shell) return shell;
+        }
+        return caches.match("/");
+      }
+    }),
   );
 });

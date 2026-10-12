@@ -16,7 +16,7 @@ export default function EnglishPanel() {
 
   useEffect(() => {
     void (async () => {
-      await fetch("/api/english/seed?limit=500", { method: "POST" });
+      await fetch("/api/english/seed?limit=20000", { method: "POST" });
       const list = await (await fetch("/api/english/warehouse?limit=30", { credentials: "include" })).json();
       setWords(list);
     })();

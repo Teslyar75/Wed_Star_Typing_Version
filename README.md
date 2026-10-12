@@ -72,12 +72,17 @@ docker compose up --build
 
 | Сделано | Ещё впереди |
 | --- | --- |
-| Изоляция сессий пилота + XP | Полный vocab 20k + миссии |
-| UPLINK + фоновый worker очереди | Рейтинг CPU космоса / Pixi |
-| vocab seed 500 + склад due | Тесты таймера RSVP <5 мс |
-| RSVP/Шульте → `/api/speedread` | react-virtuoso для читалки |
-| Окно набора (не DOM 100k) | Lighthouse PWA ≥90 |
-| textutil + Web Speech ASR | vosk-browser WASM (каркас готов) |
-| Playwright e2e вход→набор→доска | |
-| i18next + stamina/i18n JSON | |
-| PWA кэш словаря/локалей | |
+| Изоляция сессий / XP / миссии+claim | Pixi/living_space глубже |
+| UPLINK + фоновый worker | Lighthouse audit на проде |
+| vocab seed до 20k (из stamina) | |
+| RSVP timing tests + API | |
+| react-virtuoso читалка | |
+| vosk-browser + `npm run fetch:vosk` | |
+| Playwright e2e | |
+| i18next + stamina locales | |
+| PWA manifest 512 / SW v3 | |
+
+```powershell
+cd frontend
+npm run fetch:vosk   # ~40MB модель ASR
+```

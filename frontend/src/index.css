@@ -295,6 +295,12 @@ code {
   font-size: 0.8rem;
 }
 
+.bi-virt {
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
 .bi-grid {
   display: grid;
   gap: 0.35rem;

@@ -9,13 +9,16 @@
     "preview": "vite preview",
     "test": "vitest run --dir src",
     "test:e2e": "playwright test",
-    "lint": "eslint src --ext ts,tsx"
+    "lint": "eslint src --ext ts,tsx",
+    "fetch:vosk": "node scripts/fetch-vosk-model.mjs"
   },
   "dependencies": {
     "i18next": "^26.4.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^17.0.16",
+    "react-virtuoso": "^4.18.16",
+    "vosk-browser": "^0.0.8",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

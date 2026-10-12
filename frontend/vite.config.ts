@@ -7,6 +7,9 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ["vosk-browser"],
+  },
   server: {
     port: 5173,
     fs: { allow: [root, path.resolve(root, "..")] },

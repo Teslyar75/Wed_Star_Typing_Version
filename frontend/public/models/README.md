@@ -1,10 +1,10 @@
 # Vosk model (опционально)
 
-Чтобы включить vosk-browser:
+```powershell
+cd frontend
+npm run fetch:vosk
+```
 
-1. Скачайте `vosk-model-small-en-us-0.15` с https://alphacephei.com/vosk/models
-2. Положите архив как `vosk-model-small-en-us.tar.gz` в эту папку
-3. `npm i vosk-browser` во `frontend/`
-4. Допишите загрузку модели в `src/english/asr.ts` → `listenWithVosk`
+Скачает `vosk-model-small-en-us.tar.gz` (~40 MB) в эту папку. Файл в `.gitignore`.
 
-Пока ASR работает через Web Speech API + `textutil` scoring.
+После этого ASR в «Английский» предпочтёт vosk-browser; иначе — Web Speech API.
