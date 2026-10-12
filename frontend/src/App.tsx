@@ -5,8 +5,9 @@ import EnglishPanel from "./english/EnglishPanel";
 import SpeedReadPanel from "./speedread/SpeedReadPanel";
 import AuthPanel from "./auth/AuthPanel";
 import SkinPicker from "./theme/SkinPicker";
+import SpaceCanvas from "./fx/SpaceCanvas";
 import { applyTheme } from "./theme/applyTheme";
-import { t, setLang, getLang } from "./i18n";
+import { t, setLang, getLang, onLangChange } from "./i18n";
 import spaceship from "../../packages/themes/spaceship.json";
 
 type Tab = "bridge" | "reader" | "english" | "speed" | "auth" | "skins";

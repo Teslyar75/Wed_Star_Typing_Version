@@ -21,7 +21,7 @@ export default function SpaceCanvas() {
     const draw = () => {
       if (!alive) return;
       const w = (c.width = c.clientWidth);
-      const h = (c.height = 140);
+      const h = (c.height = c.clientHeight || 180);
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--st-bg") || "#03060c";
       ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = "#dff";

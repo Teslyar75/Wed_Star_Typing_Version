@@ -6,13 +6,12 @@ import steampunk from "../../../packages/themes/steampunk.json";
 import scriptorium from "../../../packages/themes/scriptorium.json";
 import neonCity from "../../../packages/themes/neon_city.json";
 import zenGarden from "../../../packages/themes/zen_garden.json";
-import SpaceCanvas from "../fx/SpaceCanvas";
+import RadioPanel from "../radio/RadioPanel";
 
 const SKINS = [spaceship, bathyscaphe, steampunk, scriptorium, neonCity, zenGarden] as SkinTheme[];
 
 export default function SkinPicker() {
   const [id, setId] = useState("spaceship");
-  const [radio, setRadio] = useState("");
 
   const pick = (skin: SkinTheme) => {
     setId(skin.id);
@@ -21,7 +20,6 @@ export default function SkinPicker() {
 
   return (
     <div className="skins">
-      <SpaceCanvas />
       <div className="skin-grid">
         {SKINS.map((s) => (
           <button
@@ -56,14 +54,8 @@ export default function SkinPicker() {
         >
           Тест щелчка
         </button>
-        <input
-          placeholder="URL потока radio…"
-          value={radio}
-          onChange={(e) => setRadio(e.target.value)}
-          style={{ minWidth: 220 }}
-        />
-        {radio && <audio controls src={radio} />}
       </div>
+      <RadioPanel />
     </div>
   );
 }
