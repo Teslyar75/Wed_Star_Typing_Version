@@ -63,7 +63,8 @@
 - Migrate: `POST /api/migrate/pilot`, `/api/migrate/bundle` ✅
 - Speedread quiz (seen yes/no) после RSVP ✅
 - Vosk модель в IndexedDB; UI-ключи i18n; импорт JSON пилота в Экипаже ✅
-- Космос light@8fps + freeze reduced-motion; радиорубка/минибар/избранное; Web Audio; Caddy DOMAIN HTTPS ✅ |
+- Космос light@8fps + freeze reduced-motion; радиорубка/минибар/избранное; Web Audio; Caddy DOMAIN HTTPS ✅
+- Gale–Church ≥90% на bilinguis-фрагменте; ICY nowplaying API; frost-профиль космоса ✅ |
 
 ## 5. Промпты для Cursor (копировать по одному)
 

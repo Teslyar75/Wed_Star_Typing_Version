@@ -77,6 +77,8 @@ const UI: Record<string, Record<string, string>> = {
     radio_tab_hint: "Радиорубка — отдельная вкладка «Радио»; мини-приёмник в шапке.",
     sound_on: "♪ Звук вкл",
     sound_off: "♪ Звук выкл",
+    radio_track: "Трек",
+    radio_history: "История эфира",
   },
   en: {
     bridge: "Bridge",
@@ -152,6 +154,8 @@ const UI: Record<string, Record<string, string>> = {
     radio_tab_hint: "Radio shack is its own tab; minibar lives in the header.",
     sound_on: "♪ Sound on",
     sound_off: "♪ Sound off",
+    radio_track: "Track",
+    radio_history: "On-air history",
   },
   uk: {
     bridge: "Місток",
@@ -227,6 +231,8 @@ const UI: Record<string, Record<string, string>> = {
     radio_tab_hint: "Радіорубка — вкладка «Радіо»; міні-приймач у шапці.",
     sound_on: "♪ Звук увімк",
     sound_off: "♪ Звук вимк",
+    radio_track: "Трек",
+    radio_history: "Історія ефіру",
   },
   de: {
     bridge: "Brücke",
@@ -302,6 +308,8 @@ const UI: Record<string, Record<string, string>> = {
     radio_tab_hint: "Funkraum ist eigener Tab; Minileiste in der Kopfzeile.",
     sound_on: "♪ Ton an",
     sound_off: "♪ Ton aus",
+    radio_track: "Titel",
+    radio_history: "Sendungsverlauf",
   },
 };
 

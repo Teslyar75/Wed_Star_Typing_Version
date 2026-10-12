@@ -1,11 +1,19 @@
 /** Порт stamina/living_space.Scene — звёзды, кометы, астероиды, планеты (Canvas 2D). */
 
-export type SpaceProfile = "light" | "full";
+export type SpaceProfile = "frost" | "light" | "full";
 
+/** frost — минимум объектов (CPU-щадящий); light — по умолчанию; full — богаче. */
 const PROFILE = {
+  frost: { stars: 40, comets: 0, rocks: 1, planets: 0 },
   light: { stars: 90, comets: 1, rocks: 3, planets: 1 },
   full: { stars: 170, comets: 2, rocks: 6, planets: 2 },
 };
+
+/** Грубая оценка «стоимости» кадра (для тестов / HUD). */
+export function profileCost(mode: SpaceProfile): number {
+  const p = PROFILE[mode];
+  return p.stars + p.comets * 20 + p.rocks * 8 + p.planets * 30;
+}
 
 type Star = { x: number; y: number; layer: number; b: number };
 type Comet = { x: number; y: number; speed: number; drift: number; tail: number };

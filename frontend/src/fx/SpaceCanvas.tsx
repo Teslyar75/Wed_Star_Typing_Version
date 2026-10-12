@@ -15,14 +15,15 @@ export default function SpaceCanvas({ profile = "light", className = "space-canv
 
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reduced = mq.matches;
-    const mode: SpaceProfile = reduced ? "light" : profile;
+    // reduced-motion → frost + один кадр; иначе выбранный профиль
+    const mode: SpaceProfile = reduced ? "frost" : profile;
     const scene = new LivingSpaceScene(c.clientWidth || 800, c.clientHeight || 180, mode);
     let alive = true;
     let raf = 0;
     let last = performance.now();
     let acc = 0;
-    // light ≈ 8 fps (меньше CPU), full ≈ 24 fps
-    const targetDt = mode === "full" ? 1 / 24 : 1 / 8;
+    // frost ≈ 4 fps, light ≈ 8 fps, full ≈ 24 fps
+    const targetDt = mode === "full" ? 1 / 24 : mode === "frost" ? 1 / 4 : 1 / 8;
 
     const paint = () => {
       const w = c.clientWidth;

@@ -11,7 +11,21 @@ export default function RadioPanel() {
   const [err, setErr] = useState("");
   const [tab, setTab] = useState<"air" | "favs">("air");
   const audioRef = useRef<HTMLAudioElement>(null);
-  const { station, playing, volume, favs, play, pause, resume, setAudio, setVolume, toggleFav, isFav } = useRadio();
+  const {
+    station,
+    playing,
+    volume,
+    favs,
+    nowPlaying,
+    history,
+    play,
+    pause,
+    resume,
+    setAudio,
+    setVolume,
+    toggleFav,
+    isFav,
+  } = useRadio();
 
   useEffect(() => {
     setAudio(audioRef.current);
@@ -90,6 +104,11 @@ export default function RadioPanel() {
             <span className={`badge ${playing ? "ok" : ""}`}>{playing ? t("radio_on_air") : t("pause")}</span>{" "}
             <strong>{station.name}</strong>
           </p>
+          {nowPlaying && (
+            <p className="muted">
+              {t("radio_track")}: {nowPlaying}
+            </p>
+          )}
           <div className="bridge-actions">
             <button type="button" className="hud-btn amber" onClick={() => (playing ? pause() : resume())}>
               {playing ? t("pause") : t("start")}
@@ -106,6 +125,16 @@ export default function RadioPanel() {
               />
             </label>
           </div>
+          {history.length > 0 && (
+            <>
+              <h4>{t("radio_history")}</h4>
+              <ul className="station-list">
+                {history.map((tr, i) => (
+                  <li key={`${tr}-${i}`}>{tr}</li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       )}
       <audio ref={audioRef} className="radio-audio" crossOrigin="anonymous" />

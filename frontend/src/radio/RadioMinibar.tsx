@@ -4,13 +4,13 @@ import { useRadio } from "./radioStore";
 type Props = { onOpen: () => void };
 
 export default function RadioMinibar({ onOpen }: Props) {
-  const { station, playing, toggle, volume, setVolume } = useRadio();
+  const { station, playing, toggle, volume, setVolume, nowPlaying } = useRadio();
   if (!station) return null;
 
   return (
     <div className="radio-minibar">
       <button type="button" className="hud-btn" onClick={onOpen} title={t("radio")}>
-        📻 {station.name}
+        📻 {nowPlaying ? `${station.name} — ${nowPlaying}` : station.name}
         {playing ? " ●" : ""}
       </button>
       <button type="button" className="hud-btn amber" onClick={() => toggle()}>

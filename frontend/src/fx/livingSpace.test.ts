@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LivingSpaceScene } from "./livingSpace";
+import { LivingSpaceScene, profileCost } from "./livingSpace";
 
 describe("LivingSpaceScene", () => {
   it("seeds stars/comets/rocks", () => {
@@ -21,5 +21,13 @@ describe("LivingSpaceScene", () => {
     const full = new LivingSpaceScene(800, 400, "full", 3);
     expect(light.stars.length).toBeLessThan(full.stars.length);
     expect(light.rocks.length).toBeLessThan(full.rocks.length);
+  });
+
+  it("frost is cheapest cost", () => {
+    expect(profileCost("frost")).toBeLessThan(profileCost("light"));
+    expect(profileCost("light")).toBeLessThan(profileCost("full"));
+    const frost = new LivingSpaceScene(400, 200, "frost", 4);
+    expect(frost.comets.length).toBe(0);
+    expect(frost.planets.length).toBe(0);
   });
 });
