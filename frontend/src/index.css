@@ -1,0 +1,89 @@
+:root {
+  --st-bg: #03060c;
+  --st-panel: #081221;
+  --st-line: #15314d;
+  --st-text: #d6f4ff;
+  --st-muted: #6f90ab;
+  --st-accent: #ffb000;
+  --st-cyan: #00e5ff;
+  --st-ok: #3dff8a;
+  --st-error: #ff3b5c;
+  --st-font-ui: "Segoe UI", system-ui, sans-serif;
+  --st-font-mono: "Cascadia Mono", Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--st-font-ui);
+  color: var(--st-text);
+  background: radial-gradient(ellipse at 50% 0%, #0a1628 0%, var(--st-bg) 55%);
+}
+
+.cockpit {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.hud-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.logo {
+  color: var(--st-accent);
+  font-size: 1.5rem;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--st-cyan) 40%, transparent);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--st-muted);
+  border: 1px solid var(--st-line);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.panel {
+  background: color-mix(in srgb, var(--st-panel) 92%, transparent);
+  border: 1px solid var(--st-line);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--st-cyan) 12%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.lead {
+  line-height: 1.55;
+  color: var(--st-muted);
+}
+
+.status-list {
+  margin: 1rem 0 0;
+  padding-left: 1.2rem;
+  line-height: 1.7;
+}
+
+.ok {
+  color: var(--st-ok);
+}
+
+code {
+  font-family: var(--st-font-mono);
+  font-size: 0.9em;
+  color: var(--st-cyan);
+}

@@ -1,0 +1,20 @@
+{
+  "id": "scriptorium",
+  "name": { "ru": "Скрипторий", "uk": "Скрипторій", "en": "Scriptorium", "de": "Skriptorium" },
+  "colors": {
+    "bg": "#2a1d12",
+    "panel": "#efe0bd",
+    "panel_border": "#7a5230",
+    "text": "#2b1a0e",
+    "muted": "#6b5040",
+    "accent": "#9c1f1f",
+    "cyan": "#7a5230",
+    "ok": "#3f6b2a",
+    "error": "#8b1a1a"
+  },
+  "fonts": { "ui": ["EB Garamond", "Cormorant Garamond"], "title": ["Cormorant Garamond", "Georgia"], "typing": ["EB Garamond", "Georgia"] },
+  "frame": { "style": "scroll", "radius": 2, "border": 2, "corner_cuts": false },
+  "background": { "engine": "candles", "params": {} },
+  "assets": { "images": "../../docs/skins/images/scriptorium" },
+  "ranks": ["Послушник", "Переписчик", "Книжник", "Хранитель", "Архивариус"]
+}

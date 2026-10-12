@@ -1,0 +1,20 @@
+{
+  "id": "neon_city",
+  "name": { "ru": "Неон-Сити", "uk": "Неон-Сіті", "en": "Neon City", "de": "Neon-Stadt" },
+  "colors": {
+    "bg": "#0a0612",
+    "panel": "#170c26",
+    "panel_border": "#ff2bd6",
+    "text": "#e6e0ff",
+    "muted": "#8a7aa0",
+    "accent": "#faff00",
+    "cyan": "#00f0ff",
+    "ok": "#39ff88",
+    "error": "#ff3355"
+  },
+  "fonts": { "ui": ["Rajdhani", "Segoe UI"], "title": ["Orbitron", "Rajdhani"], "typing": ["JetBrains Mono", "Consolas"] },
+  "frame": { "style": "cyber", "radius": 0, "border": 2, "corner_cuts": true },
+  "background": { "engine": "city_rain", "params": {} },
+  "assets": { "images": "../../docs/skins/images/neon_city" },
+  "ranks": ["Раннер", "Хакер", "Нетраннер", "Фиксер", "Легенда сети"]
+}

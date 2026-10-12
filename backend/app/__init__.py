@@ -1,0 +1,1 @@
+"""Star Typing Web API."""

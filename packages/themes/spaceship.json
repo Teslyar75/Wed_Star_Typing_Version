@@ -1,0 +1,28 @@
+{
+  "id": "spaceship",
+  "name": { "ru": "Звездолёт", "uk": "Зореліт", "en": "Starship", "de": "Raumschiff" },
+  "colors": {
+    "bg": "#03060C",
+    "panel": "#081221",
+    "panel_border": "#15314D",
+    "line": "#15314D",
+    "text": "#D6F4FF",
+    "muted": "#6F90AB",
+    "accent": "#FFB000",
+    "cyan": "#00E5FF",
+    "ok": "#3DFF8A",
+    "error": "#FF3B5C"
+  },
+  "fonts": {
+    "ui": ["Bahnschrift", "Segoe UI"],
+    "title": ["Bahnschrift", "Segoe UI"],
+    "typing": ["Cascadia Mono", "Consolas"]
+  },
+  "frame": { "style": "neon", "radius": 6, "border": 2, "corner_cuts": true },
+  "background": { "engine": "living_space", "params": {} },
+  "assets": {
+    "images": "../../docs/skins/images/spaceship",
+    "attribution": "../../docs/skins/images/ATTRIBUTION.md"
+  },
+  "ranks": ["Кадет", "Пилот-стажёр", "Мичман", "Лейтенант", "Капитан", "Адмирал флота"]
+}
