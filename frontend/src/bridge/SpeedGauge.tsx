@@ -1,4 +1,5 @@
 /** Порт stamina/hud.SpeedGauge — полукруглый спидометр зн/мин. */
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   value: number;
@@ -45,8 +46,29 @@ export default function SpeedGauge({
   const cy = H / 2 + 10;
   const r = Math.min(W / 2 - 10, H / 2 - 6);
   const tr = r * 0.8;
-  const shown = Math.max(0, value);
-  const vmaxUse = Math.max(shown, avg ?? 0) >= 380 ? 600 : vmax;
+  const target = Math.max(0, value);
+  const [shown, setShown] = useState(target);
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+
+  /* Плавная стрелка как desktop SpeedGauge.animate */
+  useEffect(() => {
+    let raf = 0;
+    const step = () => {
+      const cur = shownRef.current;
+      const diff = target - cur;
+      if (Math.abs(diff) < 0.4) {
+        if (cur !== target) setShown(target);
+        return;
+      }
+      setShown(cur + diff * 0.22);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+
+  const vmaxUse = Math.max(shown, avg ?? 0, target) >= 380 ? 600 : vmax;
   const tip = polar(cx, cy, r * 0.74, angleFor(shown, vmaxUse));
   const ticks = [];
   for (let v = 0; v <= vmaxUse; v += 20) {

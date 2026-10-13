@@ -58,3 +58,27 @@ def decode_token(token: str) -> int | None:
         return int(data["sub"])
     except (jwt.PyJWTError, KeyError, TypeError, ValueError):
         return None
+
+
+# Звания как stamina/missions.RANKS (порог XP → имя)
+RANKS: list[tuple[int, str]] = [
+    (0, "Кадет"),
+    (100, "Пилот-стажёр"),
+    (300, "Мичман"),
+    (700, "Лейтенант"),
+    (1500, "Капитан-лейтенант"),
+    (3000, "Капитан"),
+    (6000, "Коммодор"),
+    (12000, "Адмирал флота"),
+]
+
+
+def rank_for(xp: int) -> tuple[str, int, int | None]:
+    """(звание, порог текущего, порог следующего или None)."""
+    current = RANKS[0]
+    nxt: int | None = None
+    for i, (threshold, name) in enumerate(RANKS):
+        if xp >= threshold:
+            current = (threshold, name)
+            nxt = RANKS[i + 1][0] if i + 1 < len(RANKS) else None
+    return current[1], current[0], nxt

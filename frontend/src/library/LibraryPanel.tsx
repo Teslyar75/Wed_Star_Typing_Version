@@ -1,63 +1,104 @@
-import { useCallback, useEffect, useState } from "react";
+/**
+ * Библиотека скорочтения — порт stamina/speedread/screen.py LibraryPage.
+ * Слева: ТЕКСТЫ НА БОРТУ · справа: ПАСПОРТ ТЕКСТА.
+ * Каталоги: свободные Gutenberg / поиск / 2ЯЗ (BookCatalogPanel).
+ */
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useReadingPos } from "../reading/positionStore";
+import GutenbergModal from "./GutenbergModal";
 
 type ShelfItem = {
   text_id: number;
   title: string;
+  author?: string;
   lang: string;
   source: string;
   sentence_id: number;
   mode: string;
   segments: number;
   progress_pct?: number;
-};
-
-type CatalogBook = {
-  id: number;
-  title: string;
-  authors: string;
-  languages: string[];
-};
-
-type BilinguisBook = {
-  id: string;
-  slug: string;
-  title: string;
-  author: string;
-  lang_a: string;
-  lang_b: string;
+  chars?: number;
+  words?: number;
+  bilingual?: boolean;
+  print_allowed?: boolean;
 };
 
 type Props = {
-  onOpenReader?: () => void;
+  /** ▶ ГИПЕРДРАЙВ */
+  onOpenHyperdrive?: () => void;
+  /** 📖 КНИГА */
+  onOpenBook?: () => void;
+  /** ⌨ ПЕЧАТАТЬ → Свой текст / мостик */
   onOpenBridge?: () => void;
   onOpenEnglish?: () => void;
+  /** @deprecated aliases */
+  onOpenReader?: () => void;
   onOpenSpeed?: () => void;
 };
 
-export default function LibraryPanel({ onOpenReader, onOpenBridge, onOpenEnglish, onOpenSpeed }: Props) {
+type Badge = { code: string; tone: "green" | "cyan" | "amber" | "red" | "muted" };
+
+function badgesOf(it: ShelfItem): Badge[] {
+  if (!it.bilingual) return [];
+  const src = (it.source || "").toLowerCase();
+  const srcCode = src.includes("bilingu") || src.includes("pd") ? "PD" : src.includes("mt") ? "MT" : "PD";
+  return [
+    { code: "2ЯЗ", tone: "green" },
+    { code: srcCode, tone: "cyan" },
+    { code: "⌀ред.", tone: "amber" },
+    { code: "⌀печ.", tone: "amber" },
+  ];
+}
+
+function fmtNum(n: number): string {
+  return Math.max(0, Math.round(n)).toLocaleString("ru-RU").replace(/,/g, " ");
+}
+
+export default function LibraryPanel({
+  onOpenHyperdrive,
+  onOpenBook,
+  onOpenBridge,
+  onOpenReader,
+  onOpenSpeed,
+}: Props) {
   const jump = useReadingPos((s) => s.jump);
   const [shelf, setShelf] = useState<ShelfItem[]>([]);
-  const [query, setQuery] = useState("alice");
-  const [hits, setHits] = useState<CatalogBook[]>([]);
-  const [bili, setBili] = useState<BilinguisBook[]>([]);
-  const [langB, setLangB] = useState("ru");
+  const [sel, setSel] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [gutOpen, setGutOpen] = useState(false);
+  const [biliOpen, setBiliOpen] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteTitle, setPasteTitle] = useState("");
+  const [pasteBody, setPasteBody] = useState("");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameTitle, setRenameTitle] = useState("");
+  const [renameAuthor, setRenameAuthor] = useState("");
+  const txtRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
+
+  const goHyper = onOpenHyperdrive ?? onOpenSpeed ?? onOpenReader;
+  const goBook = onOpenBook ?? onOpenReader ?? onOpenSpeed;
 
   const reload = useCallback(async () => {
     const r = await fetch("/api/library", { credentials: "include" });
-    if (r.ok) setShelf(await r.json());
+    if (!r.ok) return;
+    const rows = (await r.json()) as ShelfItem[];
+    setShelf(rows);
+    setSel((cur) => {
+      if (cur != null && rows.some((x) => x.text_id === cur)) return cur;
+      return rows[0]?.text_id ?? null;
+    });
   }, []);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  const continueItem = shelf.find((x) => (x.sentence_id || 0) > 0) || shelf[0];
+  const selected = shelf.find((x) => x.text_id === sel) ?? null;
 
-  const openItem = (it: ShelfItem, mode: "reader" | "bridge" | "english" | "speed") => {
+  const remember = (it: ShelfItem, mode: string) => {
     jump(it.text_id, it.sentence_id);
     void fetch(`/api/library/${it.text_id}/position`, {
       method: "PUT",
@@ -65,190 +106,432 @@ export default function LibraryPanel({ onOpenReader, onOpenBridge, onOpenEnglish
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sentence_id: it.sentence_id, mode }),
     });
-    if (mode === "reader") onOpenReader?.();
-    else if (mode === "bridge") onOpenBridge?.();
-    else if (mode === "english") onOpenEnglish?.();
-    else onOpenSpeed?.();
+  };
+
+  const openHyperdrive = (it: ShelfItem) => {
+    remember(it, "hyperdrive");
+    goHyper?.();
+  };
+
+  const openBook = (it: ShelfItem) => {
+    remember(it, "book");
+    goBook?.();
+  };
+
+  const openType = (it: ShelfItem) => {
+    if (it.print_allowed === false || it.bilingual) {
+      setMsg(t("lib_type_blocked"));
+      return;
+    }
+    remember(it, "bridge");
+    onOpenBridge?.();
+  };
+
+  const addToShelf = async (textId: number) => {
+    await fetch("/api/library/shelf", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text_id: textId }),
+    });
   };
 
   const onUpload = async (file: File | null) => {
     if (!file) return;
     setBusy(true);
     setMsg("");
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("title", file.name);
-    fd.append("lang", "en");
-    const r = await fetch("/api/texts/upload", { method: "POST", body: fd, credentials: "include" });
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(await r.text());
-      return;
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("title", file.name.replace(/\.(txt|pdf)$/i, ""));
+      fd.append("lang", "en");
+      const r = await fetch("/api/texts/upload", { method: "POST", body: fd, credentials: "include" });
+      if (!r.ok) {
+        setMsg(await r.text());
+        return;
+      }
+      const doc = (await r.json()) as { id: number; title?: string };
+      await addToShelf(doc.id);
+      setMsg(`${t("library_ok")}: ${doc.title || file.name}`);
+      await reload();
+      setSel(doc.id);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
     }
-    const doc = await r.json();
-    await fetch("/api/library/shelf", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text_id: doc.id }),
-    });
-    setMsg(`${t("library_ok")}: ${doc.title}`);
-    void reload();
   };
 
-  const search = async () => {
+  const savePaste = async () => {
+    const text = pasteBody.trim();
+    if (!text) return;
     setBusy(true);
-    const r = await fetch(`/api/catalog/gutenberg/search?q=${encodeURIComponent(query)}`);
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(await r.text());
-      return;
+    setMsg("");
+    try {
+      const r = await fetch("/api/texts", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: pasteTitle.trim() || t("lib_paste_untitled"),
+          lang: "en",
+          content: text,
+        }),
+      });
+      if (!r.ok) {
+        setMsg(await r.text());
+        return;
+      }
+      const doc = (await r.json()) as { id: number; title?: string };
+      await addToShelf(doc.id);
+      setPasteOpen(false);
+      setPasteTitle("");
+      setPasteBody("");
+      setMsg(`${t("library_ok")}: ${doc.title}`);
+      await reload();
+      setSel(doc.id);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
     }
-    const j = await r.json();
-    setHits(j.results || []);
   };
 
-  const importBook = async (id: number, title: string) => {
-    setBusy(true);
-    const r = await fetch("/api/catalog/gutenberg/import", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gutenberg_id: id, title, lang: "en" }),
-    });
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(await r.text());
-      return;
+  const openPaste = async () => {
+    setPasteOpen(true);
+    setPasteTitle("");
+    try {
+      const clip = await navigator.clipboard.readText();
+      if (clip) setPasteBody(clip);
+    } catch {
+      setPasteBody("");
     }
-    const j = await r.json();
-    setMsg(`${t("library_ok")}: ${j.title}`);
-    void reload();
   };
 
-  const loadBilinguis = async () => {
-    setBusy(true);
-    const r = await fetch(`/api/catalog/bilinguis/list?lang_a=en&lang_b=${encodeURIComponent(langB)}`);
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(await r.text());
-      return;
-    }
-    const j = await r.json();
-    setBili(j.results || []);
+  const openRename = (it: ShelfItem) => {
+    setRenameTitle(it.title || "");
+    setRenameAuthor(it.author || "");
+    setRenameOpen(true);
   };
 
-  const importBilinguis = async (b: BilinguisBook) => {
+  const saveRename = async () => {
+    if (sel == null) return;
     setBusy(true);
-    setMsg(t("bilinguis_loading"));
-    const r = await fetch("/api/catalog/bilinguis/import", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: b.slug, lang_a: b.lang_a, lang_b: b.lang_b, title: b.title }),
-    });
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(await r.text());
-      return;
+    try {
+      const r = await fetch(`/api/library/${sel}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: renameTitle, author: renameAuthor }),
+      });
+      if (!r.ok) {
+        setMsg(await r.text());
+        return;
+      }
+      setRenameOpen(false);
+      await reload();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
     }
-    const j = await r.json();
-    setMsg(`${t("library_ok")}: ${j.title}`);
-    void reload();
   };
+
+  const doDelete = async (it: ShelfItem) => {
+    const title = it.title || `#${it.text_id}`;
+    const ok = window.confirm(t("lib_delete_confirm").replace("{0}", title));
+    if (!ok) return;
+    setBusy(true);
+    setMsg(`${t("lib_deleting")}: «${title}»…`);
+    try {
+      const r = await fetch(`/api/library/${it.text_id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!r.ok) {
+        setMsg(await r.text());
+        return;
+      }
+      setSel(null);
+      await reload();
+      setMsg(`${t("lib_deleted")}: «${title}»`);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onImported = (info: { text_id: number; title: string }) => {
+    setMsg(`${t("library_ok")}: ${info.title}`);
+    void reload().then(() => setSel(info.text_id));
+    jump(info.text_id, 0);
+  };
+
+  const printAllowed = selected ? selected.print_allowed !== false && !selected.bilingual : false;
+  const biBadges = selected ? badgesOf(selected) : [];
 
   return (
-    <section className="library">
-      <h2>{t("library")}</h2>
+    <section className="lib-page">
+      <input
+        ref={txtRef}
+        type="file"
+        accept=".txt,text/plain"
+        hidden
+        onChange={(e) => {
+          void onUpload(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={pdfRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        hidden
+        onChange={(e) => {
+          void onUpload(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
 
-      {continueItem && (
-        <div className="bridge-actions" style={{ marginBottom: "0.75rem" }}>
-          <button type="button" className="hud-btn amber" onClick={() => openItem(continueItem, continueItem.mode === "bridge" ? "bridge" : "reader")}>
-            {t("continue_reading")}: {continueItem.title || `#${continueItem.text_id}`} ({Math.round(continueItem.progress_pct || 0)}%)
-          </button>
+      {/* ── ТЕКСТЫ НА БОРТУ ── */}
+      <aside className="lib-shelf inst-panel">
+        <h3 className="route-title lib-panel-title">{t("lib_texts_aboard")}</h3>
+
+        <div className="lib-shelf-body">
+          <p className="muted lib-legend">{t("lib_legend")}</p>
+          <ul className="lib-list" role="listbox">
+            {shelf.map((it) => {
+              const on = it.text_id === sel;
+              const b = badgesOf(it);
+              const words = it.words || 0;
+              const sub = `${it.author || "—"} · ${(it.lang || "?").toUpperCase()} · ${words ? `${fmtNum(words)} ${t("lib_words_short")}` : "—"}`;
+              return (
+                <li key={it.text_id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={on}
+                    className={`lib-row ${on ? "on" : ""}`}
+                    onClick={() => setSel(it.text_id)}
+                  >
+                    <span className="lib-row-top">
+                      <strong className="lib-row-title">{it.title || `#${it.text_id}`}</strong>
+                      {b.length > 0 && (
+                        <span className="lib-badges">
+                          {b.map((x) => (
+                            <span key={x.code} className={`lib-badge tone-${x.tone}`}>
+                              {x.code}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
+                    <span className="muted lib-row-sub">{sub}</span>
+                    <span className={`lib-row-status ${it.bilingual ? "ok" : ""}`}>
+                      ● {t("lib_status_original")}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+            {!shelf.length && (
+              <li className="muted lib-empty">{t("lib_empty")}</li>
+            )}
+          </ul>
+        </div>
+
+        <div className="lib-shelf-acts">
+          <div className="lib-act-row">
+            <button
+              type="button"
+              className="hud-btn amber"
+              disabled={busy}
+              onClick={() => {
+                setBiliOpen(false);
+                setGutOpen(true);
+              }}
+            >
+              {t("lib_free")}
+            </button>
+            <button
+              type="button"
+              className="hud-btn"
+              disabled={busy}
+              onClick={() => {
+                setBiliOpen(false);
+                setGutOpen(true);
+              }}
+            >
+              {t("lib_search")}
+            </button>
+          </div>
+          <div className="lib-act-row">
+            <button
+              type="button"
+              className="hud-btn ok"
+              disabled={busy}
+              onClick={() => {
+                setGutOpen(false);
+                setBiliOpen(true);
+              }}
+            >
+              {t("lib_2lang")}
+            </button>
+          </div>
+          <div className="lib-act-row">
+            <button type="button" className="hud-btn" disabled={busy} onClick={() => txtRef.current?.click()}>
+              {t("lib_open_txt")}
+            </button>
+            <button type="button" className="hud-btn" disabled={busy} onClick={() => pdfRef.current?.click()}>
+              {t("lib_open_pdf")}
+            </button>
+            <button type="button" className="hud-btn" disabled={busy} onClick={() => void openPaste()}>
+              {t("lib_paste")}
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── ПАСПОРТ ТЕКСТА ── */}
+      <div className="lib-passport inst-panel">
+        <h3 className="route-title lib-panel-title amber">{t("lib_passport")}</h3>
+        {!selected ? (
+          <p className="muted lib-pick">{t("lib_pick")}</p>
+        ) : (
+          <>
+            <div className="lib-pass-body">
+              <h2 className="lib-pass-title">{selected.title || `#${selected.text_id}`}</h2>
+              <p className="muted lib-pass-author">{selected.author || t("lib_author_none")}</p>
+
+              <div className="lib-chips">
+                <span className="lib-badge tone-green">{t("lib_status_original")}</span>
+                <span className="lib-badge tone-cyan">{(selected.lang || "?").toUpperCase()}</span>
+                {biBadges.map((x) => (
+                  <span key={x.code} className={`lib-badge tone-${x.tone}`}>
+                    {x.code}
+                  </span>
+                ))}
+                {printAllowed ? (
+                  <span className="lib-badge tone-muted">{t("lib_print_open")}</span>
+                ) : (
+                  <span className="lib-badge tone-amber">{t("lib_print_closed")}</span>
+                )}
+              </div>
+
+              {selected.bilingual && (
+                <p className="lib-bi-note">
+                  {t("lib_bi_note")
+                    .replace("{0}", (selected.lang || "EN").toUpperCase().split("-")[0] || "EN")
+                    .replace("{1}", (selected.lang || "").includes("-")
+                      ? (selected.lang.split("-")[1] || "RU").toUpperCase()
+                      : "RU")
+                    .replace("{2}", biBadges.find((b) => b.tone === "cyan")?.code || "PD")}
+                </p>
+              )}
+
+              <pre className="lib-stats">
+                {selected.bilingual
+                  ? t("lib_stats_bi")
+                      .replace("{0}", fmtNum(selected.chars || 0))
+                      .replace("{1}", fmtNum(selected.words || 0))
+                      .replace("{2}", fmtNum(selected.words || 0))
+                      .replace("{3}", fmtNum(selected.sentence_id || 0))
+                      .replace("{4}", String(Math.round(selected.progress_pct || 0)))
+                  : t("lib_stats")
+                      .replace("{0}", fmtNum(selected.chars || 0))
+                      .replace("{1}", fmtNum(selected.words || 0))
+                      .replace("{2}", fmtNum(selected.sentence_id || 0))
+                      .replace("{3}", String(Math.round(selected.progress_pct || 0)))}
+              </pre>
+              {msg && <p className="mission-map-hint">{msg}</p>}
+            </div>
+
+            <div className="lib-pass-acts">
+              <button
+                type="button"
+                className="hud-btn amber"
+                disabled={busy}
+                onClick={() => openHyperdrive(selected)}
+              >
+                {t("lib_hyperdrive")}
+              </button>
+              <button type="button" className="hud-btn ok" disabled={busy} onClick={() => openBook(selected)}>
+                {t("lib_book")}
+              </button>
+              {printAllowed && (
+                <button type="button" className="hud-btn" disabled={busy} onClick={() => openType(selected)}>
+                  {t("lib_type")}
+                </button>
+              )}
+              <button type="button" className="hud-btn" disabled={busy} onClick={() => openRename(selected)}>
+                {t("lib_rename")}
+              </button>
+              <button
+                type="button"
+                className="hud-btn danger lib-del"
+                disabled={busy}
+                onClick={() => void doDelete(selected)}
+              >
+                {t("lib_delete")}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <GutenbergModal open={gutOpen} onClose={() => setGutOpen(false)} onImported={onImported} />
+      <GutenbergModal open={biliOpen} bilingual onClose={() => setBiliOpen(false)} onImported={onImported} />
+
+      {pasteOpen && (
+        <div className="gut-overlay" role="dialog" aria-modal="true" aria-label={t("lib_paste_title")}>
+          <div className="lib-dlg inst-panel">
+            <h3 className="route-title">{t("lib_paste_title")}</h3>
+            <label className="lib-dlg-field">
+              <span className="lab">{t("gut_title_field")}</span>
+              <input value={pasteTitle} onChange={(e) => setPasteTitle(e.target.value)} autoFocus />
+            </label>
+            <textarea
+              className="lib-dlg-ta"
+              value={pasteBody}
+              onChange={(e) => setPasteBody(e.target.value)}
+              rows={14}
+            />
+            <div className="lib-dlg-acts">
+              <button type="button" className="hud-btn ok" disabled={busy || !pasteBody.trim()} onClick={() => void savePaste()}>
+                {t("lib_save_paste")}
+              </button>
+              <button type="button" className="hud-btn" onClick={() => setPasteOpen(false)}>
+                {t("gut_nav_back")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="bridge-actions">
-        <label className="hud-btn">
-          {busy ? "…" : t("upload_pdf")}
-          <input
-            type="file"
-            accept=".pdf,.txt,application/pdf,text/plain"
-            hidden
-            onChange={(e) => void onUpload(e.target.files?.[0] ?? null)}
-          />
-        </label>
-      </div>
-      {msg && <p className="muted">{msg}</p>}
-
-      <h3>{t("shelf")}</h3>
-      <ul className="mission-list">
-        {shelf.map((it) => (
-          <li key={it.text_id}>
-            <strong>{it.title || `#${it.text_id}`}</strong>
-            <span className="muted">
-              {it.lang} · {it.segments} · {Math.round(it.progress_pct || 0)}% · {it.mode}
-            </span>
-            <button type="button" className="hud-btn" onClick={() => openItem(it, "reader")}>
-              {t("reader")}
-            </button>
-            <button type="button" className="hud-btn amber" onClick={() => openItem(it, "bridge")}>
-              {t("bridge")}
-            </button>
-            <button type="button" className="hud-btn" onClick={() => openItem(it, "english")}>
-              {t("from_book")}
-            </button>
-            <button type="button" className="hud-btn" onClick={() => openItem(it, "speed")}>
-              {t("speed")}
-            </button>
-          </li>
-        ))}
-        {!shelf.length && <li className="muted">{t("shelf_empty")}</li>}
-      </ul>
-
-      <h3>{t("bilinguis")}</h3>
-      <div className="bridge-actions">
-        <select value={langB} onChange={(e) => setLangB(e.target.value)}>
-          <option value="ru">EN→RU</option>
-          <option value="uk">EN→UK</option>
-        </select>
-        <button type="button" className="hud-btn" onClick={() => void loadBilinguis()} disabled={busy}>
-          {t("search")}
-        </button>
-      </div>
-      <ul className="mission-list">
-        {bili.map((b) => (
-          <li key={b.id}>
-            <span>
-              {b.title} <span className="muted">— {b.author}</span>
-            </span>
-            <button type="button" className="hud-btn" onClick={() => void importBilinguis(b)} disabled={busy}>
-              {t("download")}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <h3>{t("catalog")}</h3>
-      <div className="bridge-actions">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Gutenberg…" />
-        <button type="button" className="hud-btn" onClick={() => void search()} disabled={busy}>
-          {t("search")}
-        </button>
-      </div>
-      <ul className="mission-list">
-        {hits.map((b) => (
-          <li key={b.id}>
-            <span>
-              {b.title} <span className="muted">— {b.authors}</span>
-            </span>
-            <button type="button" className="hud-btn" onClick={() => void importBook(b.id, b.title)} disabled={busy}>
-              {t("download")}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {renameOpen && selected && (
+        <div className="gut-overlay" role="dialog" aria-modal="true" aria-label={t("lib_rename")}>
+          <div className="lib-dlg inst-panel lib-dlg-sm">
+            <h3 className="route-title">{t("lib_rename")}</h3>
+            <label className="lib-dlg-field">
+              <span className="lab">{t("gut_title_field")}</span>
+              <input value={renameTitle} onChange={(e) => setRenameTitle(e.target.value)} autoFocus />
+            </label>
+            <label className="lib-dlg-field">
+              <span className="lab">{t("gut_author")}</span>
+              <input value={renameAuthor} onChange={(e) => setRenameAuthor(e.target.value)} />
+            </label>
+            <div className="lib-dlg-acts">
+              <button type="button" className="hud-btn ok" disabled={busy} onClick={() => void saveRename()}>
+                {t("lib_save")}
+              </button>
+              <button type="button" className="hud-btn" onClick={() => setRenameOpen(false)}>
+                {t("gut_nav_back")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

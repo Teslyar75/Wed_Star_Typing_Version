@@ -1,0 +1,13 @@
+/* стабильность поля: без скролла страницы от стрелок / ресайза / колёсика */
+.game-shell-stage,
+.game-shell-field-fill {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.game-shell {
+  overflow: hidden;
+  overscroll-behavior: none;
+  min-height: 0;
+  height: 100%;
+}

@@ -1,8 +1,8 @@
 /** Настройки СИСТЕМ — как stamina/storage.DEFAULT_SETTINGS. */
 import { create } from "zustand";
 
-export type FontSize = "S" | "M" | "L";
-export type UiScale = "S" | "M" | "L" | "XL";
+export type FontSize = "S" | "M" | "L" | "XL" | "XXL";
+export type UiScale = "S" | "M" | "L" | "XL" | "XXL";
 export type GlowLevel = "off" | "low" | "med" | "high";
 export type UplinkTarget = "" | "ru" | "uk" | "en" | "de";
 
@@ -34,17 +34,22 @@ const DEFAULTS: CabinSettings = {
   glow: "med",
 };
 
+/** Как desktop UI_PRESETS + XXL для больших мониторов. */
 const UI_SCALE: Record<UiScale, string> = {
-  S: "0.88",
+  S: "0.90",
   M: "1",
-  L: "1.12",
-  XL: "1.24",
+  L: "1.18",
+  XL: "1.40",
+  XXL: "1.70",
 };
 
+/** Размер букв в иллюминаторе / строке набора. */
 const FONT_PX: Record<FontSize, string> = {
   S: "1.05rem",
   M: "1.35rem",
-  L: "1.65rem",
+  L: "1.75rem",
+  XL: "2.2rem",
+  XXL: "2.75rem",
 };
 
 /** CSS-токены свечения контура: blur / edge% / inner top% / inner side% (+ hover). */
@@ -99,6 +104,8 @@ function load(): CabinSettings {
     const raw = JSON.parse(localStorage.getItem(KEY) || "{}") as Partial<CabinSettings>;
     const merged = { ...DEFAULTS, ...raw };
     if (!GLOW[merged.glow]) merged.glow = DEFAULTS.glow;
+    if (!UI_SCALE[merged.uiScale]) merged.uiScale = DEFAULTS.uiScale;
+    if (!FONT_PX[merged.font]) merged.font = DEFAULTS.font;
     return merged;
   } catch {
     return { ...DEFAULTS };
@@ -132,6 +139,9 @@ function applyDom(s: CabinSettings) {
   root.dataset.font = s.font;
   root.dataset.glow = s.glow;
   root.classList.toggle("glow-off", s.glow === "off");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("st-cabin-change"));
+  }
 }
 
 type CabinState = CabinSettings & {

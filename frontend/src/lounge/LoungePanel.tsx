@@ -134,19 +134,23 @@ export default function LoungePanel() {
     }
   };
 
+  const backToLobby = () => {
+    setActive(null);
+    setMsg("");
+  };
+
   if (active) {
     return (
-      <section className="lounge lounge-play">
-        <header className="lounge-play-head">
-          <button type="button" className="hud-btn" onClick={() => setActive(null)}>
-            ← {t("lounge_lobby")}
-          </button>
-          <h2 className="route-title">{t(GAMES.find((g) => g.id === active)!.titleKey)}</h2>
-        </header>
-        {msg && <p className="muted">{msg}</p>}
-        {active === "snake" && <SnakeGame onScore={onScore} />}
-        {active === "tetris" && <TetrisGame onScore={onScore} />}
-        {active === "breakout" && <BreakoutGame onScore={onScore} />}
+      <section className="lounge lounge-play" data-nav-lock aria-label={msg || undefined}>
+        {active === "snake" && (
+          <SnakeGame record={records.snake} onLobby={backToLobby} onScore={onScore} />
+        )}
+        {active === "tetris" && (
+          <TetrisGame record={records.tetris} onLobby={backToLobby} onScore={onScore} />
+        )}
+        {active === "breakout" && (
+          <BreakoutGame record={records.breakout} onLobby={backToLobby} onScore={onScore} />
+        )}
       </section>
     );
   }
@@ -158,7 +162,7 @@ export default function LoungePanel() {
         <p className="muted lounge-sub">{t("lounge_blurb_full")}</p>
       </header>
 
-      <div className="lounge-grid">
+      <div className="lounge-grid" data-nav-group="lounge-games">
         {GAMES.map((g) => (
           <article key={g.id} className={`inst-panel lounge-card tone-${g.tone}`}>
             <div className="lab">{t(g.subKey)}</div>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import BridgeScreen from "./bridge/BridgeScreen";
 import SpaceCanvas from "./fx/SpaceCanvas";
 import HelpDrawer from "./shell/HelpDrawer";
@@ -8,9 +8,14 @@ import { detectSpaceProfile } from "./fx/canvasBudget";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import { setSoundsMuted, soundsMuted } from "./fx/sounds";
 import type { Tab } from "./shell/tabs";
+import { cycleNavZone, handleArrowNav, isTextEditTarget } from "./shell/keyboardNav";
 import RadioMinibar from "./radio/RadioMinibar";
 import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
+import { installStageFit } from "./shell/stageFit";
+
+const AuthPanel = lazy(() => import("./auth/AuthPanel"));
+const ASK_CREW_KEY = "st_ask_crew_on_start";
 
 type SpaceProfile = "frost" | "light" | "full";
 
@@ -35,7 +40,7 @@ function LazyTab({ when, children }: { when: boolean; children: ReactNode }) {
 type PilotChip = { callsign: string; rank?: string; xp?: number; xp_next?: number };
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("bridge");
+  const [tab, setTabState] = useState<Tab>("bridge");
   const [lang, setLangState] = useState(getLang());
   const [helpOpen, setHelpOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -44,10 +49,62 @@ export default function App() {
   );
   const [muted, setMuted] = useState(() => soundsMuted());
   const [pilot, setPilot] = useState<PilotChip | null>(null);
+  const [crewOpen, setCrewOpen] = useState(false);
   const [, bump] = useState(0);
   const skin = useSkin((s) => s.skin);
   const skinGen = useSkin((s) => s.gen);
   const starsOn = useCabin((s) => s.stars);
+  /** Окно, которое было открыто до текущего — Backspace возвращает сюда. */
+  const prevTabRef = useRef<Tab | null>(null);
+  const tabRef = useRef<Tab>(tab);
+  const helpRef = useRef(helpOpen);
+  const cmdRef = useRef(cmdOpen);
+  const crewRef = useRef(crewOpen);
+  const topBarScrollRef = useRef<HTMLDivElement | null>(null);
+  tabRef.current = tab;
+  helpRef.current = helpOpen;
+  cmdRef.current = cmdOpen;
+  crewRef.current = crewOpen;
+
+  const setTab = useCallback((next: Tab) => {
+    /* Справка только по F1/? на уже выбранной вкладке — при смене раздела закрываем. */
+    setHelpOpen(false);
+    setCmdOpen(false);
+    setTabState((cur) => {
+      if (cur !== next) prevTabRef.current = cur;
+      return next;
+    });
+  }, []);
+
+  const goPrevWindow = useCallback(() => {
+    const prev = prevTabRef.current;
+    if (!prev || prev === tabRef.current) return;
+    setTab(prev);
+  }, [setTab]);
+
+  useEffect(() => {
+    return installStageFit(() => document.querySelector<HTMLElement>(".stage"));
+  }, []);
+
+  /* Колёсико над полосой справа от brand → сдвиг всей полосы (вкладки + XP + радио + кнопки). */
+  useEffect(() => {
+    const el = topBarScrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      const dx = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+      if (!dx) return;
+      if (el.scrollWidth <= el.clientWidth + 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      el.scrollLeft += dx;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    return () => el.removeEventListener("wheel", onWheel, { capture: true });
+  }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(new Event("st-cabin-change"));
+  }, [tab]);
 
   useEffect(() => {
     bootSkin({ preferBase: true });
@@ -57,19 +114,26 @@ export default function App() {
       setSpaceProfile("full");
     }
     void (async () => {
+      let hasPilot = false;
       try {
         const me = await fetch("/api/pilots/me", { credentials: "include" });
         if (me.ok) {
           const j = await me.json();
-          setPilot({
-            callsign: j.callsign || j.name || t("pilot"),
-            rank: j.rank,
-            xp: j.xp,
-            xp_next: j.xp_next ?? j.xp_to_next,
-          });
+          if (j?.id || j?.callsign) {
+            hasPilot = true;
+            setPilot({
+              callsign: j.callsign || j.name || t("pilot"),
+              rank: j.rank,
+              xp: j.xp,
+              xp_next: j.xp_next ?? j.xp_to_next,
+            });
+          }
         }
       } catch {
         /* guest */
+      }
+      if (!hasPilot && localStorage.getItem(ASK_CREW_KEY) !== "0") {
+        setCrewOpen(true);
       }
     })();
     return onLangChange(() => {
@@ -79,25 +143,74 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const tabOrder: Tab[] = [
+      "bridge",
+      "missions",
+      "cargo",
+      "log",
+      "english",
+      "speed",
+      "lounge",
+      "radio",
+      "settings",
+    ];
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === "?" || e.key === "F1") && !e.ctrlKey && !e.metaKey) {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA") return;
+      /* Только явный F1 или Shift+/ (?). Не открывать при смене вкладок. */
+      if (e.key === "F1" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (isTextEditTarget(e.target)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setHelpOpen((v) => !v);
+        return;
+      }
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (isTextEditTarget(e.target)) return;
+        /* Не путать с другими клавишами раскладки — только литерал «?» */
         e.preventDefault();
         setHelpOpen((v) => !v);
+        return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCmdOpen((v) => !v);
       }
+      /* Ctrl+1…9 — разделы, как stamina/cockpit.py */
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-9]$/.test(e.key)) {
+        if (isTextEditTarget(e.target)) return;
+        const next = tabOrder[Number(e.key) - 1];
+        if (next) {
+          e.preventDefault();
+          setTab(next);
+          window.requestAnimationFrame(() => {
+            document.querySelector<HTMLElement>(`.nav-tab[data-tab="${next}"]`)?.focus();
+          });
+        }
+        return;
+      }
+      /* F6 — цикл шапка ↔ контент */
+      if (e.key === "F6" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (isTextEditTarget(e.target)) return;
+        e.preventDefault();
+        cycleNavZone();
+        return;
+      }
+      if (handleArrowNav(e)) return;
       if (e.key === "Escape") {
         setHelpOpen(false);
         setCmdOpen(false);
+        if (crewRef.current) setCrewOpen(false);
+      }
+      if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (helpRef.current || cmdRef.current || crewRef.current) return;
+        if (isTextEditTarget(e.target)) return;
+        if (!prevTabRef.current || prevTabRef.current === tabRef.current) return;
+        e.preventDefault();
+        goPrevWindow();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [goPrevWindow, setTab]);
 
   const switchLang = (code: string) => {
     setLang(code);
@@ -135,69 +248,85 @@ export default function App() {
         </div>
       )}
 
-      <header className="top-bar">
+      <header className="top-bar" data-nav-zone="chrome">
         <div className="brand">
           <div className="brand-title">★ STAR TYPING</div>
           <div className="brand-sub">{t("console_sub")}</div>
         </div>
-        <nav className="top-nav" aria-label="main">
-          {tabs.map((x) => (
-            <button
-              key={x.id}
-              type="button"
-              className={`nav-tab ${tab === x.id ? "on" : ""}`}
-              onClick={() => setTab(x.id)}
+        <div
+          ref={topBarScrollRef}
+          className="top-bar-scroll"
+          title={t("nav_wheel_hint")}
+        >
+          <div className="top-bar-scroll-inner">
+            <nav
+              className="top-nav"
+              aria-label="main"
+              role="tablist"
+              data-nav-group="tabs"
             >
-              {x.label}
-            </button>
-          ))}
-        </nav>
-        <div className="top-right">
-          {pilot ? (
-            <div className="pilot-chip">
-              <strong>{pilot.callsign}</strong>
-              {pilot.rank ? <span className="muted"> · {pilot.rank}</span> : null}
-              {pilot.xp != null ? (
-                <span className="xp">
-                  {" "}
-                  ★ {pilot.xp}
-                  {pilot.xp_next != null ? ` / ${pilot.xp_next}` : ""} XP
-                </span>
-              ) : null}
+              {tabs.map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  role="tab"
+                  data-tab={x.id}
+                  aria-selected={tab === x.id}
+                  className={`nav-tab ${tab === x.id ? "on" : ""}`}
+                  onClick={() => setTab(x.id)}
+                >
+                  {x.label}
+                </button>
+              ))}
+            </nav>
+            <div className="top-right" data-nav-group="chrome-tools">
+              {pilot ? (
+                <button type="button" className="pilot-chip" onClick={() => setCrewOpen(true)}>
+                  <strong>{pilot.callsign}</strong>
+                  {pilot.rank ? <span className="muted"> · {pilot.rank}</span> : null}
+                  {pilot.xp != null ? (
+                    <span className="xp">
+                      {" "}
+                      ★ {pilot.xp}
+                      {pilot.xp_next != null ? ` / ${pilot.xp_next}` : ""} XP
+                    </span>
+                  ) : null}
+                </button>
+              ) : (
+                <button type="button" className="hud-btn" onClick={() => setCrewOpen(true)}>
+                  {t("crew")}
+                </button>
+              )}
+              <RadioMinibar onOpen={() => setTab("radio")} />
+              <button
+                type="button"
+                className="hud-btn hud-btn-icon amber"
+                onClick={() => setHelpOpen((v) => !v)}
+                title="F1"
+                aria-label="F1"
+              >
+                ?
+              </button>
+              <button
+                type="button"
+                className={`hud-btn hud-btn-icon ${muted ? "" : "on"}`}
+                onClick={() => {
+                  const next = !muted;
+                  setMuted(next);
+                  setSoundsMuted(next);
+                }}
+                title={muted ? t("sound_off") : t("sound_on")}
+                aria-label={muted ? t("sound_off") : t("sound_on")}
+              >
+                {muted ? "♪̸" : "♪"}
+              </button>
             </div>
-          ) : (
-            <button type="button" className="hud-btn" onClick={() => setTab("settings")}>
-              {t("crew")}
-            </button>
-          )}
-          <RadioMinibar onOpen={() => setTab("radio")} />
-          <button
-            type="button"
-            className="hud-btn hud-btn-icon amber"
-            onClick={() => setHelpOpen(true)}
-            title="F1"
-            aria-label="F1"
-          >
-            ?
-          </button>
-          <button
-            type="button"
-            className={`hud-btn hud-btn-icon ${muted ? "" : "on"}`}
-            onClick={() => {
-              const next = !muted;
-              setMuted(next);
-              setSoundsMuted(next);
-            }}
-            title={muted ? t("sound_off") : t("sound_on")}
-            aria-label={muted ? t("sound_off") : t("sound_on")}
-          >
-            {muted ? "♪̸" : "♪"}
-          </button>
+          </div>
         </div>
       </header>
       <RadioAudioHost />
 
-      <main className="stage">
+      <main className="stage" data-nav-zone="stage" data-nav-group="stage" tabIndex={-1}>
         {tab === "bridge" && <BridgeScreen />}
         <LazyTab when={tab === "missions"}>
           <MissionsPanel onOpenBridge={() => setTab("bridge")} onOpenCargo={() => setTab("cargo")} />
@@ -212,7 +341,7 @@ export default function App() {
           <EnglishPanel />
         </LazyTab>
         <LazyTab when={tab === "speed"}>
-          <SpeedReadPanel />
+          <SpeedReadPanel onOpenBridge={() => setTab("bridge")} />
         </LazyTab>
         <LazyTab when={tab === "lounge"}>
           <LoungePanel />
@@ -233,8 +362,25 @@ export default function App() {
         </LazyTab>
       </main>
 
-      <HelpDrawer tab={tab} open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpDrawer
+        tab={tab}
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onFullHelp={() => setTab("settings")}
+      />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />
+
+      {crewOpen ? (
+        <div className="crew-overlay-host" role="dialog" aria-modal="true" aria-label={t("crew")}>
+          <Suspense fallback={<p className="muted">…</p>}>
+            <AuthPanel
+              mode="gate"
+              onEntered={(p) => setPilot(p)}
+              onExit={() => setCrewOpen(false)}
+            />
+          </Suspense>
+        </div>
+      ) : null}
     </div>
   );
 }

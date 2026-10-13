@@ -10,6 +10,7 @@ type Props = {
 
 const PASS_ACC = 92;
 const PENDING_KEY = "st_pending_drill";
+const FREE_KEY = "st_missions_unlock_all";
 
 function Stars({ n }: { n: number }) {
   return <span className="stars">{"★".repeat(n)}{"☆".repeat(Math.max(0, 3 - n))}</span>;
@@ -20,9 +21,11 @@ export default function MissionsPanel({ onOpenBridge, onOpenCargo }: Props) {
   const [drills, setDrills] = useState<Drill[]>([]);
   const [weakKeys, setWeakKeys] = useState<string[]>([]);
   const [hint, setHint] = useState<string | null>(null);
+  const [unlockAll, setUnlockAll] = useState(() => localStorage.getItem(FREE_KEY) === "1");
 
   const refresh = useCallback(async () => {
-    const list = await (await fetch(`/api/missions/drills?lang=${lang}`, { credentials: "include" })).json();
+    const q = unlockAll ? `&unlock_all=1` : "";
+    const list = await (await fetch(`/api/missions/drills?lang=${lang}${q}`, { credentials: "include" })).json();
     setDrills(Array.isArray(list) ? list : []);
     const r = await fetch("/api/missions/key-errors?limit=6", { credentials: "include" });
     if (r.ok) {
@@ -31,11 +34,16 @@ export default function MissionsPanel({ onOpenBridge, onOpenCargo }: Props) {
     } else {
       setWeakKeys([]);
     }
-  }, [lang]);
+  }, [lang, unlockAll]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const toggleUnlockAll = (on: boolean) => {
+    setUnlockAll(on);
+    localStorage.setItem(FREE_KEY, on ? "1" : "0");
+  };
 
   const launchDrill = async (d: Drill) => {
     if (!d.unlocked) {
@@ -43,14 +51,29 @@ export default function MissionsPanel({ onOpenBridge, onOpenCargo }: Props) {
       window.setTimeout(() => setHint(null), 2800);
       return;
     }
-    const r = await fetch(`/api/missions/drills/${d.id}/start`, { method: "POST", credentials: "include" });
+    const q = unlockAll ? "?unlock_all=1" : "";
+    const r = await fetch(`/api/missions/drills/${d.id}/start${q}`, { method: "POST", credentials: "include" });
     if (!r.ok) {
       setHint(t("mission_closed_hint"));
       window.setTimeout(() => setHint(null), 2800);
       return;
     }
     const j = await r.json();
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ id: j.mission_id, text: j.text, lang }));
+    sessionStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify({
+        id: j.mission_id,
+        text: j.text,
+        lang,
+        unlockAll,
+        num: d.num,
+        title: d.title,
+        sector: d.sector,
+        new: d.new,
+        goal: d.goal,
+        best_stars: d.best_stars,
+      }),
+    );
     onOpenBridge?.();
   };
 
@@ -63,7 +86,20 @@ export default function MissionsPanel({ onOpenBridge, onOpenCargo }: Props) {
     });
     if (!r.ok) return;
     const j = await r.json();
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ id: "repair", text: j.text, lang }));
+    sessionStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify({
+        id: "repair",
+        text: j.text,
+        lang,
+        num: 0,
+        title: t("repair_systems"),
+        sector: t("repair"),
+        new: weakKeys.join(""),
+        goal: 0,
+        best_stars: 0,
+      }),
+    );
     onOpenBridge?.();
   };
 
@@ -76,7 +112,7 @@ export default function MissionsPanel({ onOpenBridge, onOpenCargo }: Props) {
             {t("mission_blurb").replace("{0}", String(PASS_ACC))}
           </p>
         </div>
-        <div className="missions-lang">
+        <div className="missions-lang" data-nav-group="missions-lang">
           <button
             type="button"
             className={`hud-btn ${lang === "en" ? "on" : ""}`}
@@ -91,12 +127,20 @@ export default function MissionsPanel({ onOpenBridge, onOpenCargo }: Props) {
           >
             {t("russian_layout")}
           </button>
+          <label className="missions-free-access">
+            <input
+              type="checkbox"
+              checked={unlockAll}
+              onChange={(e) => toggleUnlockAll(e.target.checked)}
+            />
+            <span>{t("missions_unlock_all")}</span>
+          </label>
         </div>
       </header>
 
       {hint ? <p className="mission-map-hint">{hint}</p> : null}
 
-      <div className="mission-grid" role="list">
+      <div className="mission-grid" role="list" data-nav-group="mission-cards">
         {drills.map((d) => {
           const tone = missionAccent(d);
           const caps = missionKeycaps(d);

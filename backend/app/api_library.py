@@ -38,6 +38,52 @@ class LibraryItem(BaseModel):
     mode: str
     segments: int
     progress_pct: float = 0.0
+    chars: int = 0
+    words: int = 0
+    bilingual: bool = False
+    print_allowed: bool = True
+    author: str = ""
+
+
+class RenameIn(BaseModel):
+    title: str = Field(default="", max_length=512)
+    author: str = Field(default="", max_length=256)
+
+
+def _stats(db: Session, text_id: int) -> tuple[int, int, int]:
+    """chars, words, segments — по сегментам (оригинал)."""
+    segs = db.query(Segment).filter_by(text_id=text_id).order_by(Segment.idx).all()
+    if not segs:
+        return 0, 0, 0
+    body = " ".join((s.original or "").strip() for s in segs if (s.original or "").strip())
+    words = len(body.split()) if body else 0
+    return len(body), words, len(segs)
+
+
+def _item(doc: TextDoc, *, sentence_id: int, mode: str, chars: int, words: int, segments: int) -> LibraryItem:
+    bilingual = (doc.source or "").startswith("bilingu") or "-" in (doc.lang or "")
+    author = ""
+    title = doc.title or f"#{doc.id}"
+    if " · " in title:
+        # частый формат «Title · Author»
+        parts = title.split(" · ", 1)
+        if len(parts) == 2 and len(parts[1]) < 80:
+            title, author = parts[0], parts[1]
+    return LibraryItem(
+        text_id=doc.id,
+        title=title,
+        author=author,
+        lang=doc.lang or "und",
+        source=doc.source or "upload",
+        sentence_id=sentence_id,
+        mode=mode,
+        segments=segments,
+        progress_pct=_pct(sentence_id, segments),
+        chars=chars,
+        words=words,
+        bilingual=bilingual,
+        print_allowed=not bilingual,
+    )
 
 
 def _pct(sentence_id: int, segments: int) -> float:
@@ -65,19 +111,8 @@ def list_shelf(
         docs = db.query(TextDoc).order_by(TextDoc.id.desc()).limit(50).all()
         out: list[LibraryItem] = []
         for d in docs:
-            n = db.query(Segment).filter_by(text_id=d.id).count()
-            out.append(
-                LibraryItem(
-                    text_id=d.id,
-                    title=d.title,
-                    lang=d.lang,
-                    source=d.source,
-                    sentence_id=0,
-                    mode="reader",
-                    segments=n,
-                    progress_pct=0.0,
-                )
-            )
+            chars, words, n = _stats(db, d.id)
+            out.append(_item(d, sentence_id=0, mode="reader", chars=chars, words=words, segments=n))
         return out
 
     rows = db.query(PilotText).filter_by(pilot_id=pilot.id).order_by(PilotText.updated_at.desc()).all()
@@ -86,17 +121,15 @@ def list_shelf(
         doc = db.get(TextDoc, row.text_id)
         if doc is None:
             continue
-        n = db.query(Segment).filter_by(text_id=doc.id).count()
+        chars, words, n = _stats(db, doc.id)
         out.append(
-            LibraryItem(
-                text_id=doc.id,
-                title=doc.title,
-                lang=doc.lang,
-                source=doc.source,
+            _item(
+                doc,
                 sentence_id=row.sentence_id,
                 mode=row.mode,
+                chars=chars,
+                words=words,
                 segments=n,
-                progress_pct=_pct(row.sentence_id, n),
             )
         )
     return out
@@ -117,17 +150,69 @@ def add_to_shelf(
         db.add(row)
         db.commit()
         db.refresh(row)
-    n = db.query(Segment).filter_by(text_id=doc.id).count()
-    return LibraryItem(
-        text_id=doc.id,
-        title=doc.title,
-        lang=doc.lang,
-        source=doc.source,
+    chars, words, n = _stats(db, doc.id)
+    return _item(
+        doc,
         sentence_id=row.sentence_id,
         mode=row.mode,
+        chars=chars,
+        words=words,
         segments=n,
-        progress_pct=_pct(row.sentence_id, n),
     )
+
+
+@router.patch("/{text_id}", response_model=LibraryItem)
+def rename_shelf_item(
+    text_id: int,
+    body: RenameIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> LibraryItem:
+    """Порт LibraryPage.rename — название (+ автор в title через · )."""
+    doc = db.get(TextDoc, text_id)
+    if doc is None:
+        raise HTTPException(404, "text not found")
+    row = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=text_id).first()
+    if row is None and pilot is not None:
+        # гостевая полка / чужой текст — всё равно даём переименовать документ
+        pass
+    title = (body.title or "").strip() or doc.title
+    author = (body.author or "").strip()
+    doc.title = f"{title} · {author}" if author else title
+    db.commit()
+    db.refresh(doc)
+    chars, words, n = _stats(db, doc.id)
+    sid = row.sentence_id if row else 0
+    mode = row.mode if row else "reader"
+    return _item(doc, sentence_id=sid, mode=mode, chars=chars, words=words, segments=n)
+
+
+@router.delete("/{text_id}")
+def remove_from_shelf(
+    text_id: int,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Убрать с полки (как desktop delete) — у пилота soft-remove, иначе удалить TextDoc."""
+    if pilot is not None:
+        row = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=text_id).first()
+        if row is not None:
+            db.delete(row)
+            db.commit()
+            return {"ok": True, "removed": "shelf"}
+    doc = db.get(TextDoc, text_id)
+    if doc is None:
+        raise HTTPException(404, "text not found")
+    # сегменты/абзацы каскадом или вручную
+    from app.models import Paragraph, Sentence
+
+    db.query(Segment).filter_by(text_id=text_id).delete()
+    db.query(Sentence).filter_by(text_id=text_id).delete(synchronize_session=False)
+    db.query(Paragraph).filter_by(text_id=text_id).delete(synchronize_session=False)
+    db.query(PilotText).filter_by(text_id=text_id).delete(synchronize_session=False)
+    db.delete(doc)
+    db.commit()
+    return {"ok": True, "removed": "text"}
 
 
 @router.put("/{text_id}/position", response_model=LibraryItem)
@@ -148,16 +233,14 @@ def put_position(
     row.mode = body.mode[:32]
     db.commit()
     db.refresh(row)
-    n = db.query(Segment).filter_by(text_id=doc.id).count()
-    return LibraryItem(
-        text_id=doc.id,
-        title=doc.title,
-        lang=doc.lang,
-        source=doc.source,
+    chars, words, n = _stats(db, doc.id)
+    return _item(
+        doc,
         sentence_id=row.sentence_id,
         mode=row.mode,
+        chars=chars,
+        words=words,
         segments=n,
-        progress_pct=_pct(row.sentence_id, n),
     )
 
 

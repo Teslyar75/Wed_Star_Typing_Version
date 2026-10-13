@@ -1,0 +1,841 @@
+/**
+ * ÐÐ°Ð±Ð¸Ð½Ð° = Ð¾Ð´Ð½Ð¾ Ð¾ÐºÐ½Ð¾: Ð²ÑÑ Ð²Ð¿Ð¸ÑÑÐ²Ð°ÐµÑÑÑ Ð² viewport, Ð±ÐµÐ· Ð¿ÑÐ¾ÐºÑÑÑÐºÐ¸ ÐºÐ¾Ð»ÑÑÐ¸ÐºÐ¾Ð¼.
+ * ÐÐ¾Ð´ÐºÐ»ÑÑÐ°ÐµÑÑÑ Ð¿Ð¾ÑÐ»Ðµ index.css Ð¸ Ð¿ÐµÑÐµÐºÑÑÐ²Ð°ÐµÑ overflow: auto Ñ Ð¿Ð°Ð½ÐµÐ»ÐµÐ¹.
+ */
+
+html,
+body,
+#root {
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: 100vw;
+  margin: 0;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 0 !important;
+  touch-action: manipulation;
+}
+
+.cockpit-desktop {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.top-bar {
+  flex: 0 0 auto;
+}
+
+/* Brand ÑÐ¸ÐºÑÐ¸ÑÐ¾Ð²Ð°Ð½ ÑÐ»ÐµÐ²Ð°; Ð¼Ð°ÑÐºÐ¸ÑÑÐµÑ ÑÐºÑÐ¾Ð»Ð» Ð¿Ð¾Ð»Ð¾ÑÑ ÑÐ¿ÑÐ°Ð²Ð° */
+.brand {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  padding-right: 0.55rem;
+  background: color-mix(in srgb, var(--st-bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0.55rem 0 0.9rem -0.2rem color-mix(in srgb, var(--st-bg) 88%, transparent);
+}
+
+/* ÐÐºÐ»Ð°Ð´ÐºÐ¸ + XP + ÑÐ°Ð´Ð¸Ð¾ + ?/âª â Ð¾Ð´Ð½Ð° Ð¿Ð¾Ð»Ð¾ÑÐ°: ÑÐºÑÐ¾Ð»Ð»Ð¸ÑÑÑ Ð¢ÐÐÐ¬ÐÐ .top-bar-scroll */
+.top-bar-scroll {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  cursor: default;
+}
+
+.top-bar-scroll:hover {
+  cursor: ew-resize;
+}
+
+.top-bar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.top-bar-scroll-inner {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  box-sizing: border-box;
+  /* ÑÐ¸ÑÐµ ÑÐºÑÐ°Ð½Ð° â overflow Ñ ÑÐ¾Ð´Ð¸ÑÐµÐ»Ñ; ÑÐ¶Ðµ ÑÐºÑÐ°Ð½Ð° â min-width 100% + margin-left auto Ñ tools */
+  width: max-content;
+  min-width: 100%;
+}
+
+.top-bar-scroll .top-nav,
+.top-bar .top-nav {
+  flex: 0 0 auto !important;
+  flex-basis: auto !important;
+  order: 0 !important;
+  min-width: max-content !important;
+  width: max-content !important;
+  max-width: none !important;
+  justify-content: flex-start !important;
+  overflow: visible !important;
+  overflow-x: visible !important;
+}
+
+.top-bar-scroll .top-right,
+.top-bar .top-right {
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  margin-left: auto;
+}
+
+.stage {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  /* --st-fit-scale Ð²ÑÑÑÐ°Ð²Ð»ÑÐµÑ shell/stageFit.ts */
+}
+
+.stage > * {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  transform: scale(var(--st-fit-scale, 1));
+  transform-origin: top center;
+  box-sizing: border-box;
+  will-change: transform;
+}
+
+/* ÐÐ°Ð½ÐµÐ»Ð¸ Ð¸ Ð¼Ð¾Ð´Ð°Ð»ÐºÐ¸ â Ð±ÐµÐ· Ð²Ð½ÑÑÑÐµÐ½Ð½ÐµÐ¹ Ð¿ÑÐ¾ÐºÑÑÑÐºÐ¸ ÐºÐ¾Ð»ÐµÑÐ¾Ð¼ */
+.stage .inst-panel,
+.stage .sr-hub,
+.stage .sr-overview,
+.stage .sr-top,
+.stage .sr-trainers,
+.stage .ex-shell,
+.stage .ex-body,
+.stage .ex-mode,
+.stage .ex-col,
+.stage .ex-tac-diff,
+.stage .ex-tac-layout,
+.stage .game-shell,
+.stage .game-shell-stage,
+.stage .bridge,
+.stage .en-panel,
+.stage .cargo,
+.stage .flog,
+.stage .missions,
+.stage .lounge,
+.stage .radio-panel,
+.stage .settings-hub,
+.stage .settings-cabin,
+.help-modal-body,
+.help-overlay,
+.cmd-palette,
+.crew-overlay-host {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+/* ÑÐ¸Ð»ÑÑÑÑ ÑÐ°Ð´Ð¸Ð¾: ÑÐ¿Ð¸ÑÐºÐ¸ ÑÑÑÐ°Ð½/ÑÐ·ÑÐºÐ¾Ð²/Ð¶Ð°Ð½ÑÐ¾Ð² Ð½Ðµ Ð´Ð¾Ð»Ð¶Ð½Ñ ÐºÐ»Ð¸Ð¿Ð°ÑÑÑÑ */
+.stage .radio-filters.inst-panel {
+  overflow: visible !important;
+}
+.hud-select {
+  overflow: visible !important;
+}
+.hud-select-menu {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: min(16rem, 42vh) !important;
+  overscroll-behavior: contain;
+}
+
+/* portal: Ð¿Ð¾Ð²ÐµÑÑ ÐºÐ°Ð±Ð¸Ð½Ñ, Ð½Ðµ ÐºÐ»Ð¸Ð¿Ð°ÐµÑÑÑ Ð¿Ð°Ð½ÐµÐ»ÑÐ¼Ð¸ */
+.hud-select-menu-portal {
+  position: fixed !important;
+  z-index: 1200;
+  left: 0;
+  top: 0;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  --st-frame-fill: color-mix(in srgb, var(--st-panel) 28%, transparent);
+  background: color-mix(in srgb, var(--st-bg) 92%, transparent) !important;
+  border: 1px solid var(--st-line);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px color-mix(in srgb, #000 45%, transparent);
+}
+
+.hud-select-empty {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+/* ÐÐ¾Ð±Ð¸Ð»ÑÐ½ÑÐµ media Ð¸Ð· index.css ÑÐ°Ð·ÑÐµÑÐ°Ð»Ð¸ overflow:auto â Ð³Ð°ÑÐ¸Ð¼ */
+@media (max-width: 1100px) {
+  .flog,
+  .sr-hub,
+  .sr-overview,
+  .ex-body {
+    overflow: hidden !important;
+    height: auto;
+    max-height: 100%;
+  }
+}
+
+@media (max-width: 960px) {
+  .sr-hub,
+  .sr-overview {
+    overflow: hidden !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .ex-body {
+    overflow: hidden !important;
+  }
+}
+
+/* Ð¡ÐºÑÑÑÑ Ð¿Ð¾Ð»Ð¾ÑÑ Ð¿ÑÐ¾ÐºÑÑÑÐºÐ¸, ÐµÑÐ»Ð¸ Ð±ÑÐ°ÑÐ·ÐµÑ Ð²ÑÑ Ð¶Ðµ Ð½Ð°ÑÐ¸ÑÑÐµÑ */
+.cockpit-desktop,
+.stage,
+.stage * {
+  scrollbar-width: none;
+}
+
+.cockpit-desktop::-webkit-scrollbar,
+.stage::-webkit-scrollbar,
+.stage *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* ÐÐ°ÑÑÑÐ¾Ð¹ÐºÐ¸: Ð´Ð²Ðµ Ð²ÐºÐ»Ð°Ð´ÐºÐ¸ Ð±ÐµÐ· Ð¾Ð±ÑÐµÐ·ÐºÐ¸ ÑÐ½Ð¸Ð·Ñ */
+.settings-hub {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden !important;
+}
+
+.settings-cabin.inst-panel {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.settings-sys-row {
+  padding: 0.4rem 0.85rem !important;
+}
+
+.settings-sys-desc {
+  font-size: 0.75rem !important;
+}
+
+.settings-more-cta {
+  margin-top: auto;
+  border-bottom: none !important;
+}
+
+.settings-hotkeys {
+  margin: 0.4rem 0.85rem 0.2rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  flex: 0 0 auto;
+}
+
+/* Ð Ð°Ð´Ð¸Ð¾: ÑÐ°ÑÑÐ¾ÑÑ Ð¿Ð¾ Ð²ÐºÐ»Ð°Ð´ÐºÐ°Ð¼, Ð±ÐµÐ· Ð¾Ð±ÑÐµÐ·ÐºÐ¸ ÑÐ¿Ð¸ÑÐºÐ° */
+.radio {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.radio-head,
+.radio-tabs,
+.radio-freq-modes,
+.radio-freq-pages,
+.radio-freqs-head {
+  flex: 0 0 auto;
+}
+
+.radio-air {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.radio-freqs {
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.radio-freq-modes,
+.radio-freq-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.radio-freq-page {
+  min-width: 2.5rem;
+  padding-inline: 0.55rem !important;
+}
+
+.radio-station-list {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+
+.radio-row {
+  flex: 0 0 auto;
+}
+
+/* âââ ÐÐ¾ÑÑÐ¸Ðº: ÐºÐ°Ð¶Ð´ÑÐ¹ Ð±Ð»Ð¾Ðº ÑÐ¶Ð¸Ð¼Ð°ÐµÑÑÑ, ÐºÐ½Ð¾Ð¿ÐºÐ¸ Ð²ÑÐµÐ³Ð´Ð° Ð² ÐºÐ°Ð´ÑÐµ âââ */
+.stage > .bridge {
+  /* flex-Ð°Ð´Ð°Ð¿ÑÐ¸Ð² Ð½Ð°Ð´ÑÐ¶Ð½ÐµÐµ Ð³Ð»Ð¾Ð±Ð°Ð»ÑÐ½Ð¾Ð³Ð¾ scale */
+  transform: none !important;
+}
+
+.bridge-cockpit {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  gap: 0.3rem;
+  box-sizing: border-box;
+}
+
+.bridge-cockpit .route-head {
+  flex: 0 0 auto;
+  margin-bottom: 0.15rem !important;
+}
+
+.bridge-cockpit .route-title {
+  font-size: clamp(0.85rem, 1.6vh, 1.15rem) !important;
+}
+
+.bridge-cockpit .nav-channel {
+  flex: 0 1 auto;
+  min-height: 0;
+  margin-bottom: 0.25rem !important;
+  padding: clamp(0.3rem, 0.9vh, 0.65rem) clamp(0.5rem, 1vw, 0.85rem) !important;
+  overflow: hidden;
+}
+
+.bridge-cockpit .viewport.sight-line {
+  min-height: clamp(2.2rem, 5.5vh, 4.2rem) !important;
+  max-height: 18vh;
+  margin: 0.2rem 0 !important;
+  padding: clamp(0.3rem, 0.9vh, 0.85rem) !important;
+  font-size: clamp(0.9rem, 1.6vh + 0.35rem, 1.55rem) !important;
+}
+
+.bridge-cockpit .uplink {
+  margin-top: 0.25rem !important;
+  padding: 0.25rem 0.5rem 0.35rem !important;
+}
+
+.bridge-cockpit .instruments {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
+  overflow: hidden !important;
+  align-items: stretch;
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(0.3rem, 0.8vw, 0.55rem) !important;
+}
+
+.bridge-cockpit .inst-panel,
+.bridge-cockpit .inst-keys {
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  padding: clamp(0.25rem, 0.7vh, 0.55rem) clamp(0.35rem, 0.7vw, 0.65rem) !important;
+  overflow: hidden !important;
+}
+
+.bridge-cockpit .inst-panel h3 {
+  flex: 0 0 auto;
+  margin: 0 0 0.15rem !important;
+  font-size: clamp(0.62rem, 1.15vh, 0.8rem) !important;
+}
+
+.bridge-cockpit .acc-ring,
+.bridge-cockpit .speed-gauge,
+.bridge-cockpit .rhythm-bar {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bridge-cockpit .acc-ring-svg {
+  max-width: min(200px, 100%);
+  max-height: clamp(5.5rem, 16vh, 11rem);
+  height: auto;
+}
+
+.bridge-cockpit .inst-keys .keyboard {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  margin-top: 0.15rem !important;
+  gap: clamp(0.08rem, 0.45vh, 0.28rem) !important;
+}
+
+.bridge-cockpit .inst-keys .kb-row {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  gap: clamp(0.06rem, 0.35vw, 0.22rem) !important;
+}
+
+.bridge-cockpit .inst-keys .key {
+  min-height: 0 !important;
+  height: 100% !important;
+  font-size: clamp(0.55rem, 1.4vh, 1rem) !important;
+  padding: clamp(0.04rem, 0.25vh, 0.2rem) 0.08rem !important;
+}
+
+.bridge-cockpit .keyboard.lang-en .key-en,
+.bridge-cockpit .keyboard.lang-ru .key-ru {
+  font-size: clamp(0.65rem, 1.7vh, 1.4rem) !important;
+}
+
+.bridge-cockpit .keyboard.lang-en .key-ru,
+.bridge-cockpit .keyboard.lang-ru .key-en {
+  font-size: clamp(0.45rem, 1vh, 0.72rem) !important;
+  bottom: 2px !important;
+  right: 3px !important;
+}
+
+.bridge-cockpit .inst-actions,
+.bridge-cockpit .bridge-actions.inst-actions {
+  flex: 0 0 auto !important;
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
+  padding-top: clamp(0.25rem, 0.7vh, 0.55rem) !important;
+  gap: 0.35rem !important;
+  flex-wrap: wrap;
+}
+
+.bridge-cockpit .inst-actions .hud-btn {
+  min-height: clamp(1.7rem, 3.8vh, 2.5rem);
+  font-size: clamp(0.72rem, 1.35vh, 0.92rem);
+  padding: 0.25rem 0.55rem !important;
+}
+
+.bridge-cockpit .tele-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  font-size: clamp(0.7rem, 1.3vh, 0.9rem);
+}
+
+/* âââ ÐÐ¾Ð´Ð°Ð»ÐºÐ¸: ÑÐ°Ð·Ð¼ÐµÑÐºÐ° ÐºÐ°Ðº desktop, ÐºÐ½Ð¾Ð¿ÐºÐ¸ Ð²ÑÐµÐ³Ð´Ð° Ð² ÐºÐ°Ð´ÑÐµ âââ */
+.gut-overlay,
+.debrief-overlay,
+.help-overlay {
+  overflow: hidden !important;
+}
+
+.gut-overlay {
+  padding: 0.35rem !important;
+  place-items: center !important;
+}
+
+.gut-modal {
+  width: min(72rem, 96vw) !important;
+  /* ÐÐ¾ÑÑÐ¸ Ð½Ð° Ð²ÐµÑÑ ÑÐºÑÐ°Ð½: 5â6 ÑÑÑÐ¾Ðº Ñ Ð¾Ð±Ð»Ð¾Ð¶ÐºÐ¾Ð¹ ÑÐµÐ»Ð¸ÐºÐ¾Ð¼ */
+  height: min(calc(100dvh - 0.7rem), 64rem) !important;
+  max-height: calc(100dvh - 0.7rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  gap: 0.28rem !important;
+  padding: clamp(0.45rem, 1vh, 0.75rem) clamp(0.65rem, 1.2vw, 1rem) !important;
+}
+
+.gut-head {
+  display: flex !important;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 0 0 auto;
+}
+
+.gut-head-text {
+  min-width: 0;
+}
+
+.gut-title {
+  color: var(--st-accent) !important;
+  font-size: clamp(0.95rem, 2vh, 1.25rem) !important;
+  margin: 0 !important;
+}
+
+.gut-form {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto auto;
+  gap: 0.4rem 0.55rem;
+  align-items: end;
+  flex: 0 0 auto;
+}
+
+.gut-lang-row,
+.gut-form-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.gut-cefr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  flex: 0 0 auto;
+}
+
+.gut-status,
+.gut-hint,
+.gut-sub,
+.gut-msg,
+.gut-cefr-note {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: clamp(0.7rem, 1.2vh, 0.82rem);
+}
+
+.gut-list-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.gut-list {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column;
+  gap: 0.2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.2rem !important;
+  box-sizing: border-box;
+}
+
+/* Ровно LIST_PAGE=4 строки; каждая сжимается, обложка внутри — без среза футером */
+.gut-list > li {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: flex;
+  overflow: hidden !important;
+}
+
+.gut-row {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  text-align: left;
+  padding: 0.15rem 0.4rem !important;
+  min-height: 0;
+  box-sizing: border-box;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  overflow: hidden !important;
+}
+
+.gut-row:hover {
+  background: color-mix(in srgb, var(--st-cyan) 12%, transparent) !important;
+}
+
+.gut-row.on,
+.gut-list > li.on .gut-row {
+  background: color-mix(in srgb, var(--st-amber) 20%, transparent) !important;
+  box-shadow: inset 4px 0 0 var(--st-amber) !important;
+  border-color: color-mix(in srgb, var(--st-amber) 45%, transparent) !important;
+}
+
+.gut-sel-mark {
+  color: var(--st-amber);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding-right: 0.15rem;
+}
+
+.gut-cover {
+  width: auto;
+  height: 100%;
+  max-height: 100%;
+  aspect-ratio: 3 / 4;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--st-panel) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--st-line) 60%, transparent);
+  align-self: stretch;
+}
+
+.gut-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gut-cover-ph {
+  color: var(--st-accent);
+  font-size: 1.1rem;
+}
+
+.gut-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.gut-row-info strong {
+  font-size: clamp(0.78rem, 1.35vh, 0.95rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gut-row-info .muted,
+.gut-row-info span {
+  font-size: clamp(0.65rem, 1.1vh, 0.78rem);
+}
+
+.gut-foot {
+  flex: 0 0 auto !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: auto !important;
+  padding-top: 0.35rem;
+}
+
+.gut-foot-prep {
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .gut-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .gut-langs,
+  .gut-form-acts {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Библиотека: две колонки вписываются без скролла каюты */
+.sr-body .lib-page,
+.speed-panel .lib-page,
+.library.lib-page,
+.lib-page {
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+.lib-shelf,
+.lib-passport {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.lib-list,
+.lib-pass-body {
+  overflow: auto !important;
+  overscroll-behavior: contain;
+}
+
+.debrief-modal {
+  width: min(44rem, 96vw) !important;
+  max-height: min(88dvh, 40rem) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.debrief-h,
+.debrief-xp,
+.debrief-weak {
+  flex: 0 0 auto;
+}
+
+.debrief-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  gap: clamp(0.35rem, 1vh, 0.65rem) clamp(0.5rem, 1.5vw, 1rem) !important;
+}
+
+.debrief-val {
+  font-size: clamp(1.05rem, 2.4vh, 1.75rem) !important;
+}
+
+.debrief-actions {
+  flex: 0 0 auto !important;
+  margin-top: auto;
+}
+
+.help-modal {
+  width: min(36rem, 96vw) !important;
+  max-height: min(80dvh, 32rem) !important;
+  overflow: hidden !important;
+}
+
+.help-modal-h-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.help-q {
+  color: var(--st-accent);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.help-how {
+  display: block;
+  font-size: 0.78rem;
+}
+
+.help-modal-body {
+  overflow: hidden !important;
+}
+
+.help-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+/* Íàñòðîéêè ñêîðî÷òåíèÿ  äâå êîëîíêè âïèñûâàþòñÿ â êàáèíó */
+.sr-settings {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.sr-settings-grid {
+  min-height: 0 !important;
+}
+.sr-set-panel {
+  overflow: auto !important;
+  scrollbar-width: none;
+}
+
+/* âââ ÐÐ´Ð°Ð¿ÑÐ¸Ð² Ð¾ÑÑÐ°Ð»ÑÐ½ÑÑ Ð¾ÐºÐ¾Ð½ (ÐºÐ°Ðº Ð¼Ð¾ÑÑÐ¸Ðº): Ð²Ð¿Ð¸ÑÐ°ÑÑ Ð² stage Ð±ÐµÐ· Ð¾Ð±ÑÐµÐ·ÐºÐ¸ ÑÑÑÐµÑÐ° âââ */
+.english,
+.missions-map,
+.cargo-screen,
+.flog,
+.settings-hub,
+.lounge {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.en-overview-grid {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.en-left-col,
+.en-right-col {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.en-nav-row {
+  flex: 0 0 auto !important;
+  margin-bottom: 0.35rem !important;
+}
+
+.cargo-screen {
+  min-height: 0 !important;
+}
+
+.cargo-middle {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.cargo-editor {
+  min-height: 0 !important;
+}
+
+.cargo-opts {
+  max-height: none !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.cargo-foot,
+.missions-map-head,
+.flog-head,
+.en-nav-row {
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 1100px) {
+  .flog-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .en-overview-grid,
+  .cargo-middle {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .flog-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}

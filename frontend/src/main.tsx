@@ -5,8 +5,11 @@ import { applyTheme } from "./theme/applyTheme";
 import { initI18n } from "./i18n/setup";
 import spaceship from "../../packages/themes/spaceship.json";
 import "./index.css";
+import "./viewportFit.css";
+import { installNoWheelScroll } from "./shell/noWheelScroll";
 
 applyTheme(spaceship);
+installNoWheelScroll();
 
 async function boot() {
   await initI18n(localStorage.getItem("st_lang") || "ru");

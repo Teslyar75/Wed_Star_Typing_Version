@@ -11,10 +11,12 @@ from sqlalchemy.orm import Session
 
 from app.auth_deps import COOKIE, get_current_pilot, get_optional_pilot
 from app.db import get_db
-from app.pilots import Pilot, hash_pin, make_token, verify_pin
+from app.pilots import Pilot, hash_pin, make_token, rank_for, verify_pin
 from app.sessions import TypingSession
 
 router = APIRouter(prefix="/api/pilots", tags=["pilots"])
+
+ACCENTS = ("cyan", "amber", "green", "purple", "magenta")
 
 
 class RegisterIn(BaseModel):
@@ -48,8 +50,57 @@ class HonorRow(BaseModel):
     sessions: int
 
 
+class RosterCard(BaseModel):
+    id: int
+    callsign: str
+    display_name: str
+    accent: str
+    skin: str
+    xp: int
+    xp_lo: int
+    xp_hi: int | None
+    rank: str
+    avatar_data: str = ""
+    is_guest: bool = False
+    has_pin: bool = False
+    best_cpm: float = 0.0
+    sessions: int = 0
+    last_at: str | None = None
+
+
 def _set_cookie(resp: Response, token: str) -> None:
     resp.set_cookie(COOKIE, token, httponly=True, samesite="lax", max_age=72 * 3600)
+
+
+def _roster_card(db: Session, p: Pilot) -> RosterCard:
+    rank, lo, hi = rank_for(int(p.xp or 0))
+    sess = db.query(TypingSession).filter(TypingSession.pilot_id == p.id).all()
+    best = max((s.cpm for s in sess), default=0.0)
+    last = max((s.created_at for s in sess if s.created_at), default=None)
+    return RosterCard(
+        id=p.id,
+        callsign=p.callsign,
+        display_name=p.display_name or p.callsign,
+        accent=p.accent or "cyan",
+        skin=p.skin or "spaceship",
+        xp=int(p.xp or 0),
+        xp_lo=lo,
+        xp_hi=hi,
+        rank=rank,
+        avatar_data=p.avatar_data or "",
+        is_guest=bool(p.is_guest),
+        has_pin=bool(p.pin_hash),
+        best_cpm=float(best),
+        sessions=len(sess),
+        last_at=last.isoformat() if last else None,
+    )
+
+
+@router.get("/roster", response_model=list[RosterCard])
+def roster(db: Session = Depends(get_db)) -> list[RosterCard]:
+    """Карточки экипажа для экрана выбора пилота (без PIN)."""
+    pilots = db.query(Pilot).order_by(Pilot.xp.desc(), Pilot.id.asc()).limit(40).all()
+    return [_roster_card(db, p) for p in pilots]
 
 
 @router.post("/register", response_model=PilotOut)
@@ -57,11 +108,14 @@ def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)
     cs = body.callsign.strip()
     if db.query(Pilot).filter(Pilot.callsign == cs).first():
         raise HTTPException(400, "callsign taken")
+    n = db.query(Pilot).count()
+    accent = ACCENTS[n % len(ACCENTS)]
     p = Pilot(
         callsign=cs,
         display_name=body.display_name or cs,
         pin_hash=hash_pin(body.pin) if body.pin else "",
         skin=body.skin,
+        accent=accent,
     )
     db.add(p)
     db.commit()
@@ -77,6 +131,24 @@ def login(body: LoginIn, response: Response, db: Session = Depends(get_db)) -> P
         raise HTTPException(401, "bad credentials")
     _set_cookie(response, make_token(p.id))
     return p
+
+
+class ClearPinIn(BaseModel):
+    """Сброс кода — как ResetPinDialog: подтверждение позывным (локальный экипаж)."""
+
+    callsign: str = Field(min_length=1, max_length=64)
+
+
+@router.post("/{pilot_id}/clear-pin")
+def clear_pin(pilot_id: int, body: ClearPinIn, db: Session = Depends(get_db)) -> dict[str, bool]:
+    p = db.query(Pilot).filter(Pilot.id == pilot_id).first()
+    if p is None:
+        raise HTTPException(404, "pilot not found")
+    if p.callsign.strip().casefold() != body.callsign.strip().casefold():
+        raise HTTPException(403, "callsign mismatch")
+    p.pin_hash = ""
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/logout")
@@ -99,6 +171,23 @@ def guest_login(response: Response, db: Session = Depends(get_db)) -> Pilot:
 @router.get("/me", response_model=PilotOut | None)
 def me(pilot: Pilot | None = Depends(get_optional_pilot)) -> Pilot | None:
     return pilot
+
+
+@router.delete("/{pilot_id}")
+def delete_pilot(
+    pilot_id: int,
+    db: Session = Depends(get_db),
+    me: Pilot | None = Depends(get_optional_pilot),
+) -> dict[str, bool]:
+    """Списать пилота. Гостя можно удалить всегда; остальных — если это текущая сессия или без PIN."""
+    p = db.query(Pilot).filter(Pilot.id == pilot_id).first()
+    if p is None:
+        raise HTTPException(404, "pilot not found")
+    if not p.is_guest and p.pin_hash and (me is None or me.id != p.id):
+        raise HTTPException(403, "login as this pilot to dismiss")
+    db.delete(p)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/honor", response_model=list[HonorRow])

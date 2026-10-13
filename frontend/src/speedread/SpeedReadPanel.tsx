@@ -1,26 +1,35 @@
-import { useEffect, useRef, useState } from "react";
-import { msPerWord } from "./timing";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { t } from "../i18n";
 import { makeQuiz, type QuizItem } from "./quiz";
-import { buildPyramid } from "./epyr";
-import { gorbovSequence, shuffleGorbovGrid } from "./gorbov";
 import { useReadingPos } from "../reading/positionStore";
 import SpeedOverview, { type SrBook, type SrSession, type SrTrainer } from "./SpeedOverview";
+import HyperdriveView from "./HyperdriveView";
+import BookReaderView from "./BookReaderView";
+import TableExView from "./TableExView";
+import PyramidExView from "./PyramidExView";
+import FlashExView from "./FlashExView";
+import { tokenize } from "./rsvpCore";
+import {
+  collectFrameKeys,
+  ensureBootBuffer,
+  getTrStore,
+  RSVP_PREWARM,
+  warmAheadTail,
+} from "./trCache";
+import {
+  loadSpeedPrefs,
+  resolveStartWpm,
+  saveLastWpm,
+  saveSpeedPrefs,
+  type SpeedPrefs,
+} from "./speedPrefs";
+
+const LibraryPanel = lazy(() => import("../library/LibraryPanel"));
 
 type Page = "overview" | "reader" | "book" | "trainers" | "library" | "journal" | "settings";
 type Mode = "rsvp" | "schulte" | "gorbov" | "quiz" | "tachi" | "epyr" | "ramp";
 
 type JournalRow = SrSession;
-
-function orpIndex(word: string) {
-  if (word.length <= 1) return 0;
-  if (word.length <= 5) return 1;
-  if (word.length <= 9) return 2;
-  return 3;
-}
-
-const RAMP_KEY = "st_speed_ramp";
-const TARGET_WPM = 600;
 
 const TRAINERS: SrTrainer[] = [
   { code: "E-SHL", title: "Таблица Шульте", desc: "Числа или буквы по порядку, 3×3…7×7", ready: true, best: "—" },
@@ -33,54 +42,70 @@ const TRAINERS: SrTrainer[] = [
   { code: "E-PCR", title: "Указка", desc: "Ведущая строка без возвратов", ready: false, best: "" },
 ];
 
-function loadRampPreset() {
-  try {
-    const j = JSON.parse(localStorage.getItem(RAMP_KEY) || "{}");
-    return {
-      start: Number(j.start) || 200,
-      target: Number(j.target) || 500,
-      wordsPerStep: Number(j.wordsPerStep) || 8,
-    };
-  } catch {
-    return { start: 200, target: 500, wordsPerStep: 8 };
-  }
+function Stepper({
+  label,
+  value,
+  unit,
+  step,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  step: number;
+  min: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <label className="sr-set-row">
+      <span>{label}</span>
+      <span className="sr-stepper">
+        <button type="button" className="hud-btn" onClick={() => onChange(Math.max(min, value - step))}>
+          −
+        </button>
+        <strong>
+          {value} <span className="muted">{unit}</span>
+        </strong>
+        <button type="button" className="hud-btn" onClick={() => onChange(Math.min(max, value + step))}>
+          +
+        </button>
+      </span>
+    </label>
+  );
 }
 
-export default function SpeedReadPanel() {
+type SpeedProps = {
+  onOpenBridge?: () => void;
+};
+
+export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
   const textId = useReadingPos((s) => s.textId);
   const sentenceId = useReadingPos((s) => s.sentenceId);
   const [page, setPage] = useState<Page>("overview");
-  const [text, setText] = useState("Star Typing teaches you to read faster and type with rhythm.");
-  const [wpm, setWpm] = useState(300);
-  const [i, setI] = useState(0);
-  const [run, setRun] = useState(false);
+  const [text, setText] = useState("");
+  const [bookReady, setBookReady] = useState(false);
+  const [wpm] = useState(300);
   const [mode, setMode] = useState<Mode>("rsvp");
   const [msg, setMsg] = useState("");
   const [quiz, setQuiz] = useState<QuizItem[]>([]);
   const [qi, setQi] = useState(0);
   const [score, setScore] = useState(0);
-  const [schulte, setSchulte] = useState(() =>
-    Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5),
-  );
-  const [nextNum, setNextNum] = useState(1);
-  const [gorbovN] = useState(5);
-  const [gorbovGrid, setGorbovGrid] = useState(() => shuffleGorbovGrid(5));
-  const [gorbovStep, setGorbovStep] = useState(0);
-  const [flash, setFlash] = useState("");
-  const [flashOn, setFlashOn] = useState(false);
-  const [pyrLevel, setPyrLevel] = useState(0);
   const [journal, setJournal] = useState<JournalRow[]>([]);
   const [filterMode, setFilterMode] = useState("");
-  const [ramp, setRamp] = useState(loadRampPreset);
-  const [liveWpm, setLiveWpm] = useState(200);
+  const [prefs, setPrefs] = useState<SpeedPrefs>(loadSpeedPrefs);
+
+  const patchPrefs = (patch: Partial<SpeedPrefs>) => {
+    setPrefs((cur) => {
+      const next = { ...cur, ...patch };
+      saveSpeedPrefs(next);
+      return next;
+    });
+  };
   const [bookMeta, setBookMeta] = useState<{ title: string; segments: number } | null>(null);
   const [pilotXp, setPilotXp] = useState(0);
-  const words = text.split(/\s+/).filter(Boolean);
-  const pyramid = buildPyramid(text, 8);
-  const gorbovOrder = gorbovSequence(gorbovN);
-  const raf = useRef(0);
-  const last = useRef(0);
-  const started = useRef(0);
 
   const pages: { id: Page; label: string }[] = [
     { id: "overview", label: t("sr_overview") },
@@ -117,23 +142,61 @@ export default function SpeedReadPanel() {
     setJournal(Array.isArray(rows) ? rows : []);
   };
 
-  const loadFromShelf = async () => {
-    if (!textId) {
-      setMsg(t("from_book_need"));
-      return;
-    }
-    const r = await fetch(`/api/reader/${textId}/bilingual?offset=${sentenceId}&limit=40`, { credentials: "include" });
-    if (!r.ok) {
-      setMsg(await r.text());
-      return;
-    }
-    const segs = (await r.json()) as { original?: string }[];
-    const body = segs.map((s) => s.original || "").filter(Boolean).join(" ");
-    if (body) {
+  const loadBookContent = useCallback(
+    async (id?: number | null): Promise<string | null> => {
+      const tid = id ?? textId;
+      if (tid == null) {
+        setBookReady(false);
+        setMsg(t("from_book_need"));
+        return null;
+      }
+      const r = await fetch(`/api/texts/${tid}/content`, { credentials: "include" });
+      if (!r.ok) {
+        setMsg(await r.text());
+        setBookReady(false);
+        return null;
+      }
+      const j = (await r.json()) as { title?: string; body?: string; chars?: number };
+      const body = (j.body || "").trim();
+      if (!body) {
+        setMsg(t("from_book_need"));
+        setBookReady(false);
+        return null;
+      }
       setText(body);
-      setMsg(`${t("from_shelf")} · s${sentenceId}`);
+      setBookMeta({ title: j.title || `#${tid}`, segments: Math.max(1, Math.round((j.chars || body.length) / 5)) });
+      setBookReady(true);
+      setMsg(`${t("from_shelf")}: ${j.title || tid}`);
+      /* как book_reader._warm_book_translation: запас до входа в гипердрайв */
+      const words = tokenize(body);
+      const store = getTrStore();
+      const keys = collectFrameKeys(words, 0, 1, RSVP_PREWARM);
+      void store.warm(keys).then(() => warmAheadTail(store, words, 0, 1, RSVP_PREWARM));
+      return body;
+    },
+    [textId],
+  );
+
+  const openHyperdrive = useCallback(async () => {
+    let body = bookReady && text.trim().length > 0 ? text : null;
+    if (!body) body = await loadBookContent();
+    if (!body) {
+      setPage("library");
+      return;
     }
-  };
+    /* буфер должен уже стоять — ждём покрытие первых кадров, потом вход */
+    const words = tokenize(body);
+    if (words.length) {
+      setMsg("Uplink…");
+      await ensureBootBuffer(getTrStore(), words, 0, 1);
+    }
+    setMode("rsvp");
+    setPage("reader");
+  }, [bookReady, text, loadBookContent]);
+
+  useEffect(() => {
+    if (textId != null) void loadBookContent(textId);
+  }, [textId, loadBookContent]);
 
   useEffect(() => {
     void loadJournal();
@@ -168,161 +231,27 @@ export default function SpeedReadPanel() {
   }, [textId]);
 
   useEffect(() => {
-    if (!run || (mode !== "rsvp" && mode !== "ramp")) return;
-    const effective = mode === "ramp" ? liveWpm : wpm;
-    const ms = msPerWord(effective);
-    if (!started.current) started.current = performance.now();
-    const loop = (t0: number) => {
-      if (t0 - last.current >= ms) {
-        last.current = t0;
-        setI((x) => {
-          if (mode === "ramp" && x > 0 && x % ramp.wordsPerStep === 0) {
-            setLiveWpm((w) => Math.min(ramp.target, w + Math.max(10, Math.round((ramp.target - ramp.start) / 10))));
-          }
-          if (x + 1 >= words.length) {
-            setRun(false);
-            const elapsed = (performance.now() - started.current) / 1000;
-            void saveResult({
-              mode: mode === "ramp" ? "ramp" : "rsvp",
-              wpm: effective,
-              words: words.length,
-              elapsed,
-              score: effective,
-            });
-            const items = makeQuiz(text, "en");
-            if (items.length && mode === "rsvp") {
-              setQuiz(items);
-              setQi(0);
-              setScore(0);
-              setMode("quiz");
-            }
-            started.current = 0;
-            return x;
-          }
-          return x + 1;
-        });
-      }
-      raf.current = requestAnimationFrame(loop);
-    };
-    raf.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf.current);
-  }, [run, wpm, liveWpm, mode, words.length, ramp, text]);
-
-  useEffect(() => {
-    if (!run || mode !== "tachi") return;
-    let cancelled = false;
-    let idx = 0;
-    started.current = performance.now();
-    const tick = () => {
-      if (cancelled) return;
-      if (idx >= words.length) {
-        setRun(false);
-        setFlashOn(false);
-        const elapsed = (performance.now() - started.current) / 1000;
-        void saveResult({ mode: "tachi", wpm, words: words.length, elapsed, score: wpm });
-        return;
-      }
-      setFlash(words[idx]!);
-      setFlashOn(true);
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setFlashOn(false);
-        idx += 1;
-        window.setTimeout(tick, Math.max(200, msPerWord(wpm)));
-      }, 120);
-    };
-    tick();
-    return () => {
-      cancelled = true;
-    };
-  }, [run, mode, wpm, words]);
-
-  useEffect(() => {
-    if (!run || mode !== "epyr") return;
-    let cancelled = false;
-    let level = 0;
-    started.current = performance.now();
-    setPyrLevel(0);
-    const step = () => {
-      if (cancelled) return;
-      if (level >= pyramid.length) {
-        setRun(false);
-        const elapsed = (performance.now() - started.current) / 1000;
-        void saveResult({ mode: "epyr", wpm, words: pyramid.length, elapsed, score: pyramid.length });
-        return;
-      }
-      setPyrLevel(level);
-      level += 1;
-      window.setTimeout(step, Math.max(400, msPerWord(Math.max(120, wpm / 2))));
-    };
-    step();
-    return () => {
-      cancelled = true;
-    };
-  }, [run, mode, wpm, pyramid.length]);
-
-  useEffect(() => {
     if (page === "journal") void loadJournal(filterMode || undefined);
   }, [page, filterMode]);
 
-  const word = words[i] || "";
-  const oi = orpIndex(word);
-
-  const onSchulte = (n: number) => {
-    if (n !== nextNum) return;
-    if (nextNum === 1) started.current = performance.now();
-    if (nextNum >= 25) {
-      const elapsed = (performance.now() - started.current) / 1000;
-      void saveResult({ mode: "schulte", wpm: 0, words: 25, elapsed, score: elapsed });
-      setNextNum(1);
-      setSchulte(Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5));
-      started.current = 0;
-      return;
-    }
-    setNextNum((x) => x + 1);
-  };
-
-  const onGorbov = (cell: { color: "b" | "r"; value: number }) => {
-    const expect = gorbovOrder[gorbovStep];
-    if (!expect || expect.color !== cell.color || expect.value !== cell.value) return;
-    if (gorbovStep === 0) started.current = performance.now();
-    if (gorbovStep + 1 >= gorbovOrder.length) {
-      const elapsed = (performance.now() - started.current) / 1000;
-      void saveResult({ mode: "gorbov", wpm: 0, words: gorbovOrder.length, elapsed, score: elapsed });
-      setGorbovStep(0);
-      setGorbovGrid(shuffleGorbovGrid(gorbovN));
-      started.current = 0;
-      return;
-    }
-    setGorbovStep((x) => x + 1);
-  };
-
   const openTrainer = (code: string) => {
     setPage("trainers");
-    setRun(false);
-    if (code === "E-SHL") {
-      setMode("schulte");
-      setNextNum(1);
-      setSchulte(Array.from({ length: 25 }, (_, k) => k + 1).sort(() => Math.random() - 0.5));
-    } else if (code === "E-GRB") {
-      setMode("gorbov");
-      setGorbovStep(0);
-      setGorbovGrid(shuffleGorbovGrid(gorbovN));
-    } else if (code === "E-PYR") {
-      setMode("epyr");
-    } else if (code === "E-TAC") {
-      setMode("tachi");
-    }
+    if (code === "E-SHL") setMode("schulte");
+    else if (code === "E-GRB") setMode("gorbov");
+    else if (code === "E-PYR") setMode("epyr");
+    else if (code === "E-TAC") setMode("tachi");
   };
 
+  const trainersLobby = page === "trainers" && mode !== "schulte" && mode !== "gorbov" && mode !== "epyr" && mode !== "tachi";
+
   const book: SrBook =
-    textId != null
+    textId != null && bookReady
       ? {
           title: bookMeta?.title || `#${textId}`,
           status: t("sr_original"),
           lang: "en",
           readWord: Math.max(0, sentenceId),
-          totalWords: Math.max(bookMeta?.segments || 0, sentenceId + 1),
+          totalWords: Math.max(bookMeta?.segments || 0, text.split(/\s+/).filter(Boolean).length, sentenceId + 1),
           typeWord: null,
           startWpm: wpm,
           hasBook: true,
@@ -361,8 +290,7 @@ export default function SpeedReadPanel() {
               className={`tab ${page === p.id ? "on" : ""}`}
               onClick={() => {
                 setPage(p.id);
-                setRun(false);
-                if (p.id === "reader") setMode("rsvp");
+                if (p.id === "reader" || p.id === "trainers") setMode("rsvp");
               }}
             >
               {p.label}
@@ -376,248 +304,226 @@ export default function SpeedReadPanel() {
         <SpeedOverview
           book={book}
           sessions={journal}
-          targetWpm={TARGET_WPM}
+          targetWpm={prefs.target}
           recordWpm={recordWpm}
           effWpm={effWpm}
           streak={0}
           xp={pilotXp}
           trainers={TRAINERS}
-          onHyperdrive={() => {
-            setPage("reader");
-            setMode("rsvp");
-            void loadFromShelf();
-          }}
+          onHyperdrive={() => void openHyperdrive()}
           onBook={() => setPage("book")}
           onLibrary={() => setPage("library")}
           onTrainer={openTrainer}
         />
       )}
 
-      {page === "reader" && (
+      {page === "reader" && (mode === "rsvp" || mode === "ramp") && bookReady && text.trim() && (
+        <HyperdriveView
+          text={text}
+          textId={textId}
+          title={bookMeta?.title || t("hyperdrive")}
+          startWpm={resolveStartWpm(prefs, textId)}
+          targetWpm={prefs.target}
+          rampStep={prefs.step}
+          rampEveryS={prefs.everyS}
+          rampMode={prefs.mode}
+          punctPauses={prefs.punctPauses}
+          wordsPerFrame={prefs.wordsPerFrame}
+          fontPtInit={prefs.fontPt}
+          orpInit={prefs.orp}
+          guidesInit={prefs.guides}
+          translate={prefs.translate}
+          onExit={() => {
+            setPage("overview");
+          }}
+          onOpenBook={() => setPage("book")}
+          onOpenLibrary={() => setPage("library")}
+          onWpmPersist={(w) => saveLastWpm(textId, w)}
+          onFinished={(stats) => {
+            saveLastWpm(textId, stats.wpm);
+            void saveResult({
+              mode: prefs.mode !== "off" && stats.wpm > prefs.start ? "ramp" : "rsvp",
+              wpm: stats.wpm,
+              words: stats.words,
+              elapsed: stats.elapsed,
+              score: stats.wpm,
+            });
+            const items = makeQuiz(text, "en");
+            if (items.length) {
+              setQuiz(items);
+              setQi(0);
+              setScore(0);
+              setMode("quiz");
+            }
+          }}
+        />
+      )}
+      {page === "reader" && (mode === "rsvp" || mode === "ramp") && !(bookReady && text.trim()) && (
+        <div className="panel-inset">
+          <p className="muted">{t("from_book_need")}</p>
+          <button type="button" className="hud-btn amber" onClick={() => setPage("library")}>
+            {t("library")}
+          </button>
+        </div>
+      )}
+
+      {page === "reader" && mode === "quiz" && (
         <div className="sr-reader">
           <div className="bridge-actions">
-            {(
-              [
-                ["rsvp", t("hyperdrive")],
-                ["ramp", t("ramp")],
-                ["quiz", t("quiz")],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={`hud-btn ${mode === id ? "amber" : ""}`}
-                onClick={() => {
-                  setMode(id);
-                  setRun(false);
-                  if (id === "quiz") {
-                    const items = makeQuiz(text, "en");
-                    setQuiz(items);
-                    setQi(0);
-                    setScore(0);
-                  }
-                  if (id === "ramp") setLiveWpm(ramp.start);
-                }}
-              >
-                {label}
-              </button>
-            ))}
+            <button type="button" className="hud-btn" onClick={() => setMode("rsvp")}>
+              ← {t("hyperdrive")}
+            </button>
           </div>
-          {mode === "quiz" ? (
-            quiz.length === 0 ? (
-              <p className="muted">{t("quiz_need_text")}</p>
-            ) : qi >= quiz.length ? (
-              <p>
-                {score}/{quiz.length}
-              </p>
-            ) : (
-              <div className="quiz">
-                <p>{quiz[qi]!.question}</p>
-                <div className="bridge-actions">
-                  {quiz[qi]!.options.map((opt, oi2) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      className="hud-btn amber"
-                      onClick={() => {
-                        if (oi2 === quiz[qi]!.answer) setScore((s) => s + 1);
-                        setQi((x) => x + 1);
-                      }}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
+          {quiz.length === 0 ? (
+            <p className="muted">{t("quiz_need_text")}</p>
+          ) : qi >= quiz.length ? (
+            <p>
+              {score}/{quiz.length}
+            </p>
           ) : (
-            <>
-              <textarea className="cargo-input sr-text" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+            <div className="quiz">
+              <p>{quiz[qi]!.question}</p>
               <div className="bridge-actions">
-                <button type="button" className="hud-btn" onClick={() => void loadFromShelf()}>
-                  {t("from_shelf")}
-                </button>
-                {mode === "ramp" ? (
-                  <>
-                    <label>
-                      {t("ramp")} {ramp.start}→
-                      <input
-                        type="number"
-                        value={ramp.target}
-                        min={150}
-                        max={1200}
-                        onChange={(e) => {
-                          const next = { ...ramp, target: Number(e.target.value) };
-                          setRamp(next);
-                          localStorage.setItem(RAMP_KEY, JSON.stringify(next));
-                        }}
-                      />
-                    </label>
-                    <span className="muted">{Math.round(liveWpm)} WPM</span>
-                  </>
-                ) : (
-                  <label>
-                    WPM{" "}
-                    <input type="number" value={wpm} min={100} max={1200} onChange={(e) => setWpm(Number(e.target.value))} />
-                  </label>
-                )}
-                <button
-                  type="button"
-                  className="hud-btn amber"
-                  onClick={() => {
-                    setI(0);
-                    started.current = 0;
-                    setMsg("");
-                    if (mode === "ramp") setLiveWpm(ramp.start);
-                    setRun(true);
-                  }}
-                >
-                  {t("start")}
-                </button>
-                <button type="button" className="hud-btn" onClick={() => setRun(false)}>
-                  {t("pause")}
-                </button>
+                {quiz[qi]!.options.map((opt, oi2) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    className="hud-btn amber"
+                    onClick={() => {
+                      if (oi2 === quiz[qi]!.answer) setScore((s) => s + 1);
+                      setQi((x) => x + 1);
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
               </div>
-              {(mode === "rsvp" || mode === "ramp") && (
-                <div className="rsvp">
-                  <span>{word.slice(0, oi)}</span>
-                  <span className="orp">{word[oi] ?? ""}</span>
-                  <span>{word.slice(oi + 1)}</span>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
       )}
 
       {page === "book" && (
-        <div className="panel-inset">
-          <p className="muted">{book.hasBook ? book.title : t("sr_lib_empty_hint")}</p>
-          <button type="button" className="hud-btn amber" disabled={!book.hasBook} onClick={() => setPage("reader")}>
-            ▶ {t("hyperdrive")}
-          </button>
+        <div className="sr-book-page">
+          {!book.hasBook || !text.trim() ? (
+            <div className="panel-inset">
+              <p className="muted">{t("sr_lib_empty_hint")}</p>
+              <button type="button" className="hud-btn amber" onClick={() => setPage("library")}>
+                {t("library")}
+              </button>
+            </div>
+          ) : (
+            <BookReaderView
+              text={text}
+              title={book.title || t("sr_book")}
+              textId={textId}
+              fontPt={prefs.bookFontPt}
+              mode={prefs.bookMode}
+              theme={prefs.bookTheme}
+              onFontPt={(n) => patchPrefs({ bookFontPt: n })}
+              onMode={(m) => patchPrefs({ bookMode: m })}
+              onTheme={(th) => patchPrefs({ bookTheme: th })}
+              onLibrary={() => setPage("library")}
+              onHyperdrive={() => void openHyperdrive()}
+              onCards={
+                textId == null
+                  ? undefined
+                  : () => {
+                      void (async () => {
+                        const r = await fetch("/api/english/from-book", {
+                          method: "POST",
+                          credentials: "include",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            text_id: textId,
+                            up_to_sentence_id: Math.max(sentenceId + 40, 10),
+                            limit: 24,
+                          }),
+                        });
+                        if (r.ok) {
+                          const j = (await r.json()) as { cards?: number };
+                          setMsg(`${t("from_book")}: ${j.cards ?? 0}`);
+                        }
+                      })();
+                    }
+              }
+            />
+          )}
         </div>
       )}
 
-      {page === "trainers" && (
+      {page === "trainers" && (mode === "schulte" || mode === "gorbov") && (
+        <TableExView
+          gorbov={mode === "gorbov"}
+          onExit={() => setMode("rsvp")}
+          onResult={(payload) => void saveResult(payload)}
+        />
+      )}
+
+      {page === "trainers" && mode === "epyr" && (
+        <PyramidExView
+          onExit={() => setMode("rsvp")}
+          onResult={(payload) => void saveResult(payload)}
+        />
+      )}
+
+      {page === "trainers" && mode === "tachi" && (
+        <FlashExView
+          bookText={text}
+          onExit={() => setMode("rsvp")}
+          onResult={(payload) => void saveResult(payload)}
+        />
+      )}
+
+      {page === "trainers" && trainersLobby && (
         <div className="sr-trainers-page">
-          <div className="bridge-actions">
-            {(
-              [
-                ["schulte", t("schulte")],
-                ["gorbov", t("gorbov")],
-                ["epyr", t("epyr")],
-                ["tachi", t("tachi")],
-              ] as const
-            ).map(([id, label]) => (
+          <h3 className="sr-trainers-title">{t("sr_trainers")}</h3>
+          <p className="muted">{t("sr_trainers_blurb")}</p>
+          <div className="sr-trainers">
+            {TRAINERS.map((tr) => (
               <button
-                key={id}
+                key={tr.code}
                 type="button"
-                className={`hud-btn ${mode === id ? "amber" : ""}`}
-                onClick={() => openTrainer(id === "schulte" ? "E-SHL" : id === "gorbov" ? "E-GRB" : id === "epyr" ? "E-PYR" : "E-TAC")}
+                className={`sr-trainer${tr.ready ? " ready" : " soon"}`}
+                disabled={!tr.ready}
+                onClick={() => openTrainer(tr.code)}
               >
-                {label}
+                <span className="sr-tr-code">{tr.code}</span>
+                <span className="sr-tr-title">{tr.title}</span>
+                <span className="sr-tr-desc">{tr.desc}</span>
+                {tr.ready ? (
+                  <span className="sr-tr-best">
+                    {t("sr_best")}: {tr.best}
+                  </span>
+                ) : (
+                  <span className="sr-tr-best">{t("sr_wip")}</span>
+                )}
               </button>
             ))}
           </div>
-          {mode === "schulte" && (
-            <>
-              <p className="muted">
-                {t("next_num")}: {nextNum}
-              </p>
-              <div className="schulte">
-                {schulte.map((n) => (
-                  <button key={n} type="button" className="schulte-cell" onClick={() => onSchulte(n)}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {mode === "gorbov" && (
-            <>
-              <p className="muted">
-                {gorbovOrder[gorbovStep]
-                  ? `${gorbovOrder[gorbovStep]!.color === "b" ? "●" : "○"} ${gorbovOrder[gorbovStep]!.value}`
-                  : "OK"}
-              </p>
-              <div className="schulte gorbov" style={{ gridTemplateColumns: `repeat(${gorbovN}, 1fr)` }}>
-                {gorbovGrid.map((cell, idx) => (
-                  <button
-                    key={`${cell.color}-${cell.value}-${idx}`}
-                    type="button"
-                    className="schulte-cell"
-                    style={{ color: cell.color === "r" ? "#e05050" : "#e8e8e8", fontWeight: 700 }}
-                    onClick={() => onGorbov(cell)}
-                  >
-                    {cell.value}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {mode === "tachi" && (
-            <>
-              <div className="bridge-actions">
-                <button type="button" className="hud-btn amber" onClick={() => setRun(true)}>
-                  {t("start")}
-                </button>
-                <button type="button" className="hud-btn" onClick={() => setRun(false)}>
-                  {t("pause")}
-                </button>
-              </div>
-              <div className={`rsvp tachi ${flashOn ? "on" : ""}`}>{flashOn ? flash : "·"}</div>
-            </>
-          )}
-          {mode === "epyr" && (
-            <>
-              <div className="bridge-actions">
-                <button type="button" className="hud-btn amber" onClick={() => setRun(true)}>
-                  {t("start")}
-                </button>
-                <button type="button" className="hud-btn" onClick={() => setRun(false)}>
-                  {t("pause")}
-                </button>
-              </div>
-              <div className="epyr">
-                {pyramid.slice(0, pyrLevel + 1).map((line, li) => (
-                  <div key={li} className="epyr-line">
-                    {line}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </div>
       )}
 
       {page === "library" && (
-        <div className="panel-inset">
-          <p className="muted">{t("sr_lib_hint")}</p>
-          <button type="button" className="hud-btn" onClick={() => void loadFromShelf()}>
-            {t("from_shelf")}
-          </button>
-        </div>
+        <Suspense fallback={<p className="muted">…</p>}>
+          <LibraryPanel
+            onOpenHyperdrive={() => {
+              void (async () => {
+                const tid = useReadingPos.getState().textId;
+                const ok = await loadBookContent(tid);
+                if (ok) setPage("reader");
+              })();
+            }}
+            onOpenBook={() => {
+              void (async () => {
+                const tid = useReadingPos.getState().textId;
+                const ok = await loadBookContent(tid);
+                if (ok) setPage("book");
+              })();
+            }}
+            onOpenBridge={onOpenBridge}
+          />
+        </Suspense>
       )}
 
       {page === "journal" && (
@@ -669,12 +575,176 @@ export default function SpeedReadPanel() {
       )}
 
       {page === "settings" && (
-        <div className="panel-inset">
-          <label>
-            {t("sr_target_wpm")}{" "}
-            <input type="number" value={TARGET_WPM} disabled readOnly />
-          </label>
-          <p className="muted">{t("sr_settings_hint")}</p>
+        <div className="sr-settings" data-nav-group="sr-settings">
+          <p className="muted sr-settings-hint">{t("sr_settings_hint")}</p>
+          <div className="sr-settings-grid">
+            <section className="panel-inset sr-set-panel">
+              <h3 className="route-title">{t("sr_speed_ramp")}</h3>
+              <Stepper
+                label={t("sr_start_speed")}
+                value={prefs.start}
+                unit={t("sr_wpm_unit")}
+                step={25}
+                min={100}
+                max={1500}
+                onChange={(n) => patchPrefs({ start: n })}
+              />
+              <Stepper
+                label={t("sr_target_speed")}
+                value={prefs.target}
+                unit={t("sr_wpm_unit")}
+                step={25}
+                min={150}
+                max={2000}
+                onChange={(n) => patchPrefs({ target: n })}
+              />
+              <div className="sr-set-row">
+                <span>{t("ramp")}</span>
+                <div className="sr-choice">
+                  {(
+                    [
+                      ["smooth", t("sr_ramp_smooth")],
+                      ["steps", t("sr_ramp_steps")],
+                      ["off", t("sr_ramp_off")],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`hud-btn ${prefs.mode === id ? "amber" : ""}`}
+                      onClick={() => patchPrefs({ mode: id })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <Stepper
+                label={t("sr_ramp_step")}
+                value={prefs.step}
+                unit={t("sr_wpm_unit")}
+                step={5}
+                min={5}
+                max={100}
+                onChange={(n) => patchPrefs({ step: n })}
+              />
+              <Stepper
+                label={t("sr_ramp_every")}
+                value={prefs.everyS}
+                unit={t("sr_sec_unit")}
+                step={10}
+                min={10}
+                max={300}
+                onChange={(n) => patchPrefs({ everyS: n })}
+              />
+              <div className="sr-set-row">
+                <span>{t("sr_punct_pauses")}</span>
+                <button
+                  type="button"
+                  className={`hud-btn ${prefs.punctPauses ? "ok" : ""}`}
+                  onClick={() => patchPrefs({ punctPauses: !prefs.punctPauses })}
+                >
+                  {prefs.punctPauses ? t("on") : t("off")}
+                </button>
+              </div>
+            </section>
+
+            <section className="panel-inset sr-set-panel">
+              <h3 className="route-title">{t("sr_show_check")}</h3>
+              <Stepper
+                label={t("sr_words_frame")}
+                value={prefs.wordsPerFrame}
+                unit=""
+                step={1}
+                min={1}
+                max={5}
+                onChange={(n) => patchPrefs({ wordsPerFrame: n })}
+              />
+              <Stepper
+                label={t("sr_font_pt")}
+                value={prefs.fontPt}
+                unit="pt"
+                step={2}
+                min={22}
+                max={72}
+                onChange={(n) => patchPrefs({ fontPt: n })}
+              />
+              {(
+                [
+                  ["orp", t("hd_orp"), prefs.orp],
+                  ["guides", t("hd_guides"), prefs.guides],
+                  ["translate", t("hd_under_word"), prefs.translate],
+                ] as const
+              ).map(([key, label, on]) => (
+                <div key={key} className="sr-set-row sr-set-tog">
+                  <span>{label}</span>
+                  <button
+                    type="button"
+                    className={`hud-btn ${on ? "ok" : ""}`}
+                    onClick={() => patchPrefs({ [key]: !on })}
+                  >
+                    {on ? t("on") : t("off")}
+                  </button>
+                </div>
+              ))}
+            </section>
+
+            <section className="panel-inset sr-set-panel">
+              <h3 className="route-title">{t("sr_book_settings")}</h3>
+              <Stepper
+                label={t("sr_book_font")}
+                value={prefs.bookFontPt}
+                unit="pt"
+                step={1}
+                min={12}
+                max={28}
+                onChange={(n) => patchPrefs({ bookFontPt: n })}
+              />
+              <div className="sr-set-row">
+                <span>{t("sr_book_view")}</span>
+                <div className="sr-choice">
+                  {(
+                    [
+                      ["page", t("sr_book_page")],
+                      ["spread", t("sr_book_spread")],
+                      ["bilingual", t("sr_book_bi")],
+                      ["scroll", t("sr_book_scroll")],
+                    ] as const
+                  ).map(([id, lab]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`hud-btn ${prefs.bookMode === id ? "amber" : ""}`}
+                      onClick={() => patchPrefs({ bookMode: id })}
+                    >
+                      {lab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="sr-set-row">
+                <span>{t("sr_book_theme")}</span>
+                <div className="sr-choice">
+                  {(
+                    [
+                      ["paper", t("sr_book_paper")],
+                      ["night", t("sr_book_night")],
+                      ["sepia", t("sr_book_sepia")],
+                    ] as const
+                  ).map(([id, lab]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`hud-btn ${prefs.bookTheme === id ? "amber" : ""}`}
+                      onClick={() => patchPrefs({ bookTheme: id })}
+                    >
+                      {lab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
       )}
     </div>

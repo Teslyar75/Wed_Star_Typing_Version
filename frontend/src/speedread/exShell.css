@@ -1,0 +1,132 @@
+/**
+ * Общая типографика тренажёров — читаемые rem, без 8–10px.
+ * Подключается во всех Exercise views (Шульте/Горбов/Пирамида/Вспышка).
+ */
+
+.ex-shell .ex-title {
+  font-size: 1.15rem !important;
+  line-height: 1.35 !important;
+}
+
+.ex-shell .ex-sub {
+  margin-top: 0.35rem !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  color: var(--st-muted) !important;
+}
+
+.ex-shell .ex-back-btn {
+  height: auto !important;
+  min-height: 2.6rem !important;
+  font-size: 1rem !important;
+  padding: 0.55rem 1.1rem !important;
+  white-space: nowrap !important;
+}
+
+/* НАЙДИ — статус */
+.ex-shell .ex-next {
+  font-size: 0.85rem !important;
+  line-height: 1.35 !important;
+  margin-top: 0.35rem !important;
+}
+
+.ex-shell .ex-found {
+  font-size: 0.9rem !important;
+  line-height: 1.35 !important;
+  margin-top: 0.5rem !important;
+}
+
+.ex-shell .ex-mini-lab {
+  font-size: 0.8rem !important;
+  margin: 0.65rem 0 0.3rem !important;
+  letter-spacing: 0.04em;
+}
+
+/* чипы размера / символов — без обрезки */
+.ex-shell .ex-chip {
+  min-width: 2.75rem !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 2.1rem !important;
+  padding: 0.35rem 0.55rem !important;
+  font-size: 0.85rem !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+.ex-shell .ex-chip-row {
+  gap: 0.3rem !important;
+}
+
+.ex-shell .ex-mode-hint {
+  margin-top: 0.75rem !important;
+  font-size: 0.9rem !important;
+  line-height: 1.45 !important;
+}
+
+/* таймер / рекорд / телеметрия */
+.ex-shell .ex-rec {
+  font-size: 0.85rem !important;
+  line-height: 1.35 !important;
+  margin-top: 0.25rem !important;
+}
+
+.ex-shell .ex-tele-body {
+  font-size: 0.9rem !important;
+  line-height: 1.55 !important;
+  white-space: pre-wrap !important;
+}
+
+.ex-shell .ex-restart {
+  height: auto !important;
+  min-height: 2.6rem !important;
+  font-size: 0.95rem !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+/* панели растут/сжимаются с окном — без прокрутки */
+.ex-shell {
+  overflow: hidden !important;
+}
+
+.ex-shell .ex-find {
+  flex: 0 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.ex-shell .ex-timer {
+  flex: 0 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.ex-shell .ex-mode {
+  overflow: hidden !important;
+}
+
+.ex-shell .ex-col {
+  width: min(17rem, 100%) !important;
+  min-width: min(14rem, 100%) !important;
+  max-width: 18rem !important;
+  overflow: hidden !important;
+}
+
+.ex-shell .ex-body {
+  grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr) minmax(12rem, 17rem) !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .ex-shell .ex-body {
+    grid-template-columns: 1fr !important;
+  }
+  .ex-shell .ex-col {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}

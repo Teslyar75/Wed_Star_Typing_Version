@@ -93,11 +93,19 @@ export default function AccRing({ value, sub = "", title = "ТОЧНОСТЬ" }:
           textAnchor="middle"
           dominantBaseline="middle"
           className={`acc-ring-value ${value == null ? "dim" : ""}`}
+          fill={col}
         >
           {label}
         </text>
         {sub ? (
-          <text x={cx} y={cy + r * 0.42} textAnchor="middle" dominantBaseline="middle" className="acc-ring-sub">
+          <text
+            x={cx}
+            y={cy + r * 0.42}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="acc-ring-sub"
+            fill={value != null && value < 90 ? "var(--st-error)" : "var(--st-muted)"}
+          >
             {sub}
           </text>
         ) : null}

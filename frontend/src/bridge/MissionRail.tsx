@@ -42,7 +42,7 @@ export default function MissionRail({ drills, activeId, lastStars, onStart, onRe
           {t("mission_stars")}: <Stars n={lastStars} />
         </p>
       )}
-      <ul className="mission-list">
+      <ul className="mission-list" data-nav-group="missions">
         {drills.map((d) => (
           <li key={d.id} className={`${d.unlocked ? "" : "locked"} ${activeId === d.id ? "on" : ""}`}>
             <button type="button" className="hud-btn" disabled={!d.unlocked} onClick={() => onStart(d.id)}>

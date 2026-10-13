@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { t } from "../i18n";
 import type { Tab } from "./tabs";
 
@@ -29,37 +30,45 @@ export default function CommandPalette({ open, onClose, onJump }: Props) {
   const filtered = ITEMS.filter(
     (x) => t(x.labelKey).toLowerCase().includes(q.toLowerCase()) || x.id.includes(q.toLowerCase()),
   );
-  return (
-    <div className="cmd-palette" role="dialog" aria-label={t("command_palette")}>
-      <input
-        autoFocus
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={`${t("command_palette")}…`}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-          if (e.key === "Enter" && filtered[0]) {
-            onJump(filtered[0].id);
-            onClose();
-          }
-        }}
-      />
-      <ul>
-        {filtered.map((x) => (
-          <li key={x.id}>
-            <button
-              type="button"
-              className="hud-btn"
-              onClick={() => {
-                onJump(x.id);
-                onClose();
-              }}
-            >
-              {t(x.labelKey)}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+  return createPortal(
+    <div className="cmd-palette-overlay" onClick={onClose}>
+      <div
+        className="cmd-palette"
+        role="dialog"
+        aria-label={t("command_palette")}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={`${t("command_palette")}…`}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onClose();
+            if (e.key === "Enter" && filtered[0]) {
+              onJump(filtered[0].id);
+              onClose();
+            }
+          }}
+        />
+        <ul>
+          {filtered.map((x) => (
+            <li key={x.id}>
+              <button
+                type="button"
+                className="hud-btn"
+                onClick={() => {
+                  onJump(x.id);
+                  onClose();
+                }}
+              >
+                {t(x.labelKey)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>,
+    document.body,
   );
 }

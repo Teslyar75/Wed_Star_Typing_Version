@@ -1,5 +1,6 @@
 /** Радиорубка — раскладка как stamina/radio/screen.RadioScreen. */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { t } from "../i18n";
 import {
   fetchCountries,
@@ -14,9 +15,16 @@ import { useRadio } from "./radioStore";
 import { cacheStations, loadCachedStations } from "./stationCache";
 
 type Tab = "air" | "rx";
+/** Источник списка частот — отдельные вкладки вместо длинной прокрутки. */
+type FreqMode = "top" | "favs" | "search";
 type HudOpt = { value: string; label: string };
 
-/** Свой список вместо native &lt;select&gt; — clip-path на панелях ломает системный popup. */
+/** 12 вкладок × 10 волн = 120 станций. */
+const FREQ_PAGE = 10;
+const FREQ_TABS = 12;
+const FREQ_TOTAL = FREQ_PAGE * FREQ_TABS;
+
+/** Свой список вместо native &lt;select&gt; — portal в body, иначе clip/overflow режет меню. */
 function HudSelect({
   value,
   onChange,
@@ -29,22 +37,44 @@ function HudSelect({
   emptyLabel: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [menuBox, setMenuBox] = useState<{ left: number; top: number; width: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
   const current = options.find((o) => o.value === value)?.label ?? emptyLabel;
+
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) {
+      setMenuBox(null);
+      return;
+    }
+    const r = rootRef.current.getBoundingClientRect();
+    setMenuBox({ left: r.left, top: r.bottom + 3, width: r.width });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const n = e.target as Node;
+      if (rootRef.current?.contains(n) || menuRef.current?.contains(n)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+    const onRe = () => {
+      if (!rootRef.current) return;
+      const r = rootRef.current.getBoundingClientRect();
+      setMenuBox({ left: r.left, top: r.bottom + 3, width: r.width });
+    };
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onRe);
+    window.addEventListener("scroll", onRe, true);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onRe);
+      window.removeEventListener("scroll", onRe, true);
     };
   }, [open]);
 
@@ -59,36 +89,47 @@ function HudSelect({
         <span className="hud-select-label">{current}</span>
         <span aria-hidden>▾</span>
       </button>
-      {open ? (
-        <ul className="hud-select-menu" role="listbox">
-          <li role="option" aria-selected={!value}>
-            <button
-              type="button"
-              className={!value ? "on" : ""}
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
+      {open && menuBox
+        ? createPortal(
+            <ul
+              className="hud-select-menu hud-select-menu-portal"
+              role="listbox"
+              ref={menuRef}
+              style={{ left: menuBox.left, top: menuBox.top, width: menuBox.width }}
             >
-              {emptyLabel}
-            </button>
-          </li>
-          {options.map((o) => (
-            <li key={o.value} role="option" aria-selected={value === o.value}>
-              <button
-                type="button"
-                className={value === o.value ? "on" : ""}
-                onClick={() => {
-                  onChange(o.value);
-                  setOpen(false);
-                }}
-              >
-                {o.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+              <li role="option" aria-selected={!value}>
+                <button
+                  type="button"
+                  className={!value ? "on" : ""}
+                  onClick={() => {
+                    onChange("");
+                    setOpen(false);
+                  }}
+                >
+                  {emptyLabel}
+                </button>
+              </li>
+              {!options.length ? (
+                <li className="muted hud-select-empty">{t("radio_filters_loading")}</li>
+              ) : null}
+              {options.map((o) => (
+                <li key={o.value} role="option" aria-selected={value === o.value}>
+                  <button
+                    type="button"
+                    className={value === o.value ? "on" : ""}
+                    onClick={() => {
+                      onChange(o.value);
+                      setOpen(false);
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                </li>
+              ))}
+            </ul>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -112,6 +153,8 @@ function stationSub(s: Station): string {
 
 export default function RadioPanel() {
   const [tab, setTab] = useState<Tab>("air");
+  const [freqMode, setFreqMode] = useState<FreqMode>("top");
+  const [freqPage, setFreqPage] = useState(0);
   const [q, setQ] = useState("");
   const [tag, setTag] = useState("");
   const [country, setCountry] = useState("");
@@ -176,22 +219,23 @@ export default function RadioPanel() {
   const applyList = useCallback((data: Station[], note: string) => {
     setStations(data);
     setStatus(note);
+    setFreqPage(0);
+  }, []);
+
+  const loadMeta = useCallback(async () => {
+    const [c, l, tg] = await Promise.all([fetchCountries(), fetchLanguages(), fetchTags()]);
+    setCountries(c);
+    setLangs(l);
+    setTags(tg);
   }, []);
 
   const loadTop = useCallback(async () => {
     setBusy(true);
+    setFreqMode("top");
     setStatus(t("radio_loading"));
-    const cacheKey = "top:70";
+    const cacheKey = `top:${FREQ_TOTAL}`;
     try {
-      const [data, c, l, tg] = await Promise.all([
-        topStations(70),
-        fetchCountries(),
-        fetchLanguages(),
-        fetchTags(),
-      ]);
-      setCountries(c);
-      setLangs(l);
-      setTags(tg);
+      const data = await topStations(FREQ_TOTAL);
       applyList(data, t("radio_status_top"));
       void cacheStations(cacheKey, data);
     } catch {
@@ -207,11 +251,13 @@ export default function RadioPanel() {
   }, [applyList]);
 
   useEffect(() => {
+    void loadMeta();
     void loadTop();
-  }, [loadTop]);
+  }, [loadMeta, loadTop]);
 
   const search = async () => {
     setBusy(true);
+    setFreqMode("search");
     setStatus(t("radio_searching"));
     const cacheKey = `q:${q}|t:${tag}|c:${country}|l:${lang}`;
     try {
@@ -220,7 +266,7 @@ export default function RadioPanel() {
         tag: tag || undefined,
         country: country || undefined,
         language: lang || undefined,
-        limit: 80,
+        limit: FREQ_TOTAL,
       });
       applyList(data, t("radio_found").replace("{0}", String(data.length)));
       void cacheStations(cacheKey, data);
@@ -238,8 +284,17 @@ export default function RadioPanel() {
   };
 
   const showFavs = () => {
+    setFreqMode("favs");
     applyList(favs, t("radio_status_favs"));
   };
+
+  const capped = stations.slice(0, FREQ_TOTAL);
+  const freqPages =
+    freqMode === "top"
+      ? FREQ_TABS
+      : Math.max(1, Math.min(FREQ_TABS, Math.ceil(capped.length / FREQ_PAGE) || 1));
+  const pageSafe = Math.min(freqPage, freqPages - 1);
+  const pageStations = capped.slice(pageSafe * FREQ_PAGE, pageSafe * FREQ_PAGE + FREQ_PAGE);
 
   const onPlay = (s: Station) => {
     try {
@@ -331,12 +386,62 @@ export default function RadioPanel() {
             <div className="radio-freqs-head">
               <h3 className="radio-freqs-title">{t("radio_freqs")}</h3>
               <span className="muted">
-                {t("radio_stations_n").replace("{0}", String(stations.length))}
+                {t("radio_stations_n").replace("{0}", String(capped.length))}
               </span>
             </div>
+
+            <div className="radio-freq-modes" role="tablist" aria-label={t("radio_freqs")}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={freqMode === "top"}
+                className={`hud-btn ${freqMode === "top" ? "amber" : ""}`}
+                disabled={busy}
+                onClick={() => void loadTop()}
+              >
+                {t("radio_top")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={freqMode === "favs"}
+                className={`hud-btn ${freqMode === "favs" ? "amber" : ""}`}
+                onClick={showFavs}
+              >
+                ★ {t("radio_favs")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={freqMode === "search"}
+                className={`hud-btn ${freqMode === "search" ? "amber" : ""}`}
+                disabled={busy}
+                onClick={() => void search()}
+              >
+                {t("radio_search_lab")}
+              </button>
+            </div>
+
+            {freqPages > 1 ? (
+              <div className="radio-freq-pages" role="tablist" aria-label={t("radio_freq_pages")}>
+                {Array.from({ length: freqPages }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    role="tab"
+                    aria-selected={pageSafe === i}
+                    className={`hud-btn radio-freq-page ${pageSafe === i ? "amber" : ""}`}
+                    onClick={() => setFreqPage(i)}
+                  >
+                    {t("radio_freq_page").replace("{0}", String(i + 1))}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <ul className="radio-station-list">
-              {!stations.length && <li className="muted radio-empty">{t("radio_empty")}</li>}
-              {stations.slice(0, 120).map((s) => {
+              {!pageStations.length && <li className="muted radio-empty">{t("radio_empty")}</li>}
+              {pageStations.map((s) => {
                 const id = s.stationuuid || s.url_resolved;
                 const active = id === playingUuid;
                 return (

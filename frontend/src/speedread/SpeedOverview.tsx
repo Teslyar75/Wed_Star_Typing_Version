@@ -190,18 +190,22 @@ export default function SpeedOverview({
           <h3>{t("sr_telemetry")}</h3>
           <ul className="tele-list sr-tele-list">
             <li className="tele-time">
+              <i className="sr-tele-bar" aria-hidden />
               <span className="lab">{t("sr_record")}</span>
               <strong>{recordWpm ?? "—"}</strong>
             </li>
             <li className="tele-ok">
+              <i className="sr-tele-bar" aria-hidden />
               <span className="lab">{t("sr_eff")}</span>
               <strong>{effWpm ?? "—"}</strong>
             </li>
             <li className="tele-streak">
+              <i className="sr-tele-bar" aria-hidden />
               <span className="lab">{t("sr_streak")}</span>
               <strong>{streak}</strong>
             </li>
             <li className="tele-streak">
+              <i className="sr-tele-bar" aria-hidden />
               <span className="lab">{t("sr_xp")}</span>
               <strong>{xp}</strong>
             </li>
@@ -210,7 +214,7 @@ export default function SpeedOverview({
       </div>
 
       <h3 className="sr-trainers-title">{t("sr_trainers")}</h3>
-      <div className="sr-trainers">
+      <div className="sr-trainers" data-nav-group="sr-trainers">
         {trainers.map((tr) => (
           <button
             key={tr.code}

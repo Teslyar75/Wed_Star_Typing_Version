@@ -125,6 +125,38 @@ def get_text(text_id: int, db: Session = Depends(get_db)) -> TextDoc:
     return doc
 
 
+@router.get("/{text_id}/content")
+def get_text_content(text_id: int, db: Session = Depends(get_db)) -> dict:
+    """Полный текст книги для гипердрайва / страницы «Книга»."""
+    from app.models import Paragraph, Sentence
+
+    doc = db.get(TextDoc, text_id)
+    if doc is None:
+        raise HTTPException(404, "text not found")
+    paras = (
+        db.query(Paragraph)
+        .filter(Paragraph.text_id == text_id)
+        .order_by(Paragraph.idx)
+        .all()
+    )
+    body = "\n\n".join((p.body or "").strip() for p in paras if (p.body or "").strip())
+    if not body.strip():
+        sents = (
+            db.query(Sentence)
+            .filter(Sentence.text_id == text_id)
+            .order_by(Sentence.idx)
+            .all()
+        )
+        body = " ".join((s.body or "").strip() for s in sents if (s.body or "").strip())
+    return {
+        "id": doc.id,
+        "title": doc.title or f"#{doc.id}",
+        "lang": doc.lang or "und",
+        "body": body,
+        "chars": len(body),
+    }
+
+
 @router.get("/{text_id}/segments", response_model=list[SegmentOut])
 def get_segments(
     text_id: int,

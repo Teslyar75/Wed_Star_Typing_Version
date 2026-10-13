@@ -61,6 +61,11 @@ export function keyForChar(char: string | null, lang = "en"): string | null {
   return CHAR_TO_KEY[char.toLowerCase()] ?? null;
 }
 
+/** Cyrillic letter — для подсказки смены раскладки при ошибке. */
+export function isCyrillic(ch: string): boolean {
+  return /[\u0400-\u04FF]/.test(ch);
+}
+
 export const FINGER_COLORS = [
   "#FF4FA3", "#FFD84A", "#4CFF8F", "#2ED8FF", "#B76BFF", "#4CFF8F", "#FFD84A", "#FF4FA3", "#8FA6BF", "#4A6580",
 ];

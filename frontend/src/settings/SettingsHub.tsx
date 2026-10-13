@@ -18,7 +18,7 @@ const AuthPanel = lazy(() => import("../auth/AuthPanel"));
 const LibraryPanel = lazy(() => import("../library/LibraryPanel"));
 const BilingualReader = lazy(() => import("../reader/BilingualReader"));
 
-type Sub = "cabin" | "skins" | "crew" | "library" | "reader";
+type Sub = "cabin" | "cabinMore" | "skins" | "crew" | "library" | "reader";
 
 type Props = {
   spaceProfile: SpaceProfile;
@@ -88,6 +88,7 @@ export default function SettingsHub({
 
   const subs: { id: Sub; label: string }[] = [
     { id: "cabin", label: t("set_systems") },
+    { id: "cabinMore", label: t("set_more") },
     { id: "skins", label: t("skins") },
     { id: "crew", label: t("crew") },
     { id: "library", label: t("library") },
@@ -119,6 +120,8 @@ export default function SettingsHub({
     { key: "S", name: t("set_font_s") },
     { key: "M", name: t("set_font_m") },
     { key: "L", name: t("set_font_l") },
+    { key: "XL", name: t("set_font_xl") },
+    { key: "XXL", name: t("set_font_xxl") },
   ];
 
   const scales: { key: UiScale; name: string }[] = [
@@ -126,6 +129,7 @@ export default function SettingsHub({
     { key: "M", name: t("set_ui_m") },
     { key: "L", name: t("set_ui_l") },
     { key: "XL", name: t("set_ui_xl") },
+    { key: "XXL", name: t("set_ui_xxl") },
   ];
 
   const glows: { key: GlowLevel; name: string }[] = [
@@ -232,19 +236,6 @@ export default function SettingsHub({
             ))}
           </Row>
 
-          <Row title={t("set_skin")} desc={t("set_skin_desc")}>
-            {ALL_SKINS.map((th) => (
-              <button
-                key={th.id}
-                type="button"
-                className={`hud-btn ${skinId === th.id ? "amber" : ""}`}
-                onClick={() => setSkin(th.id)}
-              >
-                {skinLabel(th.name)}
-              </button>
-            ))}
-          </Row>
-
           <Row title={t("set_living")} desc={t("set_living_desc")}>
             {living.map((b) => (
               <button
@@ -254,6 +245,37 @@ export default function SettingsHub({
                 onClick={() => onSpaceProfile(b.key)}
               >
                 {b.name}
+              </button>
+            ))}
+          </Row>
+
+          <div className="settings-sys-row settings-more-cta">
+            <div className="settings-sys-left">
+              <div className="settings-sys-title">{t("set_more")}</div>
+              <p className="muted settings-sys-desc">{t("set_more_desc")}</p>
+            </div>
+            <div className="settings-sys-right">
+              <button type="button" className="hud-btn amber" onClick={() => setSub("cabinMore")}>
+                {t("set_more")} →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sub === "cabinMore" && (
+        <div className="settings-cabin inst-panel">
+          <div className="lab">{t("set_more")}</div>
+
+          <Row title={t("set_skin")} desc={t("set_skin_desc")}>
+            {ALL_SKINS.map((th) => (
+              <button
+                key={th.id}
+                type="button"
+                className={`hud-btn ${skinId === th.id ? "amber" : ""}`}
+                onClick={() => setSkin(th.id)}
+              >
+                {skinLabel(th.name)}
               </button>
             ))}
           </Row>
@@ -317,6 +339,18 @@ export default function SettingsHub({
           </div>
 
           <p className="muted settings-hotkeys">{t("set_hotkeys")}</p>
+
+          <div className="settings-sys-row settings-more-cta">
+            <div className="settings-sys-left">
+              <div className="settings-sys-title">{t("set_systems")}</div>
+              <p className="muted settings-sys-desc">{t("set_more_back_desc")}</p>
+            </div>
+            <div className="settings-sys-right">
+              <button type="button" className="hud-btn" onClick={() => setSub("cabin")}>
+                ← {t("set_systems")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -328,10 +362,10 @@ export default function SettingsHub({
       </Block>
       <Block when={sub === "library"}>
         <LibraryPanel
-          onOpenReader={() => setSub("reader")}
+          onOpenBook={() => setSub("reader")}
+          onOpenHyperdrive={() => onOpenSpeed?.()}
           onOpenBridge={() => onOpenBridge?.()}
           onOpenEnglish={() => onOpenEnglish?.()}
-          onOpenSpeed={() => onOpenSpeed?.()}
         />
       </Block>
       <Block when={sub === "reader"}>

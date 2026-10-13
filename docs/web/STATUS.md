@@ -9,7 +9,7 @@
 | --- | --- |
 | W0 | Онбординг кабины, адаптив шапки, фокус мостика |
 | P1 | Drill-миссии ★★★, ремонт клавиш, heatmap, карта на мостике |
-| P2 | Библиотека: PDF/TXT, полка, позиция на сервере, Gutenberg search/import |
+| P2 | Библиотека: полка+паспорт, PDF/TXT/вставка, rename/delete, Gutenberg+CEFR, bilinguis EN↔RU/UK · хвосты — [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
 | P3 | English: отсеки due/inbox/favorite/learned, из книги, ранг/XP |
 | P4 | Тахистоскоп, E-Pyr, журнал результатов с фильтром режима |
 | P5 | Аватар, экспорт/импорт `.stpilot`, недавние позывные, logout |
@@ -28,10 +28,17 @@
 | **S7 skins** | Per-skin FX + hard-reset при смене; эталон Звездолёт; image-сцены отложены |
 | **W-fast** | Lazy-вкладки, auto frost на слабых CPU, ContinueHub + 7d-сводка на мостике |
 
+## Инциденты / фиксации
+
+| Дата | Что |
+| --- | --- |
+| 2026-10-13 | Битый `index.css` (`truncated oversized` + вложенные `*/`) ломал стекло → белые окна; почищено; SW `st-shell-v38`. Docker: данные на D:, логи на C: — Disk full валил демон. Журнал: [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
+
 ## На будущее
 
 | Тема | Заметка |
 | --- | --- |
+| **P2+ library** | Gutenberg 2ЯЗ-пары DE/FR, «＋ ВРУЧНУЮ», attach/offer, scroll-каталог как desktop |
 | **S8 Deep skins** | Не только цвета: формы кнопок/панелей, свой нарратив и роли на скин (дзен → наставник/послушник). Спека: монорепо `docs/skins/SKINS_DEEP.md` |
 
 ## API (Surpass)

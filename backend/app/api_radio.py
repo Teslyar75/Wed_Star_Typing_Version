@@ -1,4 +1,4 @@
-"""Прокси ICY + избранное станций на пилота."""
+"""Прокси ICY + radio-browser + избранное станций на пилота."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from app.auth_deps import get_current_pilot, get_optional_pilot
 from app.db import Base, get_db
 from app.icy import fetch_icy_title
 from app.pilots import Pilot
+from app import radio_browser as rb
 
 router = APIRouter(prefix="/api/radio", tags=["radio"])
 
@@ -50,6 +51,58 @@ def nowplaying(url: str = Query(..., min_length=8, max_length=2000)) -> NowPlayi
         raise HTTPException(400, "url must be http(s)")
     title = fetch_icy_title(url)
     return NowPlayingOut(title=title, ok=title is not None)
+
+
+@router.get("/stations/top")
+def stations_top(limit: int = Query(120, ge=1, le=200)) -> list[dict]:
+    try:
+        return rb.top_stations(limit)
+    except ConnectionError as exc:
+        raise HTTPException(503, f"radio-browser unreachable: {exc}") from exc
+
+
+@router.get("/stations/search")
+def stations_search(
+    name: str = "",
+    country: str = "",
+    language: str = "",
+    tag: str = "",
+    limit: int = Query(120, ge=1, le=200),
+) -> list[dict]:
+    try:
+        return rb.search_stations(
+            name=name,
+            country=country,
+            language=language,
+            tag=tag,
+            limit=limit,
+        )
+    except ConnectionError as exc:
+        raise HTTPException(503, f"radio-browser unreachable: {exc}") from exc
+
+
+@router.get("/meta/countries")
+def meta_countries() -> list[dict]:
+    try:
+        return rb.countries()
+    except ConnectionError as exc:
+        raise HTTPException(503, f"radio-browser unreachable: {exc}") from exc
+
+
+@router.get("/meta/languages")
+def meta_languages() -> list[str]:
+    try:
+        return rb.languages()
+    except ConnectionError as exc:
+        raise HTTPException(503, f"radio-browser unreachable: {exc}") from exc
+
+
+@router.get("/meta/tags")
+def meta_tags() -> list[str]:
+    try:
+        return rb.tags()
+    except ConnectionError as exc:
+        raise HTTPException(503, f"radio-browser unreachable: {exc}") from exc
 
 
 @router.get("/favs")

@@ -168,6 +168,7 @@ def list_missions(
 @router.get("/drills", response_model=list[DrillOut])
 def list_drills(
     lang: str = Query("en"),
+    unlock_all: bool = Query(False, description="Открыть все drills без цепочки звёзд"),
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> list[DrillOut]:
@@ -186,6 +187,8 @@ def list_drills(
         # без пилота — только первая открыта для превью
         if pilot is None:
             unlocked = m["num"] == 1
+        if unlock_all:
+            unlocked = True
         pr = progress.get(m["id"])
         out.append(
             DrillOut(
@@ -208,13 +211,14 @@ def list_drills(
 @router.post("/drills/{mission_id}/start", response_model=DrillStartOut)
 def start_drill(
     mission_id: str,
+    unlock_all: bool = Query(False),
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> DrillStartOut:
     m = MISSION_BY_ID.get(mission_id)
     if not m:
         raise HTTPException(404, "unknown drill")
-    drills = {d.id: d for d in list_drills(m["lang"], db, pilot)}
+    drills = {d.id: d for d in list_drills(m["lang"], unlock_all, db, pilot)}
     d = drills.get(mission_id)
     if d is None or not d.unlocked:
         raise HTTPException(403, "drill locked")
@@ -226,13 +230,14 @@ def start_drill(
 def complete_drill(
     mission_id: str,
     body: DrillCompleteIn,
+    unlock_all: bool = Query(False),
     db: Session = Depends(get_db),
     pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     m = MISSION_BY_ID.get(mission_id)
     if not m:
         raise HTTPException(404, "unknown drill")
-    drills = {d.id: d for d in list_drills(m["lang"], db, pilot)}
+    drills = {d.id: d for d in list_drills(m["lang"], unlock_all, db, pilot)}
     d = drills.get(mission_id)
     if d is None or not d.unlocked:
         raise HTTPException(403, "drill locked")
@@ -265,7 +270,9 @@ def complete_drill(
         "xp_gained": gained,
         "xp": pilot.xp,
         "passed": stars > 0,
+        "goal": m["goal"],
         "next_id": nxt["id"] if nxt else None,
+        "next_title": nxt["title"] if nxt else None,
     }
 
 

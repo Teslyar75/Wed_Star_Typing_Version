@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Segment, TextDoc
 from app import translate_jobs
-from app.translate_cache import fill_missing_translations
+from app.translate_cache import cache_get, cache_put, fill_missing_translations, uplink_translate
 
 router = APIRouter(prefix="/api/reader", tags=["reader"])
 
@@ -20,6 +20,57 @@ class TranslateJob(BaseModel):
     dst_lang: str = "ru"
     limit: int = 50
     async_mode: bool = True
+
+
+@router.get("/word-tr")
+def word_tr(q: str = "", src: str = "en", dst: str = "ru", db: Session = Depends(get_db)) -> dict:
+    """Перевод слова/кадра для гипердрайва (кэш + uplink)."""
+    text = (q or "").strip()[:120]
+    if not text:
+        return {"tr": ""}
+    hit = cache_get(db, text, src, dst)
+    if hit is not None:
+        return {"tr": hit}
+    try:
+        tr = uplink_translate(text, src, dst)
+    except Exception:
+        tr = ""
+    if tr:
+        cache_put(db, text, src, dst, tr)
+    return {"tr": tr}
+
+
+class WordTrBatchIn(BaseModel):
+    words: list[str] = Field(default_factory=list)
+    src: str = "en"
+    dst: str = "ru"
+
+
+@router.post("/word-tr-batch")
+def word_tr_batch(body: WordTrBatchIn, db: Session = Depends(get_db)) -> dict:
+    """Пакетный перевод для прогрева кэша гипердрайва (до 80 уникальных слов)."""
+    out: dict[str, str] = {}
+    seen: set[str] = set()
+    for raw in body.words:
+        key = (raw or "").strip()[:120].lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        if len(seen) > 80:
+            break
+        hit = cache_get(db, key, body.src, body.dst)
+        if hit is not None:
+            out[key] = hit
+            continue
+        try:
+            tr = uplink_translate(key, body.src, body.dst)
+        except Exception:
+            tr = ""
+        if tr and not tr.startswith(f"[{body.dst}] "):
+            cache_put(db, key, body.src, body.dst, tr, commit=False)
+            out[key] = tr
+    db.commit()
+    return {"tr": out}
 
 
 @router.get("/{text_id}/bilingual")

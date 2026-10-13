@@ -32,12 +32,38 @@ class CatalogBook(BaseModel):
     authors: str
     languages: list[str] = []
     text_url: str | None = None
+    cover_url: str | None = None
+    has_cover: bool = False
+    download_count: int = 0
+    cefr: str | None = None
 
 
 class CatalogPage(BaseModel):
     results: list[CatalogBook]
     count: int
     query: str = ""
+    next: bool = False
+
+
+# Как stamina/book_catalog.py — кураторская PD-полка под CEFR
+CEFR_LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
+CEFR_PAGE = 16
+CEFR_IDS_EN: dict[str, list[int]] = {
+    "A1": [21, 113, 2591, 55, 301, 500, 14838, 1597],
+    "A2": [16, 11, 12, 46, 74, 35, 514, 47],
+    "B1": [120, 215, 76, 1661, 244, 2852, 308, 42],
+    "B2": [84, 1342, 1260, 174, 98, 345, 1400, 25344],
+    "C1": [2701, 36, 64317, 766, 730, 996, 4217, 25305],
+    "C2": [4300, 1727, 1497, 1232, 2600, 1399, 6130, 28054],
+}
+CEFR_TOPICS: dict[str, str] = {
+    "A1": "children",
+    "A2": "juvenile",
+    "B1": "adventure",
+    "B2": "fiction",
+    "C1": "literature",
+    "C2": "philosophy",
+}
 
 
 class ImportIn(BaseModel):
@@ -87,23 +113,83 @@ def _plain_url(formats: dict) -> str | None:
         if "text/plain" in key and "charset=utf-8" in key.lower():
             return url
     for key, url in (formats or {}).items():
-        if "text/plain" in key:
+        if "text/plain" in key and "zip" not in key.lower():
             return url
     return None
 
 
-def _normalize(item: dict) -> CatalogBook | None:
+def _cover_url(formats: dict) -> str | None:
+    if not isinstance(formats, dict):
+        return None
+    for mime, url in formats.items():
+        if not url:
+            continue
+        ml = str(mime).lower()
+        if ml.startswith("image/") or "cover" in ml or str(url).lower().endswith((".jpg", ".jpeg", ".png")):
+            return str(url)
+    return formats.get("image/jpeg") or formats.get("image/png")
+
+
+def _normalize(item: dict, *, cefr: str | None = None) -> CatalogBook | None:
     gid = item.get("id")
     if gid is None:
         return None
     formats = item.get("formats") or {}
+    cover = _cover_url(formats)
     return CatalogBook(
         id=int(gid),
         title=(item.get("title") or "").strip(),
         authors=_authors(item),
         languages=list(item.get("languages") or []),
         text_url=_plain_url(formats),
+        cover_url=cover,
+        has_cover=bool(cover),
+        download_count=int(item.get("download_count") or 0),
+        cefr=cefr,
     )
+
+
+def _pack(data: dict, *, query: str = "", cefr: str | None = None) -> CatalogPage:
+    results = [b for b in (_normalize(x, cefr=cefr) for x in data.get("results") or []) if b]
+    return CatalogPage(
+        results=results,
+        count=int(data.get("count") or len(results)),
+        query=query,
+        next=bool(data.get("next")),
+    )
+
+
+def _fetch_by_ids(ids: list[int], *, languages: str | None, cefr: str | None = None) -> list[CatalogBook]:
+    """Параллельная подгрузка книг по id (CEFR-полка) — иначе UI «висит» 10–20 с."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    def one(gid: int) -> CatalogBook | None:
+        try:
+            item = _get_json(f"{GUTENDEX}{gid}")
+        except HTTPException:
+            return None
+        book = _normalize(item, cefr=cefr)
+        if not book:
+            return None
+        if languages and book.languages and languages not in book.languages:
+            return None
+        return book
+
+    out: list[CatalogBook] = []
+    if not ids:
+        return out
+    with ThreadPoolExecutor(max_workers=min(8, len(ids))) as pool:
+        futs = {pool.submit(one, gid): gid for gid in ids}
+        by_id: dict[int, CatalogBook] = {}
+        for fut in as_completed(futs):
+            book = fut.result()
+            if book is not None:
+                by_id[book.id] = book
+    # сохранить порядок кураторской полки
+    for gid in ids:
+        if gid in by_id:
+            out.append(by_id[gid])
+    return out
 
 
 def _strip_boilerplate(text: str) -> str:
@@ -132,8 +218,7 @@ def search_gutenberg(
     if page > 1:
         params["page"] = str(page)
     data = _get_json(GUTENDEX + "?" + urllib.parse.urlencode(params))
-    results = [b for b in (_normalize(x) for x in data.get("results") or []) if b]
-    return CatalogPage(results=results, count=int(data.get("count") or len(results)), query=q)
+    return _pack(data, query=q)
 
 
 @router.get("/gutenberg/popular", response_model=CatalogPage)
@@ -144,8 +229,54 @@ def popular_gutenberg(page: int = 1, languages: str | None = "en") -> CatalogPag
     if page > 1:
         params["page"] = str(page)
     data = _get_json(GUTENDEX + "?" + urllib.parse.urlencode(params))
-    results = [b for b in (_normalize(x) for x in data.get("results") or []) if b]
-    return CatalogPage(results=results, count=int(data.get("count") or len(results)), query="popular")
+    return _pack(data, query="popular")
+
+
+@router.get("/gutenberg/cefr", response_model=CatalogPage)
+def cefr_gutenberg(
+    level: str = Query(..., min_length=2, max_length=2),
+    page: int = 1,
+    languages: str | None = "en",
+) -> CatalogPage:
+    """Порт stamina.book_catalog.list_by_cefr — без 500 наружу."""
+    lv = level.strip().upper()
+    if lv not in CEFR_LEVELS:
+        raise HTTPException(400, f"unknown CEFR level: {level}")
+    page = max(1, int(page or 1))
+    lang = (languages or "").strip().lower() or None
+    query = f"cefr {lv}"
+
+    try:
+        # Кураторская полка — только EN; для RU/DE/… сразу topic Gutendex
+        ids = list(CEFR_IDS_EN.get(lv) or []) if lang in (None, "", "en") else []
+        id_pages = max(1, (len(ids) + CEFR_PAGE - 1) // CEFR_PAGE) if ids else 0
+
+        if ids and page <= id_pages:
+            chunk = ids[(page - 1) * CEFR_PAGE : page * CEFR_PAGE]
+            results = _fetch_by_ids(chunk, languages=lang, cefr=lv)
+            has_more = page < id_pages or bool(CEFR_TOPICS.get(lv))
+            return CatalogPage(results=results, count=len(ids), query=query, next=has_more)
+
+        topic_page = page - id_pages if ids else page
+        topic = CEFR_TOPICS.get(lv) or "fiction"
+        params: dict[str, str] = {"topic": topic, "sort": "popular"}
+        if lang:
+            params["languages"] = lang
+        if topic_page > 1:
+            params["page"] = str(topic_page)
+        data = _get_json(GUTENDEX + "?" + urllib.parse.urlencode(params))
+        packed = _pack(data, query=query, cefr=lv)
+        return CatalogPage(
+            results=packed.results,
+            count=int(packed.count) + len(ids),
+            query=query,
+            next=packed.next,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        # Не роняем модалку Internal Server Error — пустой результат + сообщение
+        raise HTTPException(503, f"cefr catalog unavailable: {exc}") from exc
 
 
 @router.post("/gutenberg/import")

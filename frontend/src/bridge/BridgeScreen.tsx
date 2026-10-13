@@ -10,6 +10,8 @@ import { sentenceAround, wordAt, wordCursor } from "./uplink";
 import AccRing from "./AccRing";
 import SpeedGauge from "./SpeedGauge";
 import RhythmBar from "./RhythmBar";
+import MissionMiniPlaque, { type MissionBrief } from "./MissionMiniPlaque";
+import DebriefModal, { type DebriefData } from "./DebriefModal";
 import { useCabin } from "../settings/cabinStore";
 
 type Segment = { idx: number; original: string; translation: string; status: string; char_start?: number };
@@ -44,15 +46,23 @@ export default function BridgeScreen() {
   const [engine, setEngine] = useState(() => new TypingEngine(draft));
   const [tick, setTick] = useState(0);
   const [flash, setFlash] = useState(false);
+  const [keyErr, setKeyErr] = useState(false);
+  const [pauseSub, setPauseSub] = useState("");
   const [status, setStatus] = useState(() => t("ready"));
   const [segStarts, setSegStarts] = useState<number[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [activeDrill, setActiveDrill] = useState<string | null>(null);
+  const [activeMission, setActiveMission] = useState<MissionBrief | null>(null);
   const [keyRates, setKeyRates] = useState<KeyRate[]>([]);
   const [showHeat, setShowHeat] = useState(false);
+  const [debrief, setDebrief] = useState<DebriefData | null>(null);
   const [, bumpLang] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const activeDrillRef = useRef<string | null>(null);
+  const activeMissionRef = useRef<MissionBrief | null>(null);
+  const draftRef = useRef(draft);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keyErrTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const duckOnType = useRadio((s) => s.duckOnType);
   const setDuck = useRadio((s) => s.setDuck);
   const duckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,6 +70,35 @@ export default function BridgeScreen() {
   const showZones = useCabin((s) => s.zones);
   const showTranslator = useCabin((s) => s.translator);
   const now = () => performance.now() / 1000;
+
+  /** Прицел + целевая клавиша: при промахе вспышка красным; в покое цель — оранжевый. */
+  const showErrorFlash = useCallback(() => {
+    setFlash(true);
+    setKeyErr(true);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    if (keyErrTimer.current) clearTimeout(keyErrTimer.current);
+    flashTimer.current = setTimeout(() => setFlash(false), 280);
+    keyErrTimer.current = setTimeout(() => setKeyErr(false), 380);
+  }, []);
+
+  const enterPause = useCallback(
+    (sub = "") => {
+      if (engine.finished || engine.paused) return;
+      engine.pause(now());
+      setPauseSub(sub);
+      setStatus(t("pause"));
+      setTick((x) => x + 1);
+    },
+    [engine],
+  );
+
+  const leavePause = useCallback(() => {
+    if (!engine.paused) return;
+    engine.resume();
+    setPauseSub("");
+    setStatus(t("flying"));
+    setTick((x) => x + 1);
+  }, [engine]);
 
   const reloadEngine = useCallback((text: string) => {
     setEngine(new TypingEngine(text));
@@ -80,6 +119,21 @@ export default function BridgeScreen() {
     inputRef.current?.focus();
   }, [engine]);
 
+  /* Живые приборы: время и стрелка скорости обновляются между нажатиями */
+  useEffect(() => {
+    if (engine.paused || engine.finished) return;
+    const id = window.setInterval(() => setTick((x) => x + 1), 120);
+    return () => clearInterval(id);
+  }, [engine, engine.paused, engine.finished]);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+      if (keyErrTimer.current) clearTimeout(keyErrTimer.current);
+      if (duckTimer.current) clearTimeout(duckTimer.current);
+    };
+  }, []);
+
   useEffect(() => onLangChange(() => bumpLang((x) => x + 1)), []);
 
   useEffect(() => {
@@ -90,15 +144,43 @@ export default function BridgeScreen() {
     activeDrillRef.current = activeDrill;
   }, [activeDrill]);
 
+  useEffect(() => {
+    activeMissionRef.current = activeMission;
+  }, [activeMission]);
+
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
   /* Старт с вкладок «Миссии» / «Свой текст» */
   useEffect(() => {
     const raw = sessionStorage.getItem("st_pending_drill");
     if (!raw) return;
     sessionStorage.removeItem("st_pending_drill");
     try {
-      const j = JSON.parse(raw) as { id: string; text: string; lang?: string; index?: number };
+      const j = JSON.parse(raw) as MissionBrief & {
+        id: string;
+        text: string;
+        lang?: string;
+        index?: number;
+      };
       if (j.lang) setLang(j.lang);
-      setActiveDrill(j.id === "cargo" ? null : j.id);
+      const isCargo = j.id === "cargo";
+      setActiveDrill(isCargo ? null : j.id);
+      if (isCargo) {
+        setActiveMission(null);
+      } else {
+        setActiveMission({
+          id: j.id,
+          lang: j.lang || "en",
+          num: j.num ?? 0,
+          title: j.title || j.id,
+          sector: j.sector || "",
+          new: j.new || "",
+          goal: j.goal ?? 0,
+          best_stars: j.best_stars ?? 0,
+        });
+      }
       setDraft(j.text);
       setSegStarts([]);
       setSegments([]);
@@ -124,6 +206,13 @@ export default function BridgeScreen() {
     return lo;
   };
 
+  const weakFromStats = (eng: TypingEngine): { ch: string; n: number }[] =>
+    Object.entries(eng.keyStats)
+      .filter(([ch, s]) => s[1] > 0 && ch !== " ")
+      .map(([ch, s]) => ({ ch, n: s[1] }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 5);
+
   const saveSession = async (eng: TypingEngine) => {
     const seg = eng.segment(now());
     const key_stats: Record<string, number[]> = {};
@@ -142,8 +231,18 @@ export default function BridgeScreen() {
     });
 
     const drillId = activeDrillRef.current;
+    const mission = activeMissionRef.current;
+    const weak = weakFromStats(eng);
+    let stars = 0;
+    let xp = 0;
+    let passed = true;
+    let nextId: string | null = null;
+    let nextTitle: string | null = null;
+    let goal = mission?.goal ?? 0;
+
     if (drillId && drillId !== "repair") {
-      await fetch(`/api/missions/drills/${drillId}/complete`, {
+      const free = localStorage.getItem("st_missions_unlock_all") === "1" ? "?unlock_all=1" : "";
+      const r = await fetch(`/api/missions/drills/${drillId}/complete${free}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -155,17 +254,140 @@ export default function BridgeScreen() {
           key_stats,
         }),
       });
+      if (r.ok) {
+        const j = (await r.json()) as {
+          stars: number;
+          xp_gained: number;
+          passed: boolean;
+          goal?: number;
+          next_id?: string | null;
+          next_title?: string | null;
+        };
+        stars = j.stars;
+        xp = j.xp_gained;
+        passed = j.passed;
+        goal = j.goal ?? goal;
+        nextId = j.next_id ?? null;
+        nextTitle = j.next_title ?? null;
+      }
     }
+
+    setDebrief({
+      kind: drillId && drillId !== "repair" ? "mission" : "cargo",
+      title: mission?.title,
+      goal,
+      stars,
+      xp,
+      passed,
+      seg: {
+        cpm: seg.cpm,
+        acc: seg.acc,
+        errors: seg.errors,
+        elapsed: seg.elapsed,
+        rhythm: seg.rhythm,
+        best_streak: seg.best_streak,
+      },
+      weak,
+      nextId,
+      nextTitle,
+    });
     void refreshHeatmap();
+  };
+
+  const startDrillById = async (missionId: string) => {
+    const free = localStorage.getItem("st_missions_unlock_all") === "1" ? "?unlock_all=1" : "";
+    const r = await fetch(`/api/missions/drills/${missionId}/start${free}`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!r.ok) return;
+    const j = (await r.json()) as {
+      mission_id: string;
+      title: string;
+      text: string;
+      goal: number;
+      keys: string;
+    };
+    const prev = activeMissionRef.current;
+    setActiveDrill(j.mission_id);
+    setActiveMission({
+      id: j.mission_id,
+      lang: prev?.lang || lang,
+      num: prev?.num ?? 0,
+      title: j.title,
+      sector: prev?.sector || "",
+      new: j.keys || prev?.new || "",
+      goal: j.goal,
+      best_stars: prev?.best_stars ?? 0,
+    });
+    setDraft(j.text);
+    setTextId(null);
+    setSegStarts([]);
+    setSegments([]);
+    setDebrief(null);
+    reloadEngine(j.text);
+  };
+
+  const onDebriefRepeat = () => {
+    const id = activeDrillRef.current;
+    if (id && id !== "repair") {
+      void startDrillById(id);
+      return;
+    }
+    setDebrief(null);
+    reloadEngine(draftRef.current);
+  };
+
+  const onDebriefNext = () => {
+    const id = debrief?.nextId;
+    if (id) void startDrillById(id);
+  };
+
+  const onDebriefRepair = async () => {
+    const weak = debrief?.weak.map((w) => w.ch) || [];
+    const r = await fetch("/api/missions/repair/start", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lang, weak }),
+    });
+    if (!r.ok) return;
+    const j = (await r.json()) as { text: string };
+    setActiveDrill("repair");
+    setActiveMission({
+      id: "repair",
+      lang,
+      num: 0,
+      title: t("repair_systems"),
+      sector: t("repair"),
+      new: weak.join(""),
+      goal: 0,
+      best_stars: 0,
+    });
+    setDraft(j.text);
+    setDebrief(null);
+    reloadEngine(j.text);
+  };
+
+  const onDebriefClose = () => {
+    setDebrief(null);
+    setStatus(t("flight_done"));
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
-      if (engine.paused) engine.resume();
-      else engine.pause(now());
-      setStatus(engine.paused ? t("pause") : t("flying"));
-      setTick((x) => x + 1);
+      if (engine.paused) leavePause();
+      else enterPause();
+      return;
+    }
+    /* Backspace — возврат в предыдущее окно (App); не глотаем здесь */
+    if (e.key === "Backspace") return;
+    if (engine.paused) {
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        leavePause();
+      }
       return;
     }
     if (e.ctrlKey || e.altKey || e.metaKey) return;
@@ -181,15 +403,18 @@ export default function BridgeScreen() {
     if (res === null) return;
     if (res === ERROR) {
       playError();
-      setFlash(true);
-      setTimeout(() => setFlash(false), 120);
+      showErrorFlash();
     } else if (res === DONE) {
       playFinish();
       setStatus(t("finish"));
       setDuck(false);
+      setFlash(false);
+      setKeyErr(false);
     } else {
       playClick();
       setStatus(t("flying"));
+      setFlash(false);
+      setKeyErr(false);
     }
     setTick((x) => x + 1);
     setSentence(sentenceAt(engine.index));
@@ -205,21 +430,30 @@ export default function BridgeScreen() {
 
   const stats = useMemo(() => {
     const t0 = now();
-    const cpm = Math.round(engine.cpm(t0));
+    const cpm = engine.cpm(t0);
+    const inst = engine.instantCpm();
+    /* live CPM как desktop: мгновенный, пока идёт набор; иначе средняя */
+    const live = !engine.paused && inst > 0 ? inst : cpm;
     const elapsed = engine.elapsed(t0);
-    const left = engine.progress > 0.02 && cpm > 0 ? Math.round(((1 - engine.progress) * engine.text.length) / (cpm / 60)) : null;
+    const leftChars = Math.max(0, engine.text.length - engine.index);
+    const leftSec =
+      engine.progress > 0.02 && cpm > 10 && leftChars > 0
+        ? Math.round((leftChars / (cpm / 60)))
+        : null;
     return {
-      cpm,
-      inst: Math.round(engine.instantCpm()),
+      cpm: Math.round(cpm),
+      live: Math.round(live),
       wpm: Math.round(cpm / 5),
-      acc: engine.accuracy != null ? (Math.round(engine.accuracy * 10) / 10) : null,
+      acc: engine.accuracy != null ? Math.round(engine.accuracy * 10) / 10 : null,
       err: engine.errors,
       el: elapsed,
       elLabel: `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(Math.floor(elapsed % 60)).padStart(2, "0")}`,
       leftLabel:
-        left == null
-          ? "—"
-          : `≈${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`,
+        leftSec == null
+          ? leftChars
+            ? String(leftChars)
+            : "—"
+          : `≈${String(Math.floor(leftSec / 60)).padStart(2, "0")}:${String(leftSec % 60).padStart(2, "0")}`,
       pct: Math.round(engine.progress * 100),
       len: engine.text.length,
       done: engine.index,
@@ -243,13 +477,25 @@ export default function BridgeScreen() {
 
   return (
     <section className="bridge bridge-cockpit">
-      <header className="route-head">
-        <div>
+      {debrief ? (
+        <DebriefModal
+          data={debrief}
+          onRepeat={onDebriefRepeat}
+          onNext={debrief.nextId ? onDebriefNext : undefined}
+          onRepair={debrief.weak.length || keyRates.length ? () => void onDebriefRepair() : undefined}
+          onClose={onDebriefClose}
+        />
+      ) : null}
+      <header className={`route-head ${activeMission ? "has-mission" : ""}`}>
+        <div className="route-head-left">
           <h2 className="route-title">
-            {t("own_text")} · {t("cargo_run")}
+            {activeMission
+              ? `${t("missions")} · ${activeMission.title}`
+              : `${t("own_text")} · ${t("cargo_run")}`}
           </h2>
           <p className="muted">{t("progress_autosave")}</p>
         </div>
+        {activeMission ? <MissionMiniPlaque mission={activeMission} /> : <div className="route-head-spacer" />}
         <div className="route-progress" aria-label={t("route_progress")}>
           <span className="lab">{t("route_progress")}</span>
           <div className="route-bar">
@@ -266,7 +512,10 @@ export default function BridgeScreen() {
           <span className="lab">{t("nav_channel")}</span>
           <span className={`flight-status ${engine.finished ? "done" : ""}`}>{status}</span>
         </div>
-        <div className={`viewport sight-line ${flash ? "flash" : ""}`} onClick={() => inputRef.current?.focus()}>
+        <div
+          className={`viewport sight-line ${flash ? "flash" : ""} ${engine.paused ? "is-paused" : ""}`}
+          onClick={() => inputRef.current?.focus()}
+        >
           {/* Прицел фиксирован по центру — буквы проходят сквозь него (Viewport.redraw) */}
           <div className="sight-left typed" aria-hidden>
             {slice.slice(0, cursorLocal)}
@@ -275,10 +524,22 @@ export default function BridgeScreen() {
           <div className="sight-right ahead" aria-hidden>
             {slice.slice(cursorLocal + (engine.finished ? 0 : 1))}
           </div>
+          {engine.paused ? (
+            <div className="bridge-pause-overlay" aria-live="polite">
+              <div className="bridge-pause-icon" aria-hidden>
+                ❚❚
+              </div>
+              <div className="bridge-pause-title">{t("pause")}</div>
+              <div className="bridge-pause-sub">{pauseSub || t("pause_hint")}</div>
+            </div>
+          ) : null}
           <input
             ref={inputRef}
             className="ghost-input"
             onKeyDown={onKey}
+            onBlur={() => {
+              if (!engine.finished && !engine.paused) enterPause(t("pause_focus"));
+            }}
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -302,35 +563,39 @@ export default function BridgeScreen() {
       <div className="instruments">
         <aside className="inst-panel inst-engine">
           <h3>{t("engine")}</h3>
-          <SpeedGauge value={stats.inst || stats.cpm} avg={stats.cpm} wpm={stats.wpm} title={t("speed_label")} unit={t("cpm_unit")} />
+          <SpeedGauge value={stats.live} avg={stats.cpm} wpm={stats.wpm} title={t("speed_label")} unit={t("cpm_unit")} />
           <RhythmBar value={stats.rhythm} />
         </aside>
 
         <aside className="inst-panel inst-keys">
           <h3>{t("finger_nav")}</h3>
           {showKeyboard && (
-            <div className="keyboard" aria-hidden>
+            <div className={`keyboard lang-${lang.startsWith("ru") ? "ru" : "en"}`} aria-hidden>
               {ROWS.map((row, ri) => (
                 <div className="kb-row" key={ri}>
                   {row.map(([id, en, ru, w, finger]) => {
                     const active = id === highlight;
+                    const errKey = active && keyErr;
                     const zone = showZones ? (FINGER_COLORS[finger] ?? FINGER_COLORS[9]!) : "var(--st-line)";
                     const isMod = finger === MOD_FINGER;
                     return (
                       <div
                         key={id}
-                        className={`key ${active ? "active" : ""} ${isMod ? "mod" : ""}`}
+                        className={`key ${active ? "active" : ""} ${errKey ? "err" : ""} ${isMod ? "mod" : ""}`}
                         style={{
                           flex: `${w} 1 0`,
                           minWidth: 0,
-                          borderColor: active ? "var(--st-accent)" : isMod ? "var(--st-line)" : zone,
-                          background: active
-                            ? `color-mix(in srgb, var(--st-accent) 55%, #000)`
-                            : isMod
-                              ? "color-mix(in srgb, var(--st-panel) 80%, #000)"
-                              : showZones
-                                ? `color-mix(in srgb, ${zone} 13%, var(--st-panel))`
-                                : "var(--st-panel)",
+                          /* active/err заливка — CSS --st-frame-fill (inline background глушит !important) */
+                          ...(active
+                            ? {}
+                            : {
+                                ["--st-frame-line" as string]: isMod ? "var(--st-line)" : zone,
+                                ["--st-frame-fill" as string]: isMod
+                                  ? "color-mix(in srgb, var(--st-panel) 14%, transparent)"
+                                  : showZones
+                                    ? `color-mix(in srgb, ${zone} 18%, transparent)`
+                                    : "color-mix(in srgb, var(--st-panel) 14%, transparent)",
+                              }),
                         }}
                       >
                         <span className="key-en">{en || "␣"}</span>
@@ -348,18 +613,12 @@ export default function BridgeScreen() {
               type="button"
               className={`hud-btn ${engine.paused ? "amber" : ""}`}
               onClick={() => {
-                if (engine.paused) {
-                  engine.resume();
-                  setStatus(t("flying"));
-                } else {
-                  engine.pause(now());
-                  setStatus(t("pause"));
-                }
-                setTick((x) => x + 1);
+                if (engine.paused) leavePause();
+                else enterPause();
                 inputRef.current?.focus();
               }}
             >
-              {engine.paused ? `▶ ${t("pause")}` : t("pause")} Esc
+              {engine.paused ? t("pause_resume") : t("pause")} Esc
             </button>
             <button
               type="button"
