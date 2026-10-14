@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { t } from "../i18n";
 import { makeQuiz, type QuizItem } from "./quiz";
 import { useReadingPos } from "../reading/positionStore";
+import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 import SpeedOverview, { type SrBook, type SrSession, type SrTrainer } from "./SpeedOverview";
 import HyperdriveView from "./HyperdriveView";
 import BookReaderView from "./BookReaderView";
@@ -116,6 +117,31 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
     { id: "journal", label: t("journal") },
     { id: "settings", label: t("settings") },
   ];
+
+  useEffect(() => {
+    const meta = pages.find((p) => p.id === page);
+    setDeepRoute([{ slug: page, label: meta?.label || page }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- labels from t() at render
+  }, [page]);
+
+  useEffect(() => {
+    registerGoHandler((slugs) => {
+      const id = slugs[0] as Page | undefined;
+      if (!id || !pages.some((p) => p.id === id)) return;
+      if (id === "reader") {
+        void openHyperdrive();
+        return;
+      }
+      if (id === "book") {
+        void openBook();
+        return;
+      }
+      setPage(id);
+      if (id === "trainers") setMode("rsvp");
+    });
+    return () => registerGoHandler(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const saveResult = async (payload: {
     mode: string;

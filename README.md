@@ -10,10 +10,9 @@
 
 | Документ | Содержание |
 | --- | --- |
-| [docs/web/STATUS.md](docs/web/STATUS.md) | **актуальный статус** Excellence/Parity |
-| [docs/web/PARITY_PLAN.md](docs/web/PARITY_PLAN.md) | эпики P1–P8 паритета с десктопом |
-| [docs/web/WEB_PLAN.md](docs/web/WEB_PLAN.md) | стек, фазы 0–8, промпты Cursor |
-| [docs/skins/SKINS.md](docs/skins/SKINS.md) | скины (десктоп + веб) |
+| [docs/CHANGELOG_2026-10-14.md](docs/CHANGELOG_2026-10-14.md) | **web vs desktop:** IA зон, бортжурнал, сканер, настройки |
+| Планы в монорепо | [My_Stamina/docs/web](https://github.com/Teslyar75/My_Stamina/tree/master/docs/web) — STATUS, PARITY_PLAN, WEB_PLAN |
+| Скины | `packages/themes/` + спека в монорепо `docs/skins/SKINS.md` |
 
 ## Структура
 

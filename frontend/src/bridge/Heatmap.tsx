@@ -1,14 +1,9 @@
+import type { CSSProperties } from "react";
 import { FINGER_COLORS, HOME_BUMPS, MOD_FINGER, ROWS } from "../typing/layouts";
 import { t } from "../i18n";
+import { colorFor, heatFillMix } from "./heatmapColor";
 
 export type KeyRate = { key: string; rate: number; errors: number; hits: number };
-
-function colorFor(rate: number | undefined): string {
-  if (rate == null || rate <= 0) return "transparent";
-  if (rate < 0.05) return "color-mix(in srgb, #3d9a5f 55%, transparent)";
-  if (rate < 0.12) return "color-mix(in srgb, #c9a227 50%, transparent)";
-  return "color-mix(in srgb, #c94c4c 60%, transparent)";
-}
 
 type Props = { rates: KeyRate[]; lang: string; showTitle?: boolean; showPct?: boolean };
 
@@ -24,19 +19,28 @@ export default function Heatmap({ rates, lang, showTitle = true, showPct = false
             {row.map(([id, en, ru, w, finger]) => {
               const label = (isRu ? ru || en : en || ru).toLowerCase();
               const stat = map.get(label) || map.get(id.replace("Key", "").toLowerCase());
-              const pct = stat && stat.rate > 0 ? `${Math.round(stat.rate * 1000) / 10}` : "";
+              const rate = stat?.rate;
+              const heat = colorFor(rate);
+              const pct = rate != null && rate > 0 ? `${Math.round(rate * 1000) / 10}` : "";
               const isMod = finger === MOD_FINGER;
+              const style: CSSProperties & Record<string, string | number> = {
+                flex: `${w} 1 0`,
+                minWidth: 0,
+              };
+              if (heat && rate != null) {
+                const mix = heatFillMix(rate);
+                style["--st-frame-fill"] = `color-mix(in srgb, ${heat} ${mix}%, transparent)`;
+                style["--st-frame-glow"] = heat;
+                style["--st-frame-line"] = `color-mix(in srgb, ${heat} 78%, var(--st-line))`;
+              } else {
+                style.borderColor = FINGER_COLORS[finger];
+              }
               return (
                 <div
                   key={id}
-                  className={`key ${isMod ? "mod" : ""}`}
+                  className={`key ${isMod ? "mod" : ""}${heat ? " heat" : ""}`}
                   title={stat ? `${stat.errors}/${stat.hits + stat.errors}` : undefined}
-                  style={{
-                    flex: `${w} 1 0`,
-                    minWidth: 0,
-                    borderColor: FINGER_COLORS[finger],
-                    background: colorFor(stat?.rate),
-                  }}
+                  style={style}
                 >
                   <span className="key-en">{en || "␣"}</span>
                   {ru && ru !== en ? <span className="key-ru">{ru}</span> : null}

@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useReadingPos } from "../reading/positionStore";
+import { setModalStack } from "../shell/routeStore";
 import GutenbergModal from "./GutenbergModal";
 import PdfImportModal from "./PdfImportModal";
 
@@ -78,6 +79,34 @@ export default function LibraryPanel({
   const [renameAuthor, setRenameAuthor] = useState("");
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+
+  /* gutenberg/bilingual/manual — стек крошек внутри GutenbergModal */
+  useEffect(() => {
+    const mods: { slug: string; label: string }[] = [];
+    if (pdfOpen) mods.push({ slug: "pdf", label: t("pdf_title") });
+    if (pasteOpen) mods.push({ slug: "paste", label: t("lib_paste_title") });
+    if (renameOpen) mods.push({ slug: "rename", label: t("lib_rename") });
+    if (!gutOpen && !biliOpen) setModalStack(mods);
+    return () => {
+      if (!gutOpen && !biliOpen) setModalStack([]);
+    };
+  }, [pdfOpen, pasteOpen, renameOpen, gutOpen, biliOpen]);
+
+  useEffect(() => {
+    const onGo = (e: Event) => {
+      const slugs = ((e as CustomEvent<{ slugs: string[] }>).detail?.slugs || []) as string[];
+      if (!slugs.includes("gutenberg")) setGutOpen(false);
+      if (!slugs.includes("bilingual")) setBiliOpen(false);
+      if (!slugs.includes("pdf")) {
+        setPdfOpen(false);
+        setPdfFile(null);
+      }
+      if (!slugs.includes("paste")) setPasteOpen(false);
+      if (!slugs.includes("rename")) setRenameOpen(false);
+    };
+    window.addEventListener("st-crumb-go", onGo);
+    return () => window.removeEventListener("st-crumb-go", onGo);
+  }, []);
   const txtRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
 

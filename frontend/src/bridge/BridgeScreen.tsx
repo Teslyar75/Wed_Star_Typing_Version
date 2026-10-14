@@ -13,6 +13,7 @@ import RhythmBar from "./RhythmBar";
 import MissionMiniPlaque, { type MissionBrief } from "./MissionMiniPlaque";
 import DebriefModal, { type DebriefData } from "./DebriefModal";
 import { useCabin } from "../settings/cabinStore";
+import { setModalStack } from "../shell/routeStore";
 
 type Segment = { idx: number; original: string; translation: string; status: string; char_start?: number };
 
@@ -57,6 +58,21 @@ export default function BridgeScreen() {
   const [showHeat, setShowHeat] = useState(false);
   const [debrief, setDebrief] = useState<DebriefData | null>(null);
   const [, bumpLang] = useState(0);
+
+  useEffect(() => {
+    if (debrief) setModalStack([{ slug: "debrief", label: t("debrief_title") }]);
+    else setModalStack([]);
+  }, [debrief]);
+
+  useEffect(() => {
+    if (!debrief) return;
+    const onGo = (e: Event) => {
+      const slugs = ((e as CustomEvent<{ slugs: string[] }>).detail?.slugs || []) as string[];
+      if (!slugs.includes("debrief")) setDebrief(null);
+    };
+    window.addEventListener("st-crumb-go", onGo);
+    return () => window.removeEventListener("st-crumb-go", onGo);
+  }, [debrief]);
   const inputRef = useRef<HTMLInputElement>(null);
   const activeDrillRef = useRef<string | null>(null);
   const activeMissionRef = useRef<MissionBrief | null>(null);

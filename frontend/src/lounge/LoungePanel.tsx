@@ -1,6 +1,7 @@
 /** Комната отдыха — лобби как stamina/lounge/screen.LoungeScreen. */
 import { useCallback, useEffect, useState } from "react";
 import { t } from "../i18n";
+import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 import SnakeGame from "./SnakeGame";
 import TetrisGame from "./TetrisGame";
 import BreakoutGame from "./BreakoutGame";
@@ -93,6 +94,30 @@ export default function LoungePanel() {
   const [active, setActive] = useState<GameId | null>(null);
   const [records, setRecords] = useState<Record<GameId, number>>({ tetris: 0, snake: 0, breakout: 0 });
   const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    if (active) {
+      const g = GAMES.find((x) => x.id === active);
+      setDeepRoute([
+        { slug: "lobby", label: t("lounge_room") },
+        { slug: active, label: g ? t(g.titleKey) : active },
+      ]);
+    } else {
+      setDeepRoute([{ slug: "lobby", label: t("lounge_room") }]);
+    }
+  }, [active]);
+
+  useEffect(() => {
+    registerGoHandler((slugs) => {
+      const leaf = slugs[slugs.length - 1];
+      if (!leaf || leaf === "lobby") {
+        setActive(null);
+        return;
+      }
+      if (leaf === "tetris" || leaf === "snake" || leaf === "breakout") setActive(leaf);
+    });
+    return () => registerGoHandler(null);
+  }, []);
 
   const refreshRecords = useCallback(async () => {
     const next = { tetris: 0, snake: 0, breakout: 0 };

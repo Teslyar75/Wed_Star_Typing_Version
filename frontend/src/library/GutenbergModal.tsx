@@ -1,6 +1,7 @@
 /** Свободные книги · порт stamina/book_shelf.BookCatalogPanel (+ bilingual / адаптив). */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
+import { setModalStack } from "../shell/routeStore";
 import BilingualManualModal from "./BilingualManualModal";
 
 const LANGS_GUT = ["", "en", "de", "fr", "es", "it", "ru"] as const;
@@ -66,6 +67,29 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
   const [downloading, setDownloading] = useState(false);
   const [msg, setMsg] = useState("");
   const [manualOpen, setManualOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const root = bilingual
+      ? { slug: "bilingual", label: t("gut_title_2lang") }
+      : { slug: "gutenberg", label: t("gut_free_books") };
+    const segs = [root];
+    if (manualOpen) segs.push({ slug: "manual", label: t("bi_manual_title") });
+    setModalStack(segs);
+    return () => setModalStack([]);
+  }, [open, bilingual, manualOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onGo = (e: Event) => {
+      const slugs = ((e as CustomEvent<{ slugs: string[] }>).detail?.slugs || []) as string[];
+      if (!slugs.includes("manual")) setManualOpen(false);
+      const root = bilingual ? "bilingual" : "gutenberg";
+      if (!slugs.includes(root)) onClose();
+    };
+    window.addEventListener("st-crumb-go", onGo);
+    return () => window.removeEventListener("st-crumb-go", onGo);
+  }, [open, bilingual, onClose]);
   const fetchSeq = useRef(0);
   const modeRef = useRef<Mode>("browse");
   const cefrRef = useRef<string | null>(null);

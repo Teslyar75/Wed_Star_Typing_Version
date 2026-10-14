@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useRadio } from "../radio/radioStore";
 import { useReadingPos } from "../reading/positionStore";
+import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 import EnglishOverview from "./EnglishOverview";
 import FromBookPage from "./FromBookPage";
 import ListsPage from "./ListsPage";
@@ -59,12 +60,33 @@ const STUB_PROG: EnProgress = {
   vocab_total: 0,
 };
 
+const LAST_SCAN_KEY = "st_en_last_scan";
+
+function readLastScan(): string {
+  try {
+    return (localStorage.getItem(LAST_SCAN_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function writeLastScan(word: string) {
+  const w = word.trim();
+  if (!w) return;
+  try {
+    localStorage.setItem(LAST_SCAN_KEY, w);
+  } catch {
+    /* private mode */
+  }
+}
+
 export default function EnglishPanel() {
   const textId = useReadingPos((s) => s.textId);
   const sentenceId = useReadingPos((s) => s.sentenceId);
   const [page, setPage] = useState<EnPage>("overview");
-  const [scanQ, setScanQ] = useState("");
-  const [scanSeed, setScanSeed] = useState("");
+  const [scanQ, setScanQ] = useState(() => readLastScan());
+  /** последнее слово в зоне сканера — вкладка «Сканер» всегда открывает его */
+  const [scanSeed, setScanSeed] = useState(() => readLastScan());
   const [scanBack, setScanBack] = useState<EnPage>("sets");
   const [missionLaunch, setMissionLaunch] = useState<MissionLaunch>({});
   const [missionKey, setMissionKey] = useState(0);
@@ -204,17 +226,46 @@ export default function EnglishPanel() {
     })();
   }, [textId]);
 
+  useEffect(() => {
+    const meta = PAGES.find((p) => p.id === page);
+    setDeepRoute([{ slug: page, label: meta ? t(meta.labelKey) : page }]);
+  }, [page]);
+
+  const rememberScan = (word: string) => {
+    const w = word.trim();
+    if (!w) return;
+    setScanQ(w);
+    setScanSeed(w);
+    writeLastScan(w);
+  };
+
+  const openScanner = (word: string, back?: EnPage) => {
+    const w = word.trim();
+    setScanBack(back ?? (page === "scanner" ? scanBack : page));
+    if (w) rememberScan(w);
+    setPage("scanner");
+    void reloadMeta();
+  };
+
+  /** вкладка «Сканер» = тот же экран, что из карты: последнее слово (или пустой seed → WOD внутри) */
   const go = (name: EnPage) => {
+    if (name === "scanner") {
+      const last = scanSeed.trim() || scanQ.trim() || readLastScan();
+      openScanner(last, page === "scanner" ? scanBack : page);
+      return;
+    }
     setPage(name);
     void reloadMeta();
   };
 
-  const openScanner = (word: string, back?: EnPage) => {
-    setScanBack(back ?? (page === "scanner" ? scanBack : page));
-    setScanQ(word);
-    setScanSeed(word);
-    setPage("scanner");
-  };
+  useEffect(() => {
+    registerGoHandler((slugs) => {
+      const id = slugs[0] as EnPage | undefined;
+      if (id && PAGES.some((p) => p.id === id)) go(id);
+    });
+    return () => registerGoHandler(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- регистрация на mount/смену go
+  }, [page, scanSeed, scanQ, scanBack]);
 
   const openSets = (setId: string) => {
     setMissionSet(setId);
@@ -241,11 +292,7 @@ export default function EnglishPanel() {
   };
 
   const runScan = () => {
-    const q = scanQ.trim();
-    if (!q) {
-      setPage("scanner");
-      return;
-    }
+    const q = scanQ.trim() || scanSeed.trim() || readLastScan();
     openScanner(q, page === "scanner" ? scanBack : page);
   };
 
@@ -342,10 +389,7 @@ export default function EnglishPanel() {
           backPage={scanBack}
           currentSet={missionSet}
           onBack={() => go(scanBack || "sets")}
-          onNeighborWord={(w) => {
-            setScanQ(w);
-            setScanSeed(w);
-          }}
+          onNeighborWord={(w) => rememberScan(w)}
           onStartMission={(mode, word) =>
             startMission({ mode, source: "set", setId: missionSet, single: word, autoStart: true })
           }

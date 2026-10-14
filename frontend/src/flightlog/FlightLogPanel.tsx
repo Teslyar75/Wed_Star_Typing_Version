@@ -1,6 +1,7 @@
 /** Бортжурнал — паритет stamina/screens.LogScreen. */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Heatmap, { type KeyRate } from "../bridge/Heatmap";
+import { colorFor } from "../bridge/heatmapColor";
 import { t } from "../i18n";
 
 type Summary = {
@@ -46,8 +47,8 @@ function isCyrillic(ch: string): boolean {
 
 function DynamicsChart({ runs }: { runs: Summary["runs"] }) {
   const w = 640;
-  const h = 220;
-  const pad = 16;
+  const h = 140;
+  const pad = 12;
   if (!runs.length) {
     return <p className="muted flog-chart-empty">{t("flog_no_runs")}</p>;
   }
@@ -113,7 +114,7 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
       if (heatLang === "ru" || heatLang === "uk") return isCyrillic(k.key);
       return !isCyrillic(k.key);
     });
-    return filtered.slice(0, 8);
+    return filtered.slice(0, 12);
   }, [keys, heatLang]);
 
   const cards = useMemo(() => {
@@ -223,7 +224,6 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
             rates={keys}
             lang={heatLang === "uk" ? "ru" : heatLang === "de" ? "en" : heatLang}
             showTitle={false}
-            showPct
           />
           <div className="flog-heat-row">
             {([
@@ -249,15 +249,32 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
           <h3>{t("flog_weak")}</h3>
           {weak.length ? (
             <ul className="flog-weak-list">
-              {weak.map((w) => (
-                <li key={w.key}>
-                  «{w.key}»{" "}
-                  <strong>{(w.rate * 100).toFixed(1)}%</strong>{" "}
-                  <span className="muted">
-                    ({w.errors} {t("flog_of")} {w.hits + w.errors})
-                  </span>
-                </li>
-              ))}
+              {weak.map((w) => {
+                const heat = colorFor(w.rate) ?? "#FFB000";
+                return (
+                  <li key={w.key}>
+                    <span
+                      className="key flog-weak-cap"
+                      style={
+                        {
+                          /* плотная заливка — иначе сквозь стекло виден только космос */
+                          "--st-frame-fill": `color-mix(in srgb, ${heat} 78%, var(--st-panel))`,
+                          "--st-frame-glow": heat,
+                          "--st-frame-line": heat,
+                          color: "#f4f7fb",
+                        } as Record<string, string>
+                      }
+                      title={`${w.errors}/${w.hits + w.errors}`}
+                    >
+                      {w.key}
+                    </span>
+                    <strong className="flog-weak-pct">{(w.rate * 100).toFixed(1)}%</strong>
+                    <span className="muted flog-weak-hits">
+                      ({w.errors} {t("flog_of")} {w.hits + w.errors})
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="muted">{t("flog_weak_empty")}</p>

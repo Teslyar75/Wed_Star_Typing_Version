@@ -78,9 +78,9 @@ export default function ScannerPage({
   const [ptab, setPtab] = useState<"ipa" | "syl" | "guide" | "notes">("ipa");
   const [match, setMatch] = useState<MatchInfo | null>(null);
 
-  const load = useCallback(async (query: string) => {
+  const load = useCallback(async (query: string, opts?: { silentEmpty?: boolean; remember?: boolean }) => {
     const needle = query.trim();
-    if (!needle) return;
+    if (!needle) return false;
     setMsg("");
     setShowTr(false);
     setHint(false);
@@ -89,18 +89,54 @@ export default function ScannerPage({
     const r = await fetch(`/api/english/lookup?q=${encodeURIComponent(needle)}`, { credentials: "include" });
     if (!r.ok) {
       setWord(null);
-      setMsg(t("en_word_not_found"));
-      return;
+      if (!opts?.silentEmpty) setMsg(t("en_word_not_found"));
+      return false;
     }
     const w = (await r.json()) as EnWord;
     setWord(w);
     setMyTr(w.my_tr || w.translation || "");
     setQ(w.word);
-  }, []);
+    // remember только для fallback / явного запроса — не зацикливать scanSeed
+    if (opts?.remember) onNeighborWord?.(w.word);
+    return true;
+  }, [onNeighborWord]);
 
+  /** рабочая зона: last session → слово дня → первое из набора */
   useEffect(() => {
-    if (initialQuery.trim()) void load(initialQuery);
-  }, [initialQuery, load]);
+    let cancelled = false;
+    void (async () => {
+      const seed = initialQuery.trim();
+      if (seed) {
+        if (!cancelled) await load(seed);
+        return;
+      }
+      try {
+        const wod = await fetch("/api/english/word-of-day", { credentials: "include" });
+        if (wod.ok) {
+          const j = (await wod.json()) as { word?: string };
+          if (!cancelled && j.word && (await load(j.word, { silentEmpty: true, remember: true }))) return;
+        }
+      } catch {
+        /* */
+      }
+      try {
+        const r = await fetch(
+          `/api/english/set/${encodeURIComponent(currentSet)}?limit=1&offset=0&sort=freq`,
+          { credentials: "include" },
+        );
+        if (r.ok) {
+          const j = (await r.json()) as { items?: EnWord[] };
+          const first = j.items?.[0]?.word;
+          if (!cancelled && first) await load(first, { silentEmpty: true, remember: true });
+        }
+      } catch {
+        /* */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialQuery, currentSet, load]);
 
   useEffect(() => {
     void (async () => {
@@ -323,12 +359,14 @@ export default function ScannerPage({
                 <pre className="en-sc-ptext">{ptext}</pre>
               </div>
 
-              <div className="en-sc-panel">
+              <div className="en-sc-panel en-sc-panel-data">
                 <div className="en-sc-panel-lab">{t("en_scan_data")}</div>
-                {word.definition && <p className="en-sc-def">{word.definition}</p>}
-                {(word.example || word.sentences?.[0]?.en) && (
-                  <p className="en-sc-ex">{highlightWord(word.example || word.sentences?.[0]?.en || "", word.word)}</p>
-                )}
+                <div className="en-sc-data-scroll">
+                  {word.definition && <p className="en-sc-def">{word.definition}</p>}
+                  {(word.example || word.sentences?.[0]?.en) && (
+                    <p className="en-sc-ex">{highlightWord(word.example || word.sentences?.[0]?.en || "", word.word)}</p>
+                  )}
+                </div>
                 <label className="en-sc-tr">
                   <span>{t("en_my_tr")}</span>
                   <input value={myTr} onChange={(e) => setMyTr(e.target.value)} onBlur={() => void saveTr()} />
@@ -336,16 +374,22 @@ export default function ScannerPage({
                 <div className="en-sc-acts">
                   <button
                     type="button"
-                    className={`en-sm-chip ${word.known ? "ok-chip" : "danger"}`}
+                    className={`en-sm-chip ${word.known ? "ok-chip" : ""}`}
                     onClick={() => void markKnown(!word.known)}
                   >
                     {word.known ? t("en_know_btn") : t("en_unknown_btn")}
                   </button>
-                  {lists[0] && (
-                    <button type="button" className="en-sm-chip" onClick={() => void toList(lists[0]!.id)}>
-                      {t("en_to_list")}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="en-sm-chip"
+                    title={lists[0]?.name || t("en_to_list")}
+                    onClick={() => {
+                      if (lists[0]) void toList(lists[0].id);
+                      else setMsg(t("en_no_lists"));
+                    }}
+                  >
+                    {t("en_to_list")}
+                  </button>
                   <button type="button" className="en-sm-chip on" onClick={() => void toReview()}>
                     {t("en_to_review_btn")}
                   </button>

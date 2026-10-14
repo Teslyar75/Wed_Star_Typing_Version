@@ -872,6 +872,52 @@ body {
   flex: 0 0 auto !important;
 }
 
+/* бортжурнал: динамика компактная, низ (клавиатура) забирает остаток */
+.flog-dynamics {
+  flex: 0 0 auto !important;
+  max-height: min(9.5rem, 22vh) !important;
+}
+.flog-bottom {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+/* english/book: список книг скроллится, последняя строка не режется */
+.en-from-book {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.en-book-list {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding-bottom: 0.85rem !important;
+}
+
+/* бортжурнал: динамика компактная, низ (клавиатура) забирает остаток */
+.flog-dynamics {
+  flex: 0 0 auto !important;
+  max-height: min(9.5rem, 22vh) !important;
+}
+.flog-bottom {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+/* english/book: список книг скроллится, последняя строка не режется */
+.en-from-book {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.en-book-list {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding-bottom: 0.85rem !important;
+}
+
 @media (max-width: 1100px) {
   .flog-cards {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;

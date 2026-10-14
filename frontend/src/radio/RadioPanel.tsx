@@ -13,6 +13,7 @@ import {
 } from "./api";
 import { useRadio } from "./radioStore";
 import { cacheStations, loadCachedStations } from "./stationCache";
+import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 
 type Tab = "air" | "rx";
 /** Источник списка частот — отдельные вкладки вместо длинной прокрутки. */
@@ -185,6 +186,29 @@ export default function RadioPanel() {
     setDuckOnType,
     setAutoLast,
   } = useRadio();
+
+  useEffect(() => {
+    const label = tab === "air" ? t("radio_air") : t("radio_rx");
+    const segs: { slug: string; label: string }[] = [{ slug: tab, label }];
+    if (tab === "air" && freqMode !== "top") {
+      segs.push({
+        slug: freqMode,
+        label: freqMode === "favs" ? t("radio_favs") : t("radio_search_lab"),
+      });
+    }
+    setDeepRoute(segs);
+  }, [tab, freqMode]);
+
+  useEffect(() => {
+    registerGoHandler((slugs) => {
+      const root = slugs[0] as Tab | undefined;
+      if (root === "air" || root === "rx") setTab(root);
+      const mode = slugs[1] as FreqMode | undefined;
+      if (mode === "top" || mode === "favs" || mode === "search") setFreqMode(mode);
+      else if (slugs.length === 1 && root === "air") setFreqMode("top");
+    });
+    return () => registerGoHandler(null);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

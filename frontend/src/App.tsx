@@ -9,6 +9,9 @@ import { t, setLang, getLang, onLangChange } from "./i18n";
 import { setSoundsMuted, soundsMuted } from "./fx/sounds";
 import type { Tab } from "./shell/tabs";
 import { cycleNavZone, handleArrowNav, isTextEditTarget } from "./shell/keyboardNav";
+import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
+import PathCrumbs from "./shell/PathCrumbs";
+import { clearDeepRoute } from "./shell/routeStore";
 import RadioMinibar from "./radio/RadioMinibar";
 import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
@@ -71,10 +74,24 @@ export default function App() {
     setHelpOpen(false);
     setCmdOpen(false);
     setTabState((cur) => {
-      if (cur !== next) prevTabRef.current = cur;
+      if (cur !== next) {
+        prevTabRef.current = cur;
+        /* смена зоны — сбросить глубокий хвост крошек */
+        if (zoneOf(cur) !== zoneOf(next)) clearDeepRoute();
+        if (next === "bridge" || next === "missions" || next === "cargo" || next === "log") {
+          if (next === "bridge") clearDeepRoute();
+        }
+      }
       return next;
     });
   }, []);
+
+  const setZone = useCallback(
+    (zone: ZoneId) => {
+      setTab(homeTabForZone(zone));
+    },
+    [setTab],
+  );
 
   const goPrevWindow = useCallback(() => {
     const prev = prevTabRef.current;
@@ -143,17 +160,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const tabOrder: Tab[] = [
-      "bridge",
-      "missions",
-      "cargo",
-      "log",
-      "english",
-      "speed",
-      "lounge",
-      "radio",
-      "settings",
-    ];
     const onKey = (e: KeyboardEvent) => {
       /* Только явный F1 или Shift+/ (?). Не открывать при смене вкладок. */
       if (e.key === "F1" && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -174,15 +180,15 @@ export default function App() {
         e.preventDefault();
         setCmdOpen((v) => !v);
       }
-      /* Ctrl+1…9 — разделы, как stamina/cockpit.py */
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-9]$/.test(e.key)) {
+      /* Ctrl+1…6 — зоны (см. docs/web/NAV_ZONES.md) */
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-6]$/.test(e.key)) {
         if (isTextEditTarget(e.target)) return;
-        const next = tabOrder[Number(e.key) - 1];
+        const next = ZONE_ORDER[Number(e.key) - 1];
         if (next) {
           e.preventDefault();
-          setTab(next);
+          setZone(next);
           window.requestAnimationFrame(() => {
-            document.querySelector<HTMLElement>(`.nav-tab[data-tab="${next}"]`)?.focus();
+            document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`)?.focus();
           });
         }
         return;
@@ -223,17 +229,22 @@ export default function App() {
     localStorage.setItem("st_space_profile", p);
   };
 
-  const tabs: { id: Tab; label: string }[] = [
+  const zoneTabs: { id: ZoneId; label: string }[] = [
     { id: "bridge", label: t("bridge") },
-    { id: "missions", label: t("missions") },
-    { id: "cargo", label: t("own_text") },
-    { id: "log", label: t("flight_log") },
     { id: "english", label: t("english") },
     { id: "speed", label: t("speed") },
     { id: "lounge", label: t("lounge") },
     { id: "radio", label: t("radio") },
     { id: "settings", label: t("settings") },
   ];
+
+  const bridgeSubs: { id: Tab; label: string }[] = [
+    { id: "missions", label: t("missions") },
+    { id: "cargo", label: t("own_text") },
+    { id: "log", label: t("flight_log") },
+  ];
+
+  const activeZone = zoneOf(tab);
 
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
@@ -261,19 +272,20 @@ export default function App() {
           <div className="top-bar-scroll-inner">
             <nav
               className="top-nav"
-              aria-label="main"
+              aria-label="zones"
               role="tablist"
               data-nav-group="tabs"
             >
-              {tabs.map((x) => (
+              {zoneTabs.map((x) => (
                 <button
                   key={x.id}
                   type="button"
                   role="tab"
+                  data-zone={x.id}
                   data-tab={x.id}
-                  aria-selected={tab === x.id}
-                  className={`nav-tab ${tab === x.id ? "on" : ""}`}
-                  onClick={() => setTab(x.id)}
+                  aria-selected={activeZone === x.id}
+                  className={`nav-tab ${activeZone === x.id ? "on" : ""}`}
+                  onClick={() => setZone(x.id)}
                 >
                   {x.label}
                 </button>
@@ -326,6 +338,28 @@ export default function App() {
       </header>
       <RadioAudioHost />
 
+      {isBridgeZone(tab) ? (
+        <nav
+          className="zone-subnav bridge-subnav"
+          data-nav-group="bridge-sub"
+          aria-label={t("bridge_subnav")}
+        >
+          {bridgeSubs.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              className={`hud-btn ${tab === x.id ? "amber" : ""}`}
+              data-tab={x.id}
+              onClick={() => setTab(x.id)}
+            >
+              {x.label}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+
+      <PathCrumbs tab={tab} onJump={setTab} />
+
       <main className="stage" data-nav-zone="stage" data-nav-group="stage" tabIndex={-1}>
         {tab === "bridge" && <BridgeScreen />}
         <LazyTab when={tab === "missions"}>
@@ -355,9 +389,6 @@ export default function App() {
             onSpaceProfile={setProfile}
             lang={lang}
             onLang={switchLang}
-            onOpenBridge={() => setTab("bridge")}
-            onOpenEnglish={() => setTab("english")}
-            onOpenSpeed={() => setTab("speed")}
           />
         </LazyTab>
       </main>

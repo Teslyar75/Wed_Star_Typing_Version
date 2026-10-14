@@ -12,22 +12,18 @@ import {
 } from "../fx/sounds";
 import { useCabin, type FontSize, type GlowLevel, type UiScale, type UplinkTarget } from "./cabinStore";
 import { ALL_SKINS, useSkin } from "../theme/skinStore";
+import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 
 const SkinPicker = lazy(() => import("../theme/SkinPicker"));
 const AuthPanel = lazy(() => import("../auth/AuthPanel"));
-const LibraryPanel = lazy(() => import("../library/LibraryPanel"));
-const BilingualReader = lazy(() => import("../reader/BilingualReader"));
 
-type Sub = "cabin" | "cabinMore" | "skins" | "crew" | "library" | "reader";
+type Sub = "cabin" | "cabinMore" | "skins" | "crew";
 
 type Props = {
   spaceProfile: SpaceProfile;
   onSpaceProfile: (p: SpaceProfile) => void;
   lang: string;
   onLang: (code: string) => void;
-  onOpenBridge?: () => void;
-  onOpenEnglish?: () => void;
-  onOpenSpeed?: () => void;
 };
 
 function Block({ when, children }: { when: boolean; children: ReactNode }) {
@@ -67,9 +63,6 @@ export default function SettingsHub({
   onSpaceProfile,
   lang,
   onLang,
-  onOpenBridge,
-  onOpenEnglish,
-  onOpenSpeed,
 }: Props) {
   const [sub, setSub] = useState<Sub>("cabin");
   const cabin = useCabin();
@@ -91,9 +84,23 @@ export default function SettingsHub({
     { id: "cabinMore", label: t("set_more") },
     { id: "skins", label: t("skins") },
     { id: "crew", label: t("crew") },
-    { id: "library", label: t("library") },
-    { id: "reader", label: t("reader") },
   ];
+
+  useEffect(() => {
+    const meta = subs.find((s) => s.id === sub);
+    setDeepRoute([{ slug: sub, label: meta?.label || sub }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sub]);
+
+  useEffect(() => {
+    registerGoHandler((slugs) => {
+      const id = slugs[0] as Sub | undefined;
+      if (id && ["cabin", "cabinMore", "skins", "crew"].includes(id)) {
+        setSub(id as Sub);
+      }
+    });
+    return () => registerGoHandler(null);
+  }, []);
 
   const langBtns: { code: string; name: string }[] = [
     { code: "ru", name: "Русский" },
@@ -359,17 +366,6 @@ export default function SettingsHub({
       </Block>
       <Block when={sub === "crew"}>
         <AuthPanel />
-      </Block>
-      <Block when={sub === "library"}>
-        <LibraryPanel
-          onOpenBook={() => setSub("reader")}
-          onOpenHyperdrive={() => onOpenSpeed?.()}
-          onOpenBridge={() => onOpenBridge?.()}
-          onOpenEnglish={() => onOpenEnglish?.()}
-        />
-      </Block>
-      <Block when={sub === "reader"}>
-        <BilingualReader />
       </Block>
     </section>
   );
