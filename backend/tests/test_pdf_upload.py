@@ -31,6 +31,19 @@ def test_pdf_upload_or_empty_scan() -> None:
     assert r.status_code in (200, 400)
 
 
+def test_pdf_preview_blank_is_scanned() -> None:
+    pdf = _tiny_pdf()
+    r = client.post(
+        "/api/texts/pdf/preview",
+        files={"file": ("tiny.pdf", pdf, "application/pdf")},
+        data={"first": "1", "last": ""},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total_pages"] >= 1
+    assert body["scanned"] is True or body["ok"] is False
+
+
 def test_txt_upload_via_multipart() -> None:
     cs = f"P-{uuid.uuid4().hex[:6]}"
     client.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})

@@ -177,9 +177,36 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
     [textId],
   );
 
+  /** Как desktop show(): active_reading или первая книга на полке. */
+  const resolveShelfBook = useCallback(async (): Promise<{ textId: number; sentenceId: number } | null> => {
+    const cur = useReadingPos.getState().textId;
+    try {
+      const shelf = await (await fetch("/api/library", { credentials: "include" })).json();
+      if (!Array.isArray(shelf) || shelf.length === 0) return null;
+      type Row = { text_id: number; sentence_id?: number };
+      const rows = shelf as Row[];
+      const hit = cur != null ? rows.find((x) => x.text_id === cur) : undefined;
+      const pick = hit ?? rows[0];
+      if (!pick) return null;
+      if (cur !== pick.text_id) {
+        useReadingPos.getState().jump(pick.text_id, Number(pick.sentence_id) || 0, "reader");
+      }
+      return { textId: pick.text_id, sentenceId: Number(pick.sentence_id) || 0 };
+    } catch {
+      return cur != null ? { textId: cur, sentenceId: useReadingPos.getState().sentenceId } : null;
+    }
+  }, []);
+
   const openHyperdrive = useCallback(async () => {
-    let body = bookReady && text.trim().length > 0 ? text : null;
-    if (!body) body = await loadBookContent();
+    const picked = await resolveShelfBook();
+    if (!picked) {
+      setMsg(t("sr_lib_empty"));
+      setPage("library");
+      return;
+    }
+    let body =
+      bookReady && text.trim().length > 0 && textId === picked.textId ? text : null;
+    if (!body) body = await loadBookContent(picked.textId);
     if (!body) {
       setPage("library");
       return;
@@ -192,11 +219,37 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
     }
     setMode("rsvp");
     setPage("reader");
-  }, [bookReady, text, loadBookContent]);
+  }, [bookReady, text, textId, loadBookContent, resolveShelfBook]);
+
+  const openBook = useCallback(async () => {
+    const picked = await resolveShelfBook();
+    if (!picked) {
+      setMsg(t("sr_lib_empty"));
+      setPage("library");
+      return;
+    }
+    const body =
+      bookReady && text.trim().length > 0 && textId === picked.textId
+        ? text
+        : await loadBookContent(picked.textId);
+    if (!body) {
+      setPage("library");
+      return;
+    }
+    setPage("book");
+  }, [bookReady, text, textId, loadBookContent, resolveShelfBook]);
 
   useEffect(() => {
-    if (textId != null) void loadBookContent(textId);
-  }, [textId, loadBookContent]);
+    if (textId != null) {
+      void loadBookContent(textId);
+      return;
+    }
+    /* обзор при пустом textId — как desktop refresh: первая с полки */
+    void (async () => {
+      const picked = await resolveShelfBook();
+      if (picked) void loadBookContent(picked.textId);
+    })();
+  }, [textId, loadBookContent, resolveShelfBook]);
 
   useEffect(() => {
     void loadJournal();
@@ -289,8 +342,16 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
               type="button"
               className={`tab ${page === p.id ? "on" : ""}`}
               onClick={() => {
+                if (p.id === "reader") {
+                  void openHyperdrive();
+                  return;
+                }
+                if (p.id === "book") {
+                  void openBook();
+                  return;
+                }
                 setPage(p.id);
-                if (p.id === "reader" || p.id === "trainers") setMode("rsvp");
+                if (p.id === "trainers") setMode("rsvp");
               }}
             >
               {p.label}
@@ -311,7 +372,7 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
           xp={pilotXp}
           trainers={TRAINERS}
           onHyperdrive={() => void openHyperdrive()}
-          onBook={() => setPage("book")}
+          onBook={() => void openBook()}
           onLibrary={() => setPage("library")}
           onTrainer={openTrainer}
         />

@@ -20,6 +20,10 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://star:star@postgres:5432/star_typing
       SECRET_KEY: ${SECRET_KEY:-change-me-in-prod}
+      VOSK_MODEL_DIR: /models/vosk-model-small-en-us-0.15
+    volumes:
+      # та же модель, что у десктопа (репозиторий My_New_Stamina/models)
+      - ../models:/models:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -32,7 +36,8 @@ services:
       dockerfile: frontend/Dockerfile
     volumes:
       - frontend_dist:/out
-    entrypoint: ["/bin/sh", "-c", "cp -a /srv/frontend/. /out/ && sleep infinity"]
+    # чистим volume, иначе старые hashed CSS/JS копятся и путают кэш
+    entrypoint: ["/bin/sh", "-c", "rm -rf /out/* /out/.[!.]* 2>/dev/null; cp -a /srv/frontend/. /out/ && sleep infinity"]
 
   caddy:
     image: caddy:2-alpine

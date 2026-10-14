@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useReadingPos } from "../reading/positionStore";
 import GutenbergModal from "./GutenbergModal";
+import PdfImportModal from "./PdfImportModal";
 
 type ShelfItem = {
   text_id: number;
@@ -75,6 +76,8 @@ export default function LibraryPanel({
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTitle, setRenameTitle] = useState("");
   const [renameAuthor, setRenameAuthor] = useState("");
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const txtRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
 
@@ -289,8 +292,11 @@ export default function LibraryPanel({
         accept=".pdf,application/pdf"
         hidden
         onChange={(e) => {
-          void onUpload(e.target.files?.[0] ?? null);
+          const f = e.target.files?.[0] ?? null;
           e.target.value = "";
+          if (!f) return;
+          setPdfFile(f);
+          setPdfOpen(true);
         }}
       />
 
@@ -482,6 +488,19 @@ export default function LibraryPanel({
 
       <GutenbergModal open={gutOpen} onClose={() => setGutOpen(false)} onImported={onImported} />
       <GutenbergModal open={biliOpen} bilingual onClose={() => setBiliOpen(false)} onImported={onImported} />
+      <PdfImportModal
+        open={pdfOpen}
+        file={pdfFile}
+        onClose={() => {
+          setPdfOpen(false);
+          setPdfFile(null);
+        }}
+        onImported={async (info) => {
+          setMsg(`${t("library_ok")}: ${info.title}`);
+          await reload();
+          setSel(info.text_id);
+        }}
+      />
 
       {pasteOpen && (
         <div className="gut-overlay" role="dialog" aria-modal="true" aria-label={t("lib_paste_title")}>

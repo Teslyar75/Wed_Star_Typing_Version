@@ -39,6 +39,7 @@ type Props = {
   onFormBook: () => void;
   onPracticeBook: () => void;
   onOpenBookSection: () => void;
+  onOpenSet: (setId: string) => void;
   onScanWord: (word: string) => void;
 };
 
@@ -90,6 +91,7 @@ export default function EnglishOverview({
   onFormBook,
   onPracticeBook,
   onOpenBookSection,
+  onOpenSet,
   onScanWord,
 }: Props) {
   const [wod, setWod] = useState<Wod | null>(null);
@@ -177,7 +179,7 @@ export default function EnglishOverview({
                 s.lim <= 0 ? t("en_set_thematic") : frac >= 1 ? t("en_set_done") : s.known ? t("en_set_progress") : t("en_set_new");
               const tone = frac >= 1 ? "done" : s.known ? "ready" : "idle";
               return (
-                <button key={s.id} type="button" className={`en-sector tone-${tone}`} onClick={onQuickMission}>
+                <button key={s.id} type="button" className={`en-sector tone-${tone}`} onClick={() => onOpenSet(s.id)}>
                   <div className="ens-top">
                     <span className="ens-code">{s.code}</span>
                     <span className="ens-sub">{s.sub}</span>

@@ -1,4 +1,4 @@
-import { FINGER_COLORS, ROWS } from "../typing/layouts";
+import { FINGER_COLORS, HOME_BUMPS, MOD_FINGER, ROWS } from "../typing/layouts";
 import { t } from "../i18n";
 
 export type KeyRate = { key: string; rate: number; errors: number; hits: number };
@@ -14,28 +14,33 @@ type Props = { rates: KeyRate[]; lang: string; showTitle?: boolean; showPct?: bo
 
 export default function Heatmap({ rates, lang, showTitle = true, showPct = false }: Props) {
   const map = new Map(rates.map((r) => [r.key.toLowerCase(), r]));
+  const isRu = lang.startsWith("ru") || lang === "uk";
   return (
     <div className={`heatmap ${showPct ? "with-pct" : ""}`}>
       {showTitle ? <h3>{t("heatmap")}</h3> : null}
-      <div className="keyboard" aria-label={t("heatmap")}>
+      <div className={`keyboard lang-${isRu ? "ru" : "en"}`} aria-label={t("heatmap")}>
         {ROWS.map((row, ri) => (
           <div className="kb-row" key={ri}>
             {row.map(([id, en, ru, w, finger]) => {
-              const label = (lang === "ru" ? ru || en : en || ru).toLowerCase();
+              const label = (isRu ? ru || en : en || ru).toLowerCase();
               const stat = map.get(label) || map.get(id.replace("Key", "").toLowerCase());
               const pct = stat && stat.rate > 0 ? `${Math.round(stat.rate * 1000) / 10}` : "";
+              const isMod = finger === MOD_FINGER;
               return (
                 <div
                   key={id}
-                  className="key"
+                  className={`key ${isMod ? "mod" : ""}`}
                   title={stat ? `${stat.errors}/${stat.hits + stat.errors}` : undefined}
                   style={{
-                    flex: w,
+                    flex: `${w} 1 0`,
+                    minWidth: 0,
                     borderColor: FINGER_COLORS[finger],
                     background: colorFor(stat?.rate),
                   }}
                 >
-                  <span>{lang === "ru" ? ru || en : en || ru}</span>
+                  <span className="key-en">{en || "␣"}</span>
+                  {ru && ru !== en ? <span className="key-ru">{ru}</span> : null}
+                  {HOME_BUMPS.has(id) ? <span className="key-home" aria-hidden /> : null}
                   {showPct && pct ? <em className="key-pct">{pct}</em> : null}
                 </div>
               );

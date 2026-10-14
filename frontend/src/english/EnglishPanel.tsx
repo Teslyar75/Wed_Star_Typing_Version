@@ -1,48 +1,185 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+/**
+ * АНГЛИЙСКИЙ — 10 подвкладок + хаб-связи (см. docs/web/ENGLISH_LINK_MAP.md).
+ */
+import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useRadio } from "../radio/radioStore";
 import { useReadingPos } from "../reading/positionStore";
-import EnglishOverview, { type EnProgress } from "./EnglishOverview";
+import EnglishOverview from "./EnglishOverview";
+import FromBookPage from "./FromBookPage";
+import ListsPage from "./ListsPage";
+import LogPage from "./LogPage";
+import MissionsPage from "./MissionsPage";
+import ReviewPage from "./ReviewPage";
+import ScannerPage from "./ScannerPage";
+import SettingsPage from "./SettingsPage";
+import StarMapsPage from "./StarMapsPage";
+import WarehousePage from "./WarehousePage";
+import type { EnPage, EnProgress, EnSettings } from "./types";
 
-type Word = { id: number; word: string; translation: string; example: string };
-type Bin = "due" | "favorite" | "learned" | "inbox";
-type Page = "overview" | "sets" | "scanner" | "practice" | "review" | "warehouse" | "book" | "lists" | "log" | "settings";
-type Progress = EnProgress;
-type LogRow = { id: number; word: string; grade: number; at: string | null };
-
-const PAGES: { id: Page; labelKey: string }[] = [
+const PAGES: { id: EnPage; labelKey: string }[] = [
   { id: "overview", labelKey: "en_overview" },
   { id: "sets", labelKey: "en_star_maps" },
   { id: "scanner", labelKey: "en_scanner" },
   { id: "practice", labelKey: "en_missions" },
   { id: "review", labelKey: "en_systems_check" },
+  { id: "warehouse", labelKey: "en_warehouse" },
+  { id: "book", labelKey: "en_from_book_tab" },
   { id: "lists", labelKey: "en_lists" },
   { id: "log", labelKey: "en_log" },
   { id: "settings", labelKey: "en_settings" },
 ];
 
+export type MissionLaunch = {
+  mode?: "random" | "speaking" | "reading" | "questions";
+  source?: string;
+  setId?: string;
+  listId?: number;
+  single?: string;
+  ids?: number[];
+  autoStart?: boolean;
+};
+
+/** Как на десктопе: UI сразу, словарь досеивается в фоне мелкими порциями. */
+const STUB_PROG: EnProgress = {
+  xp: 0,
+  rank: "—",
+  favorite: 0,
+  learned: 0,
+  inbox: 0,
+  due: 0,
+  streak_days: 0,
+  best_streak: 0,
+  daily_goal: 30,
+  xp_today: 0,
+  new_available: 20,
+  level: 1,
+  level_lo: 0,
+  level_hi: 100,
+  vocab_total: 0,
+};
+
 export default function EnglishPanel() {
   const textId = useReadingPos((s) => s.textId);
   const sentenceId = useReadingPos((s) => s.sentenceId);
-  const [page, setPage] = useState<Page>("overview");
-  const [bin, setBin] = useState<Bin>("due");
-  const [words, setWords] = useState<Word[]>([]);
-  const [i, setI] = useState(0);
-  const [show, setShow] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [heard, setHeard] = useState("");
-  const [score, setScore] = useState<number | null>(null);
-  const [level, setLevel] = useState(0);
-  const [prog, setProg] = useState<Progress | null>(null);
-  const [log, setLog] = useState<LogRow[]>([]);
-  const [msg, setMsg] = useState("");
+  const [page, setPage] = useState<EnPage>("overview");
   const [scanQ, setScanQ] = useState("");
+  const [scanSeed, setScanSeed] = useState("");
+  const [scanBack, setScanBack] = useState<EnPage>("sets");
+  const [missionLaunch, setMissionLaunch] = useState<MissionLaunch>({});
+  const [missionKey, setMissionKey] = useState(0);
+  const [prog, setProg] = useState<EnProgress>(STUB_PROG);
+  const [seedHint, setSeedHint] = useState("");
+  const [whCount, setWhCount] = useState(0);
+  const [bookReady, setBookReady] = useState(0);
   const [bookTitle, setBookTitle] = useState("");
   const [bookSegments, setBookSegments] = useState(0);
-  const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem("st_en_auto_speak") === "1");
+  const [settings, setSettings] = useState<EnSettings | null>(null);
+  const [missionSet, setMissionSet] = useState("top-3000");
   const setDuck = useRadio((s) => s.setDuck);
   const duckOnType = useRadio((s) => s.duckOnType);
+  const seedBusy = useRef(false);
+
+  const onDuck = (on: boolean) => {
+    if (duckOnType) setDuck(on);
+  };
+
+  // Прогрев Vosk заранее — иначе речь теряется на загрузке модели
+  useEffect(() => {
+    void import("./asr").then((m) => m.preloadVosk());
+  }, []);
+
+  // Фон: досев словаря мелкими пачками (не блокируем вкладку).
+  useEffect(() => {
+    let cancelled = false;
+    const pump = async () => {
+      if (seedBusy.current) return;
+      seedBusy.current = true;
+      try {
+        // быстрый старт: одна маленькая порция, чтобы lookup/обзор жили
+        const first = await fetch("/api/english/seed?limit=3000&batch=250", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (first.ok) {
+          const j = (await first.json()) as { done?: boolean; total?: number };
+          if (!j.done) {
+            setSeedHint(t("en_seed_bg").replace("{0}", String(j.total ?? 0)));
+          } else {
+            setSeedHint("");
+          }
+        }
+        // дальше — редко и по чуть-чуть, пока вкладка открыта
+        while (!cancelled) {
+          await new Promise((res) => setTimeout(res, 2500));
+          if (cancelled) break;
+          const r = await fetch("/api/english/seed?limit=20580&batch=200", {
+            method: "POST",
+            credentials: "include",
+          });
+          if (!r.ok) break;
+          const j = (await r.json()) as { done?: boolean; total?: number };
+          if (j.done) {
+            setSeedHint("");
+            break;
+          }
+          setSeedHint(t("en_seed_bg").replace("{0}", String(j.total ?? 0)));
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        seedBusy.current = false;
+      }
+    };
+    void pump();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const reloadMeta = async () => {
+    // прогресс — первым и отдельно: UI не ждёт склад/книги
+    try {
+      const p = await fetch("/api/english/progress", { credentials: "include" });
+      if (p.ok) setProg(await p.json());
+    } catch {
+      /* stub уже на экране */
+    }
+    try {
+      const s = await fetch("/api/english/settings", { credentials: "include" });
+      if (s.ok) {
+        const j = (await s.json()) as EnSettings;
+        setSettings(j);
+        if (j.current_set) setMissionSet(j.current_set);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const wh = await fetch("/api/english/warehouse/cards?state=shelf", { credentials: "include" });
+      if (wh.ok) {
+        const rows = (await wh.json()) as unknown[];
+        setWhCount(Array.isArray(rows) ? rows.length : 0);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const bk = await fetch("/api/english/book/hub", { credentials: "include" });
+      if (bk.ok) {
+        const rows = (await bk.json()) as { cards?: number; ready?: number; due?: number }[];
+        if (Array.isArray(rows)) {
+          setBookReady(rows.reduce((n, r) => n + (r.due || r.ready || r.cards || 0), 0));
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    void reloadMeta();
+  }, [page]);
 
   useEffect(() => {
     if (textId == null) {
@@ -67,212 +204,56 @@ export default function EnglishPanel() {
     })();
   }, [textId]);
 
-  const seedBusy = useRef(false);
-
-  /** Досев словаря порциями в фоне — UI не ждёт 20k. */
-  useEffect(() => {
-    let cancelled = false;
-    const pump = async () => {
-      if (seedBusy.current) return;
-      seedBusy.current = true;
-      try {
-        while (!cancelled) {
-          const r = await fetch("/api/english/seed?limit=20000&batch=400", {
-            method: "POST",
-            credentials: "include",
-          });
-          if (!r.ok) break;
-          const j = (await r.json()) as { done?: boolean; added?: number };
-          if (j.done) break;
-          await new Promise((res) => setTimeout(res, 80));
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        seedBusy.current = false;
-      }
-    };
-    void pump();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const reload = useCallback(async () => {
-    const warehouseBin = page === "review" ? "due" : page === "lists" ? bin : page === "practice" ? "inbox" : bin;
-    const [listRes, progRes, logRes] = await Promise.all([
-      fetch(`/api/english/warehouse?limit=30&bin=${warehouseBin}`, { credentials: "include" }),
-      fetch("/api/english/progress", { credentials: "include" }),
-      page === "log"
-        ? fetch("/api/english/log?limit=40", { credentials: "include" })
-        : Promise.resolve(null),
-    ]);
-    setWords(await listRes.json());
-    setI(0);
-    setProg(await progRes.json());
-    if (logRes) setLog(await logRes.json());
-  }, [bin, page]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const w = words[i];
-
-  const speak = () => {
-    if (!w || !window.speechSynthesis) return;
-    setSpeaking(true);
-    if (duckOnType) setDuck(true);
-    const u = new SpeechSynthesisUtterance(w.word);
-    u.lang = "en-US";
-    u.onend = () => {
-      setSpeaking(false);
-      if (duckOnType) setDuck(false);
-    };
-    window.speechSynthesis.speak(u);
+  const go = (name: EnPage) => {
+    setPage(name);
+    void reloadMeta();
   };
 
-  const listen = async () => {
-    if (!w) return;
-    setListening(true);
-    if (duckOnType) setDuck(true);
-    setHeard("");
-    setScore(null);
-    const { listenOnce } = await import("./asr");
-    const res = await listenOnce({
-      expected: w.example || w.word,
-      targetWord: w.word,
-      onInterim: setHeard,
-      onLevel: setLevel,
-    });
-    setListening(false);
-    if (duckOnType) setDuck(false);
-    setHeard(res.transcript || (res.engine === "none" ? t("asr_unavailable") : ""));
-    setScore(res.engine === "none" ? null : res.score);
-    setLevel(0);
+  const openScanner = (word: string, back?: EnPage) => {
+    setScanBack(back ?? (page === "scanner" ? scanBack : page));
+    setScanQ(word);
+    setScanSeed(word);
+    setPage("scanner");
   };
 
-  const grade = async (g: number) => {
-    if (!w) return;
-    await fetch("/api/english/review", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word_id: w.id, grade: g }),
-    });
-    setShow(false);
-    setHeard("");
-    setScore(null);
-    setI((x) => (x + 1) % Math.max(words.length, 1));
-    void reload();
+  const openSets = (setId: string) => {
+    setMissionSet(setId);
+    setPage("sets");
   };
 
-  const move = async (target: "favorite" | "learned" | "inbox") => {
-    if (!w) return;
-    await fetch("/api/english/move", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word_id: w.id, bin: target }),
+  const startMission = (opts: MissionLaunch) => {
+    if (opts.setId) setMissionSet(opts.setId);
+    setMissionLaunch({
+      mode: opts.mode || "random",
+      source: opts.source || "set",
+      setId: opts.setId || missionSet,
+      listId: opts.listId,
+      single: opts.single,
+      ids: opts.ids,
+      autoStart: opts.autoStart !== false,
     });
-    void reload();
-  };
-
-  const fromBook = async () => {
-    if (textId == null) {
-      setMsg(t("from_book_need"));
-      return;
-    }
-    const r = await fetch("/api/english/from-book", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text_id: textId, up_to_sentence_id: Math.max(sentenceId + 20, 5), limit: 24 }),
-    });
-    if (!r.ok) {
-      setMsg(await r.text());
-      return;
-    }
-    const j = await r.json();
-    setMsg(`${t("from_book")}: ${j.cards}`);
-    setBin("inbox");
+    setMissionKey((k) => k + 1);
     setPage("practice");
   };
 
-  const cardUi = (
-    <div className="card">
-      {!w ? (
-        <p className="lead">{t("vocab_loading")}</p>
-      ) : (
-        <>
-          <h2>{show ? w.translation || w.word : w.word}</h2>
-          {speaking && <span className="badge ok">{t("reading")}</span>}
-          {listening && (
-            <span className="badge ok">
-              {t("listening")} {Math.round(level)}%
-            </span>
-          )}
-          <div className="bridge-actions" style={{ justifyContent: "center" }}>
-            <button type="button" className="hud-btn" onClick={speak}>
-              {t("voice")}
-            </button>
-            <button type="button" className="hud-btn" onClick={() => void listen()}>
-              {t("mic")}
-            </button>
-            <button
-              type="button"
-              className="hud-btn amber"
-              onClick={() => {
-                setShow((s) => !s);
-                if (!show && autoSpeak) speak();
-              }}
-            >
-              {t("show")}
-            </button>
-            <button type="button" className="hud-btn" onClick={() => void move("favorite")}>
-              ★
-            </button>
-          </div>
-          {heard && <p className="muted">Услышано: {heard}</p>}
-          {score != null && <p>Совпадение: {score}%</p>}
-          {listening && (
-            <div className="mic-meter" aria-hidden>
-              <div style={{ width: `${level}%` }} />
-            </div>
-          )}
-          {show && (
-            <>
-              <p className="muted">{w.example}</p>
-              <div className="bridge-actions">
-                {[1, 2, 3, 4].map((g) => (
-                  <button key={g} type="button" className="hud-btn" onClick={() => void grade(g)}>
-                    {g}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </>
-      )}
-    </div>
-  );
+  const startReview = () => {
+    setPage("review");
+  };
 
   const runScan = () => {
-    const q = scanQ.trim().toLowerCase();
+    const q = scanQ.trim();
     if (!q) {
       setPage("scanner");
       return;
     }
-    const hit = words.find((x) => x.word.toLowerCase() === q || x.word.toLowerCase().startsWith(q));
-    if (hit) {
-      setWords([hit, ...words.filter((x) => x.id !== hit.id)]);
-      setI(0);
-      setPage("scanner");
-      setShow(false);
-    } else {
-      setPage("scanner");
-      setMsg(`${t("en_scan")}: ${q}`);
-    }
+    openScanner(q, page === "scanner" ? scanBack : page);
+  };
+
+  const navLabel = (id: EnPage, base: string) => {
+    if (id === "review" && prog && prog.due > 0) return `${base} (${prog.due})`;
+    if (id === "warehouse" && whCount > 0) return `${base} (${whCount})`;
+    if (id === "book" && bookReady > 0) return `${base} (${bookReady})`;
+    return base;
   };
 
   return (
@@ -284,9 +265,9 @@ export default function EnglishPanel() {
               key={p.id}
               type="button"
               className={`hud-btn ${page === p.id ? "amber" : ""}`}
-              onClick={() => setPage(p.id)}
+              onClick={() => go(p.id)}
             >
-              {t(p.labelKey)}
+              {navLabel(p.id, t(p.labelKey))}
             </button>
           ))}
         </div>
@@ -306,9 +287,10 @@ export default function EnglishPanel() {
           />
         </form>
       </div>
-      {msg && <p className="muted">{msg}</p>}
 
-      {page === "overview" && prog && (
+      {seedHint ? <p className="muted en-seed-hint">{seedHint}</p> : null}
+
+      {page === "overview" && (
         <EnglishOverview
           prog={prog}
           book={
@@ -328,108 +310,102 @@ export default function EnglishPanel() {
                   hasBook: false,
                 }
           }
-          onStartLesson={() => setPage("review")}
-          onQuickMission={() => {
-            setBin("inbox");
-            setPage("practice");
+          onStartLesson={startReview}
+          onQuickMission={() => startMission({ mode: "random", source: "set", setId: missionSet })}
+          onFromBook={() => go("book")}
+          onFormBook={() => go("book")}
+          onPracticeBook={() => startMission({ mode: "speaking", source: "book", autoStart: true })}
+          onOpenBookSection={() => go("book")}
+          onOpenSet={openSets}
+          onScanWord={(w) => openScanner(w, "overview")}
+        />
+      )}
+
+      {page === "sets" && (
+        <StarMapsPage
+          currentSet={missionSet}
+          onOpenScanner={(w) => openScanner(w, "sets")}
+          onStartMission={(id) => startMission({ mode: "random", source: "set", setId: id })}
+          onLearnCards={(id) => {
+            setMissionSet(id);
+            startReview();
           }}
-          onFromBook={() => setPage("book")}
-          onFormBook={() => void fromBook()}
-          onPracticeBook={() => {
-            setBin("inbox");
-            setPage("practice");
+          onSetChange={setMissionSet}
+        />
+      )}
+
+      {page === "scanner" && (
+        <ScannerPage
+          initialQuery={scanSeed}
+          onDuck={onDuck}
+          ttsRate={settings?.tts_rate ?? 1}
+          backPage={scanBack}
+          currentSet={missionSet}
+          onBack={() => go(scanBack || "sets")}
+          onNeighborWord={(w) => {
+            setScanQ(w);
+            setScanSeed(w);
           }}
-          onOpenBookSection={() => setPage("book")}
-          onScanWord={(word) => {
-            setScanQ(word);
-            setPage("scanner");
-            const hit = words.find((x) => x.word.toLowerCase() === word.toLowerCase());
-            if (hit) {
-              setWords([hit, ...words.filter((x) => x.id !== hit.id)]);
-              setI(0);
-            }
+          onStartMission={(mode, word) =>
+            startMission({ mode, source: "set", setId: missionSet, single: word, autoStart: true })
+          }
+        />
+      )}
+
+      {page === "practice" && (
+        <MissionsPage
+          key={missionKey}
+          onDuck={onDuck}
+          ttsRate={settings?.tts_rate ?? 1}
+          defaultLen={settings?.mission_len ?? 10}
+          defaultSet={missionLaunch.setId || missionSet}
+          defaultMode={missionLaunch.mode}
+          defaultSource={missionLaunch.source}
+          listId={missionLaunch.listId}
+          single={missionLaunch.single}
+          autoStart={missionLaunch.autoStart}
+          asr={settings?.asr !== false}
+          onOpenWord={(w) => openScanner(w, "practice")}
+          onExitHub={() => {
+            setMissionLaunch({});
           }}
         />
       )}
 
-      {(page === "sets" || page === "scanner") && (
-        <div className="panel-inset">
-          <p className="muted">{page === "sets" ? t("en_sets_soon") : t("en_scanner_hint")}</p>
-          {page === "scanner" && cardUi}
-        </div>
+      {page === "review" && (
+        <ReviewPage onDuck={onDuck} ttsRate={settings?.tts_rate ?? 1} reverse={settings?.reverse_cards} />
       )}
 
-      {(page === "practice" || page === "review" || page === "warehouse") && (
-        <>
-          {page === "warehouse" && (
-            <div className="bridge-actions">
-              {(["due", "inbox", "favorite", "learned"] as Bin[]).map((b) => (
-                <button key={b} type="button" className={`hud-btn ${bin === b ? "amber" : ""}`} onClick={() => setBin(b)}>
-                  {t(`bin_${b}`)}
-                </button>
-              ))}
-            </div>
-          )}
-          {cardUi}
-        </>
+      {page === "warehouse" && (
+        <WarehousePage
+          onDuck={onDuck}
+          ttsRate={settings?.tts_rate ?? 1}
+          defaultGoal={settings?.warehouse_passes ?? 2}
+          onOpenScanner={() => go("scanner")}
+        />
       )}
 
       {page === "book" && (
-        <div>
-          <p className="muted">
-            {textId != null
-              ? `${t("from_book_pos")}: #${textId} · s${sentenceId}`
-              : t("from_book_need")}
-          </p>
-          <button type="button" className="hud-btn amber" onClick={() => void fromBook()} disabled={textId == null}>
-            {t("from_book")}
-          </button>
-        </div>
+        <FromBookPage onPractice={() => startMission({ mode: "speaking", source: "book", autoStart: true })} />
       )}
 
       {page === "lists" && (
-        <>
-          <div className="bridge-actions">
-            {(["inbox", "favorite", "learned"] as Bin[]).map((b) => (
-              <button key={b} type="button" className={`hud-btn ${bin === b ? "amber" : ""}`} onClick={() => setBin(b)}>
-                {t(`bin_${b}`)}
-              </button>
-            ))}
-          </div>
-          <ul className="mission-list">
-            {words.map((x) => (
-              <li key={x.id}>
-                <strong>{x.word}</strong> <span className="muted">{x.translation}</span>
-              </li>
-            ))}
-          </ul>
-        </>
+        <ListsPage
+          onOpenScanner={(w) => openScanner(w, "lists")}
+          onMissionFromList={(listId) => startMission({ mode: "random", source: "list", listId, autoStart: true })}
+          onReviewFromList={() => startReview()}
+        />
       )}
 
       {page === "log" && (
-        <ul className="mission-list">
-          {log.map((r) => (
-            <li key={r.id}>
-              {r.word} · grade {r.grade} <span className="muted">{r.at}</span>
-            </li>
-          ))}
-          {!log.length && <li className="muted">{t("en_log_empty")}</li>}
-        </ul>
+        <LogPage
+          onReviewMistakes={startReview}
+          onMissionMistakes={() => startMission({ mode: "random", source: "mistakes", autoStart: true })}
+          onOpenWord={(w) => openScanner(w, "log")}
+        />
       )}
 
-      {page === "settings" && (
-        <label className="muted">
-          <input
-            type="checkbox"
-            checked={autoSpeak}
-            onChange={(e) => {
-              setAutoSpeak(e.target.checked);
-              localStorage.setItem("st_en_auto_speak", e.target.checked ? "1" : "0");
-            }}
-          />{" "}
-          {t("en_auto_speak")}
-        </label>
-      )}
+      {page === "settings" && <SettingsPage onChange={setSettings} />}
     </div>
   );
 }

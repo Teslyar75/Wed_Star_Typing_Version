@@ -346,11 +346,35 @@ body {
 }
 
 .bridge-cockpit .viewport.sight-line {
-  min-height: clamp(2.2rem, 5.5vh, 4.2rem) !important;
-  max-height: 18vh;
+  /* место в канале есть — крупный шрифт + прицел как на desktop */
+  min-height: clamp(3.4rem, 8.5vh, 5.8rem) !important;
+  max-height: 22vh;
   margin: 0.2rem 0 !important;
-  padding: clamp(0.3rem, 0.9vh, 0.85rem) !important;
-  font-size: clamp(0.9rem, 1.6vh + 0.35rem, 1.55rem) !important;
+  padding: clamp(0.45rem, 1.2vh, 1rem) !important;
+  font-size: clamp(1.45rem, 2.6vh + 0.45rem, 2.35rem) !important;
+}
+
+.bridge-cockpit .cursor.sight-crosshair {
+  min-width: 0.85em !important;
+  padding: 0.08em 0.28em !important;
+  line-height: 1.15 !important;
+  box-shadow:
+    0 0 0 2px var(--st-accent),
+    0 0 0 5px color-mix(in srgb, var(--st-accent) 40%, var(--st-bg)) !important;
+}
+
+.bridge-cockpit .cursor.sight-crosshair::before {
+  top: -10px !important;
+  border-left-width: 6px !important;
+  border-right-width: 6px !important;
+  border-bottom-width: 8px !important;
+}
+
+.bridge-cockpit .cursor.sight-crosshair::after {
+  bottom: -10px !important;
+  border-left-width: 6px !important;
+  border-right-width: 6px !important;
+  border-top-width: 8px !important;
 }
 
 .bridge-cockpit .uplink {
@@ -413,20 +437,27 @@ body {
 .bridge-cockpit .inst-keys .key {
   min-height: 0 !important;
   height: 100% !important;
-  font-size: clamp(0.55rem, 1.4vh, 1rem) !important;
-  padding: clamp(0.04rem, 0.25vh, 0.2rem) 0.08rem !important;
+  /* основная буква крупнее (~40% высоты клавиши); раньше viewportFit сжимал до ~1rem */
+  font-size: clamp(1.15rem, 2.8vh, 2.2rem) !important;
+  padding: clamp(0.06rem, 0.35vh, 0.22rem) 0.1rem !important;
 }
 
 .bridge-cockpit .keyboard.lang-en .key-en,
 .bridge-cockpit .keyboard.lang-ru .key-ru {
-  font-size: clamp(0.65rem, 1.7vh, 1.4rem) !important;
+  font-size: clamp(1.2rem, 3vh, 2.35rem) !important;
+  font-weight: 800 !important;
 }
 
 .bridge-cockpit .keyboard.lang-en .key-ru,
 .bridge-cockpit .keyboard.lang-ru .key-en {
-  font-size: clamp(0.45rem, 1vh, 0.72rem) !important;
-  bottom: 2px !important;
-  right: 3px !important;
+  font-size: clamp(0.72rem, 1.55vh, 1.2rem) !important;
+  bottom: 3px !important;
+  right: 4px !important;
+}
+
+.bridge-cockpit .keyboard .key.mod .key-en,
+.bridge-cockpit .keyboard .key.mod .key-ru {
+  font-size: clamp(0.7rem, 1.5vh, 1.05rem) !important;
 }
 
 .bridge-cockpit .inst-actions,
@@ -466,9 +497,9 @@ body {
 
 .gut-modal {
   width: min(72rem, 96vw) !important;
-  /* ÐÐ¾ÑÑÐ¸ Ð½Ð° Ð²ÐµÑÑ ÑÐºÑÐ°Ð½: 5â6 ÑÑÑÐ¾Ðº Ñ Ð¾Ð±Ð»Ð¾Ð¶ÐºÐ¾Ð¹ ÑÐµÐ»Ð¸ÐºÐ¾Ð¼ */
-  height: min(calc(100dvh - 0.7rem), 64rem) !important;
-  max-height: calc(100dvh - 0.7rem) !important;
+  /* вписываем в экран: футер/«Ещё» не обрезаются; Скачать — в шапке справа */
+  height: min(calc(100dvh - 1.2rem), 56rem) !important;
+  max-height: calc(100dvh - 1.2rem) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
@@ -480,11 +511,19 @@ body {
   display: flex !important;
   align-items: center;
   gap: 0.65rem;
-  flex: 0 0 auto;
+  flex: 0 0 auto !important;
 }
 
 .gut-head-text {
+  flex: 1 1 auto !important;
   min-width: 0;
+}
+
+.gut-dl-top {
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+  white-space: nowrap !important;
+  z-index: 2;
 }
 
 .gut-title {
@@ -662,7 +701,7 @@ body {
   }
 }
 
-/* Библиотека: две колонки вписываются без скролла каюты */
+/* Библиотека: две колонки вписываются без скролла каюты; полка ≥460px — читаемые кнопки */
 .sr-body .lib-page,
 .speed-panel .lib-page,
 .library.lib-page,
@@ -670,6 +709,15 @@ body {
   min-height: 0 !important;
   max-height: 100% !important;
   overflow: hidden !important;
+  grid-template-columns: 460px minmax(0, 1fr) !important;
+}
+@media (max-width: 900px) {
+  .sr-body .lib-page,
+  .speed-panel .lib-page,
+  .library.lib-page,
+  .lib-page {
+    grid-template-columns: 1fr !important;
+  }
 }
 .lib-shelf,
 .lib-passport {

@@ -79,6 +79,14 @@ class BilinguisImportIn(BaseModel):
     title: str = ""
 
 
+class GutenbergBiImportIn(BaseModel):
+    gutenberg_id: int
+    gutenberg_id_tr: int
+    title: str = ""
+    lang_a: str = "en"
+    lang_b: str = "de"
+
+
 def _get_json(url: str) -> dict:
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
     try:
@@ -313,6 +321,115 @@ def import_gutenberg(
             db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
             db.commit()
     return {"text_id": doc.id, "title": doc.title, "chars": len(text)}
+
+
+@router.get("/gutenberg/bilingual")
+def gutenberg_bilingual_list(
+    lang_a: str = "en",
+    lang_b: str = "de",
+    page: int = 1,
+    mode: str = Query("browse", pattern="^(browse|search|cefr)$"),
+    title: str = "",
+    author: str = "",
+    level: str | None = None,
+) -> dict:
+    """Пары Gutenberg PD (DE/FR/ES/IT). RU/UK — bilinguis/list."""
+    from app import gutenberg_bilingual as gbi
+
+    la = (lang_a or "en").strip().lower()
+    lb = (lang_b or "de").strip().lower()
+    if la == lb:
+        return {
+            "count": 0,
+            "next": False,
+            "results": [],
+            "query": f"{la}→{lb}",
+            "bilingual": True,
+            "source": "gutenberg",
+        }
+    try:
+        if mode == "cefr":
+            lv = (level or "A1").strip().upper()
+            return gbi.list_bilingual_by_cefr(lv, lang_a=la, lang_b=lb, page=page)
+        if mode == "search":
+            return gbi.search_bilingual(
+                title=title, author=author, lang_a=la, lang_b=lb, page=page
+            )
+        return gbi.list_bilingual_free(lang_a=la, lang_b=lb, page=page)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(503, f"bilingual catalog unavailable: {exc}") from exc
+
+
+@router.post("/gutenberg/bilingual/import")
+def gutenberg_bilingual_import(
+    body: GutenbergBiImportIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Скачать оригинал + перевод Gutenberg → import_bilingual."""
+    from app import gutenberg_bilingual as gbi
+
+    book = gbi.fetch_book(body.gutenberg_id)
+    tr = gbi.fetch_book(body.gutenberg_id_tr)
+    if not book or not tr:
+        raise HTTPException(404, "book or translation not found")
+    lb = (body.lang_b or "").strip().lower() or gbi.primary_lang(tr, "de")
+    if not gbi.is_language_pair(book, tr, lb):
+        raise HTTPException(400, "not a valid language pair")
+    if not book.get("text_url") or not tr.get("text_url"):
+        raise HTTPException(404, "text_url missing")
+
+    def _decode(raw: bytes) -> str:
+        text = None
+        for enc in ("utf-8-sig", "utf-8", "latin-1", "cp1252"):
+            try:
+                text = raw.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        if text is None:
+            text = raw.decode("utf-8", "replace")
+        return _strip_boilerplate(text.replace("\r\n", "\n").replace("\r", "\n")) + "\n"
+
+    try:
+        text_a = _decode(_get_bytes(book["text_url"]))
+        text_b = _decode(_get_bytes(tr["text_url"]))
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(400, f"download failed: {exc}") from exc
+    if len(text_a) < 200 or len(text_b) < 200:
+        raise HTTPException(400, "downloaded text too short")
+    if len(text_a) > 400_000:
+        text_a = text_a[:400_000]
+    if len(text_b) > 400_000:
+        text_b = text_b[:400_000]
+    la = gbi.primary_lang(book, body.lang_a or "en")
+    title = body.title or book.get("title") or f"Gutenberg {body.gutenberg_id}"
+    doc = import_bilingual(
+        db,
+        title=title,
+        lang_src=la,
+        lang_tgt=lb,
+        original=text_a,
+        translation=text_b,
+    )
+    if pilot is not None:
+        from app.api_library import PilotText
+
+        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
+            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
+            db.commit()
+    return {
+        "text_id": doc.id,
+        "title": doc.title,
+        "chars": len(text_a),
+        "source": "gutenberg_bilingual",
+        "gutenberg_id": body.gutenberg_id,
+        "gutenberg_id_tr": body.gutenberg_id_tr,
+    }
 
 
 @router.get("/bilinguis/list")

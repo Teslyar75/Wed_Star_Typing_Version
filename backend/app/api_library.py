@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,6 +14,8 @@ from app.auth_deps import get_current_pilot, get_optional_pilot
 from app.db import Base, get_db
 from app.models import Segment, TextDoc
 from app.pilots import Pilot
+from app.text_processing import DEFAULT_PREP_OPTS, norm_opts
+from app.texts_service import ensure_prepared
 
 router = APIRouter(prefix="/api/library", tags=["library"])
 
@@ -40,6 +43,8 @@ class LibraryItem(BaseModel):
     progress_pct: float = 0.0
     chars: int = 0
     words: int = 0
+    prepared_chars: int = 0
+    prep_lower: bool = True
     bilingual: bool = False
     print_allowed: bool = True
     author: str = ""
@@ -60,7 +65,32 @@ def _stats(db: Session, text_id: int) -> tuple[int, int, int]:
     return len(body), words, len(segs)
 
 
-def _item(doc: TextDoc, *, sentence_id: int, mode: str, chars: int, words: int, segments: int) -> LibraryItem:
+def _prep_meta(db: Session, doc: TextDoc, *, bilingual: bool) -> tuple[int, bool]:
+    """prepared_chars, prep_lower — для паспорта (чтение ≠ печать)."""
+    if bilingual:
+        return 0, True
+    if not (doc.prepared or "").strip():
+        ensure_prepared(db, doc)
+    opts = dict(DEFAULT_PREP_OPTS)
+    if (doc.prep_opts or "").strip():
+        try:
+            opts = norm_opts(json.loads(doc.prep_opts))
+        except json.JSONDecodeError:
+            pass
+    prepared = (doc.prepared or "").strip()
+    return len(prepared), bool(opts.get("lower", True))
+
+
+def _item(
+    db: Session,
+    doc: TextDoc,
+    *,
+    sentence_id: int,
+    mode: str,
+    chars: int,
+    words: int,
+    segments: int,
+) -> LibraryItem:
     bilingual = (doc.source or "").startswith("bilingu") or "-" in (doc.lang or "")
     author = ""
     title = doc.title or f"#{doc.id}"
@@ -69,6 +99,7 @@ def _item(doc: TextDoc, *, sentence_id: int, mode: str, chars: int, words: int, 
         parts = title.split(" · ", 1)
         if len(parts) == 2 and len(parts[1]) < 80:
             title, author = parts[0], parts[1]
+    prep_chars, prep_lower = _prep_meta(db, doc, bilingual=bilingual)
     return LibraryItem(
         text_id=doc.id,
         title=title,
@@ -81,6 +112,8 @@ def _item(doc: TextDoc, *, sentence_id: int, mode: str, chars: int, words: int, 
         progress_pct=_pct(sentence_id, segments),
         chars=chars,
         words=words,
+        prepared_chars=prep_chars,
+        prep_lower=prep_lower,
         bilingual=bilingual,
         print_allowed=not bilingual,
     )

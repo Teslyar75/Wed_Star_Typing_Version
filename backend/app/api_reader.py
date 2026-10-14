@@ -82,7 +82,7 @@ def bilingual_view(text_id: int, offset: int = 0, limit: int = 100, db: Session 
         .filter(Segment.text_id == text_id)
         .order_by(Segment.idx)
         .offset(max(0, offset))
-        .limit(max(1, min(limit, 300)))
+                        .limit(max(1, min(limit, 800)))
         .all()
     )
     return [

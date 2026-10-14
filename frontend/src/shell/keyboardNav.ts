@@ -21,10 +21,14 @@ export function isTextEditTarget(el: EventTarget | null): boolean {
   return ["text", "search", "password", "email", "url", "tel", "number"].includes(type);
 }
 
-/** Гипердрайв / игры / набор — стрелки оставляем им. */
+/** Гипердрайв / книга / игры / набор — стрелки оставляем им (не прыжок по toolbar). */
 export function isCaptureOwner(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
-  if (el.closest(".hyperdrive, .lounge-game, .snake-wrap, .tetris-wrap, .breakout-wrap, [data-nav-lock]")) {
+  if (
+    el.closest(
+      ".hyperdrive, .sr-book-reader, .lounge-game, .snake-wrap, .tetris-wrap, .breakout-wrap, [data-nav-lock]",
+    )
+  ) {
     return true;
   }
   if (el.classList.contains("ghost-input")) return true;

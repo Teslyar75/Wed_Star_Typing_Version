@@ -1,6 +1,7 @@
 /** Свободные книги · порт stamina/book_shelf.BookCatalogPanel (+ bilingual / адаптив). */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
+import BilingualManualModal from "./BilingualManualModal";
 
 const LANGS_GUT = ["", "en", "de", "fr", "es", "it", "ru"] as const;
 const LANGS_ORIG = ["en", "de", "fr", "es", "it", "ru"] as const;
@@ -22,6 +23,9 @@ export type CatalogHit = {
   lang_a?: string;
   lang_b?: string;
   source?: string;
+  tr_id?: number;
+  translation?: { id: number; title?: string; authors?: string; languages?: string[] };
+  bilingual?: boolean;
 };
 
 type Mode = "browse" | "search" | "cefr";
@@ -61,6 +65,7 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [manualOpen, setManualOpen] = useState(false);
   const fetchSeq = useRef(0);
   const modeRef = useRef<Mode>("browse");
   const cefrRef = useRef<string | null>(null);
@@ -245,6 +250,82 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
     [authorQ, beginFetch, lang, titleQ],
   );
 
+  /** Gutenberg PD-пары (DE/FR/ES/IT) — не mono-лента */
+  const loadGutPairs = useCallback(
+    async (opts: { mode: Mode; page: number; append?: boolean; cefr?: string | null; lang?: string }) => {
+      const seq = beginFetch(!opts.append);
+      const la = (opts.lang !== undefined ? opts.lang : lang) || "en";
+      const lb = langB || "de";
+      try {
+        let mode = opts.mode;
+        const params = new URLSearchParams({
+          lang_a: la,
+          lang_b: lb,
+          page: String(opts.page),
+          mode,
+        });
+        if (mode === "cefr") {
+          params.set("level", (opts.cefr || cefrRef.current || "A1").toUpperCase());
+        } else if (mode === "search") {
+          const title = titleQ.trim();
+          const author = authorQ.trim();
+          if (!title && !author) {
+            mode = "browse";
+            params.set("mode", "browse");
+          } else {
+            if (title) params.set("title", title);
+            if (author) params.set("author", author);
+          }
+        }
+        const r = await fetch(`/api/catalog/gutenberg/bilingual?${params}`, {
+          credentials: "include",
+        });
+        if (isStale(seq)) return;
+        if (!r.ok) {
+          setMsg((await r.text()) || `HTTP ${r.status}`);
+          setBusy(false);
+          return;
+        }
+        const j = (await r.json()) as {
+          results?: CatalogHit[];
+          count?: number;
+          next?: boolean;
+        };
+        const next = (Array.isArray(j.results) ? j.results : []).map((b) => ({
+          ...b,
+          authors: b.authors || "",
+          languages: b.languages || [b.lang_a || la, b.lang_b || lb].filter(Boolean) as string[],
+          lang_a: b.lang_a || la,
+          lang_b: b.lang_b || lb,
+          tr_id: b.tr_id ?? b.translation?.id,
+          source: "gutenberg",
+          bilingual: true,
+        }));
+        applyHits(seq, next, {
+          mode,
+          page: opts.page,
+          append: opts.append,
+          count: Number(j.count) || next.length,
+          more: Boolean(j.next),
+          cefrLv: mode === "cefr" ? opts.cefr || cefrRef.current : null,
+        });
+        if (!next.length && !opts.append) {
+          setMsg(
+            t("gut_empty_gut_pair").replace("{0}", la.toUpperCase()).replace("{1}", lb.toUpperCase()),
+          );
+        } else if (opts.mode === "browse" && !opts.append) {
+          setMsg(t("gut_bi_gut_hint"));
+        }
+      } catch (e) {
+        if (!isStale(seq)) {
+          setMsg(e instanceof Error ? e.message : String(e));
+          setBusy(false);
+        }
+      }
+    },
+    [authorQ, beginFetch, lang, langB, titleQ],
+  );
+
   const load = useCallback(
     async (opts: { mode: Mode; page: number; append?: boolean; cefr?: string | null; lang?: string }) => {
       if (bilingual && pairBilinguis && (opts.mode === "browse" || opts.mode === "search")) {
@@ -256,12 +337,13 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
         setMsg(t("gut_cefr_bilinguis_hint"));
         return;
       }
-      await loadGut(opts);
-      if (bilingual && !pairBilinguis && opts.mode === "browse") {
-        setMsg(t("gut_bi_gut_hint"));
+      if (bilingual && !pairBilinguis) {
+        await loadGutPairs(opts);
+        return;
       }
+      await loadGut(opts);
     },
-    [bilingual, loadBilinguis, loadGut, pairBilinguis],
+    [bilingual, loadBilinguis, loadGut, loadGutPairs, pairBilinguis],
   );
 
   /** Открытие модалки */
@@ -352,6 +434,34 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
         onImported?.(j);
         return;
       }
+      const trId = book.tr_id ?? book.translation?.id;
+      if (bilingual && trId != null && typeof book.id === "number") {
+        const r = await fetch("/api/catalog/gutenberg/bilingual/import", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gutenberg_id: book.id,
+            gutenberg_id_tr: trId,
+            title: book.title,
+            lang_a: book.lang_a || lang || "en",
+            lang_b: book.lang_b || langB || "de",
+          }),
+        });
+        if (isStale(seq)) return;
+        if (!r.ok) {
+          setMsg(await r.text());
+          return;
+        }
+        const j = (await r.json()) as { text_id: number; title: string };
+        setMsg(`${t("library_ok")}: ${j.title}`);
+        onImported?.(j);
+        return;
+      }
+      if (bilingual && !trId) {
+        setMsg(t("gut_no_pair"));
+        return;
+      }
       const r = await fetch("/api/catalog/gutenberg/import", {
         method: "POST",
         credentials: "include",
@@ -389,7 +499,9 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
   if (!open) return null;
   const selected = hits.find((h) => sameId(h.id, sel)) ?? null;
   const withCover = hits.filter((h) => h.has_cover || h.cover_url).length;
-  const withTr = bilingual ? hits.length : 0;
+  const withTr = bilingual
+    ? hits.filter((h) => h.tr_id != null || h.translation?.id != null || h.source === "bilinguis").length
+    : 0;
   const listPages = Math.max(1, Math.ceil(hits.length / LIST_PAGE) || 1);
   const listSafe = Math.min(listPage, listPages - 1);
   const visible = hits.slice(listSafe * LIST_PAGE, listSafe * LIST_PAGE + LIST_PAGE);
@@ -407,6 +519,18 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
             <h2 className="route-title gut-title">{t(titleKey)}</h2>
             <p className="muted gut-sub">{bilingual ? t("gut_sub_2lang") : t("gut_sub")}</p>
           </div>
+          {/* сверху справа — иначе футер уезжает за низ экрана (free / search / 2ЯЗ) */}
+          <button
+            type="button"
+            className={`hud-btn ok gut-dl-top ${downloading ? "amber" : ""}`}
+            disabled={busy || downloading || !selected}
+            title={selected ? selected.title : undefined}
+            onClick={() => void download()}
+          >
+            {downloading
+              ? `… ${t("gut_downloading")}`
+              : `⇩ ${bilingual ? t("gut_download_2lang") : t("gut_download")}`}
+          </button>
         </header>
 
         <p className="muted gut-hint">{bilingual ? t("gut_hint_2lang") : t("gut_hint")}</p>
@@ -523,20 +647,28 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
         ) : null}
 
         <p className="muted gut-status">
-          {(bilingual ? t("gut_status_2lang") : t("gut_status_tab"))
-            .replace("{0}", String(catalogCount))
-            .replace("{1}", String(visible.length))
-            .replace("{2}", String(hits.length))
-            .replace("{3}", String(withCover))
-            .replace("{4}", String(withTr))}
+          {bilingual
+            ? t("gut_status_2lang")
+                .replace("{0}", String(hits.length))
+                .replace("{1}", String(visible.length))
+                .replace("{2}", String(listPages))
+                .replace("{3}", String(withCover))
+            : t("gut_status_tab")
+                .replace("{0}", String(catalogCount))
+                .replace("{1}", String(visible.length))
+                .replace("{2}", String(hits.length))
+                .replace("{3}", String(withCover))}
+          {bilingual && withTr ? ` · 2ЯЗ: ${withTr}` : ""}
           {mode === "cefr" && cefr ? ` · CEFR ${cefr}` : ""}
           {lang ? ` · ${(lang || "").toUpperCase()}` : ` · ${t("gut_lang_all")}`}
+          {bilingual && langB ? `→${langB.toUpperCase()}` : ""}
         </p>
 
         {msg ? <p className="mission-map-hint gut-msg">{msg}</p> : null}
 
         {listPages > 1 ? (
           <div className="gut-list-pages" role="tablist" aria-label={t(titleKey)}>
+            <span className="muted gut-cefr-note">{t("gut_tabs")}</span>
             {Array.from({ length: listPages }, (_, i) => (
               <button
                 key={i}
@@ -573,7 +705,9 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
                     {b.cover_url ? (
                       <img src={b.cover_url} alt="" loading="lazy" />
                     ) : (
-                      <span className="gut-cover-ph">{b.source === "bilinguis" ? "2ЯЗ" : "★"}</span>
+                      <span className="gut-cover-ph">
+                        {b.source === "bilinguis" || b.bilingual || b.tr_id ? "2ЯЗ" : "★"}
+                      </span>
                     )}
                   </span>
                   <span className="gut-row-info">
@@ -606,21 +740,36 @@ export default function GutenbergModal({ open, onClose, onImported, bilingual = 
           >
             {t("gut_more")}
           </button>
-          <button
-            type="button"
-            className={`hud-btn ok ${downloading ? "amber" : ""}`}
-            disabled={busy || downloading || !selected}
-            onClick={() => void download()}
-          >
-            {downloading
-              ? `… ${t("gut_downloading")}`
-              : `⇩ ${bilingual ? t("gut_download_2lang") : t("gut_download")}`}
-          </button>
+          {bilingual ? (
+            <button
+              type="button"
+              className="hud-btn ok"
+              disabled={busy || downloading}
+              onClick={() => setManualOpen(true)}
+            >
+              {t("bi_manual_btn")}
+            </button>
+          ) : null}
           <button type="button" className="hud-btn gut-foot-prep" onClick={onClose}>
             ← {bilingual ? t("gut_nav_back") : t("gut_to_prep")}
           </button>
         </footer>
       </div>
+
+      {bilingual ? (
+        <BilingualManualModal
+          open={manualOpen}
+          defaultLangA={lang || "en"}
+          defaultLangB={langB || "ru"}
+          onClose={() => setManualOpen(false)}
+          onImported={(info) => {
+            setManualOpen(false);
+            setMsg(`${t("library_ok")}: ${info.title}`);
+            onImported?.(info);
+            onClose();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

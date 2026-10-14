@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
@@ -46,24 +46,47 @@ def init_db() -> None:
     from app import api_lounge as _lounge  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
-    _sqlite_ensure_columns()
+    _ensure_columns()
 
 
-def _sqlite_ensure_columns() -> None:
-    """Лёгкие ALTER для уже существующих SQLite-файлов (create_all не добавляет колонки)."""
-    if not _engine_url().startswith("sqlite"):
-        return
-    from sqlalchemy import text
-
+def _ensure_columns() -> None:
+    """ALTER для уже существующих БД (create_all не добавляет колонки). SQLite + Postgres."""
     alters = [
         ("card_progress", "bin", "VARCHAR(32) DEFAULT 'inbox'"),
         ("card_progress", "english_xp", "INTEGER DEFAULT 0"),
         ("pilots", "avatar_data", "TEXT DEFAULT ''"),
-        ("pilots", "is_guest", "BOOLEAN DEFAULT 0"),
+        ("pilots", "is_guest", "BOOLEAN DEFAULT FALSE" if not _engine_url().startswith("sqlite") else "BOOLEAN DEFAULT 0"),
+        ("texts", "prepared", "TEXT DEFAULT ''"),
+        ("texts", "prep_opts", "VARCHAR(256) DEFAULT ''"),
+        ("vocab_words", "slug", "VARCHAR(80) DEFAULT ''"),
+        ("vocab_words", "rank", "INTEGER DEFAULT 0"),
+        ("vocab_words", "meta", "TEXT DEFAULT ''"),
+        ("card_progress", "known", "INTEGER DEFAULT 0"),
+        ("card_progress", "my_tr", "VARCHAR(256) DEFAULT ''"),
+        ("card_progress", "wh_state", "VARCHAR(16) DEFAULT ''"),
+        ("card_progress", "wh_runs", "INTEGER DEFAULT 0"),
+        ("card_progress", "wh_goal", "INTEGER DEFAULT 2"),
+        ("card_progress", "wh_stars", "INTEGER DEFAULT 0"),
+        ("card_progress", "wh_avg", "DOUBLE PRECISION DEFAULT 0" if not _engine_url().startswith("sqlite") else "FLOAT DEFAULT 0"),
     ]
+    url = _engine_url()
     with engine.begin() as conn:
+        if url.startswith("sqlite"):
+            for table, col, typedef in alters:
+                rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
+                names = {r[1] for r in rows}
+                if col not in names:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}"))
+            return
+
+        # Postgres
         for table, col, typedef in alters:
-            rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
-            names = {r[1] for r in rows}
-            if col not in names:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}"))
+            exists = conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name = :t AND column_name = :c"
+                ),
+                {"t": table, "c": col},
+            ).fetchone()
+            if not exists:
+                conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{col}" {typedef}'))

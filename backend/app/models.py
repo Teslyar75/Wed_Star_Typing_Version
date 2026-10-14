@@ -18,6 +18,10 @@ class TextDoc(Base):
     lang: Mapped[str] = mapped_column(String(16), default="und")
     source: Mapped[str] = mapped_column(String(64), default="upload")  # upload | pdf | bilingual
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Версия для набора (lower/punct/spaces). Чтение (гипердрайв/книга) — только paragraphs.
+    prepared: Mapped[str] = mapped_column(Text, default="")
+    # JSON: {"lower":true,"punct":true,"spaces":true,...}
+    prep_opts: Mapped[str] = mapped_column(String(256), default="")
 
     paragraphs: Mapped[list[Paragraph]] = relationship(
         back_populates="text", cascade="all, delete-orphan", order_by="Paragraph.idx"

@@ -164,10 +164,11 @@ export default function SpeedOverview({
             </>
           )}
           <div className="sr-launch-acts">
+            {/* desktop OverviewPage: btn_go только при книге; «КНИГА» всегда → open_current_book / библиотека */}
             <button type="button" className="hud-btn amber" disabled={!book.hasBook} onClick={onHyperdrive}>
               ▶ {t("hyperdrive")}
             </button>
-            <button type="button" className="hud-btn ok" disabled={!book.hasBook} onClick={onBook}>
+            <button type="button" className="hud-btn ok" onClick={onBook}>
               📖 {t("sr_book")}
             </button>
             <button type="button" className="hud-btn" onClick={onLibrary}>
