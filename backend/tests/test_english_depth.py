@@ -57,6 +57,63 @@ def test_sets_lookup_mission_lists() -> None:
     assert settings.json()["mission_len"] == 5
 
 
+def test_set_page_limit_in_sql() -> None:
+    """Страница набора режется в SQL: ответ короче полного фильтра, порядок по rank."""
+    import json
+
+    from sqlalchemy import event
+
+    from app.api_english import VocabWord
+    from app.db import SessionLocal, engine
+
+    prefix = f"zzp{uuid.uuid4().hex[:6]}"
+    db = SessionLocal()
+    try:
+        for i in range(12):
+            db.add(
+                VocabWord(
+                    word=f"{prefix}{i:02d}w",
+                    translation="t",
+                    slug=f"{prefix}-{i}",
+                    rank=i + 1,
+                    meta=json.dumps({"pos": "noun", "difficulty": "easy"}),
+                )
+            )
+        db.commit()
+    finally:
+        db.close()
+
+    seen: list[str] = []
+
+    def catch(_conn, _cursor, statement, _params, _context, _executemany) -> None:
+        if "vocab_words" in statement.lower():
+            seen.append(statement)
+
+    event.listen(engine, "before_cursor_execute", catch)
+    try:
+        res = client.get(
+            f"/api/english/set/top-1000?q={prefix}&limit=2&offset=0&sort=freq&length=all&status=all"
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", catch)
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total"] == 12
+    assert [item["word"] for item in body["items"]] == [f"{prefix}00w", f"{prefix}01w"]
+    assert any("LIMIT" in statement.upper() for statement in seen)
+
+    page2 = client.get(
+        f"/api/english/set/top-1000?q={prefix}&limit=2&offset=2&sort=freq"
+    )
+    assert [item["word"] for item in page2.json()["items"]] == [f"{prefix}02w", f"{prefix}03w"]
+
+    short = client.get(
+        f"/api/english/set/top-1000?q={prefix}&limit=20&sort=alpha&length=short"
+    )
+    assert short.json()["total"] == 0
+
+
 def test_warehouse_run_flow() -> None:
     cs = f"W-{uuid.uuid4().hex[:8]}"
     reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "1234"})

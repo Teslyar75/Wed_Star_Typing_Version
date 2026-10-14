@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
-from sqlalchemy import Date, DateTime, Float, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, Float, Integer, String, Text, UniqueConstraint, and_, case, func, or_
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from app.auth_deps import get_optional_pilot
@@ -934,6 +934,86 @@ def get_word(
     return serialize_word(w, card)
 
 
+_POS_MAIN = ("noun", "verb", "adjective", "adverb", "pronoun", "preposition", "conjunction")
+
+
+def _meta_text(key: str):
+    """Поле из JSON `vocab_words.meta`. Пустая строка не ломает cast."""
+    from app.db import engine
+
+    raw = func.nullif(VocabWord.meta, "")
+    if engine.dialect.name == "postgresql":
+        from sqlalchemy import cast
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        return cast(raw, JSONB).op("->>")(key)
+    return func.json_extract(raw, f"$.{key}")
+
+
+def _set_word_query(db: Session, set_id: str, q: str, pos: str, difficulty: str, status: str, length: str, pid: int):
+    """Фильтры набора в SQL. Случайная сортировка применяется к id отдельно."""
+    from app.english_vocab import SET_LIMIT, THEMATIC_SETS
+
+    query = db.query(VocabWord)
+    if set_id in THEMATIC_SETS:
+        query = query.filter(VocabWord.slug.like("dev:%"))
+    else:
+        lim = SET_LIMIT.get(set_id, 3000)
+        query = query.filter(VocabWord.rank > 0, VocabWord.rank <= lim)
+    if q.strip():
+        query = query.filter(VocabWord.word.ilike(f"%{q.strip().lower()}%"))
+
+    n = func.length(VocabWord.word)
+    if length == "short":
+        query = query.filter(n <= 4)
+    elif length == "mid":
+        query = query.filter(and_(n >= 5, n <= 7))
+    elif length == "long":
+        query = query.filter(n >= 8)
+
+    pos_expr = func.lower(_meta_text("pos"))
+    if pos and pos != "all":
+        if pos == "other":
+            query = query.filter(or_(pos_expr.is_(None), pos_expr == "", pos_expr.notin_(_POS_MAIN)))
+        else:
+            query = query.filter(pos_expr == pos)
+
+    diff_expr = func.lower(_meta_text("difficulty"))
+    if difficulty and difficulty != "all":
+        query = query.filter(diff_expr == difficulty)
+
+    card_on = and_(CardProgress.word_id == VocabWord.id, CardProgress.pilot_id == pid)
+    if status == "known":
+        query = query.join(CardProgress, card_on).filter(CardProgress.known == 1)
+    elif status == "unknown":
+        query = query.outerjoin(CardProgress, card_on).filter(or_(CardProgress.id.is_(None), CardProgress.known == 0))
+    elif status == "review":
+        query = query.join(CardProgress, card_on).filter(CardProgress.known == 0)
+    return query
+
+
+def _ordered_set_page(query, sort: str, seed: int, offset: int, limit: int, db: Session) -> tuple[int, list[VocabWord]]:
+    if sort == "random":
+        ids = [row[0] for row in query.with_entities(VocabWord.id).all()]
+        random.Random(max(1, int(seed) or 1)).shuffle(ids)
+        page_ids = ids[offset : offset + limit]
+        if not page_ids:
+            return len(ids), []
+        by_id = {w.id: w for w in db.query(VocabWord).filter(VocabWord.id.in_(page_ids)).all()}
+        return len(ids), [by_id[i] for i in page_ids if i in by_id]
+
+    total = query.count()
+    diff_expr = func.lower(_meta_text("difficulty"))
+    diff_rank = case((diff_expr == "easy", 0), (diff_expr == "tricky", 2), else_=1)
+    if sort == "alpha":
+        query = query.order_by(func.lower(VocabWord.word), VocabWord.id)
+    elif sort == "difficulty":
+        query = query.order_by(diff_rank, VocabWord.rank, VocabWord.id)
+    else:
+        query = query.order_by(VocabWord.rank, VocabWord.id)
+    return total, query.offset(offset).limit(limit).all()
+
+
 @router.get("/set/{set_id}")
 def words_in_set(
     set_id: str,
@@ -949,86 +1029,36 @@ def words_in_set(
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
-    """Фильтры как desktop vocab.filtered — до пагинации."""
-    import random as _rnd
-
-    from app.english_vocab import SET_LIMIT, THEMATIC_SETS
-
+    """Фильтры как desktop vocab.filtered — до пагинации, страница в SQL."""
     if db.query(VocabWord).count() == 0:
         _seed_vocab(db, 2000, 500)
     limit = max(1, min(limit, 120))
     offset = max(0, offset)
-    status = (status or "all").lower()
-    length = (length or "all").lower()
-    sort = (sort or "freq").lower()
-    pos_n = (pos or "").strip().lower()
-    diff_n = (difficulty or "").strip().lower()
-
-    query = db.query(VocabWord)
-    if set_id in THEMATIC_SETS:
-        query = query.filter(VocabWord.slug.like("dev:%"))
-        # если S-DEV ещё не досеян — не отдаём пустоту молча (фронт покажет 0)
-    else:
-        lim = SET_LIMIT.get(set_id, 3000)
-        query = query.filter(VocabWord.rank > 0, VocabWord.rank <= lim)
-    if q.strip():
-        qq = f"%{q.strip().lower()}%"
-        query = query.filter(VocabWord.word.ilike(qq))
-    rows = query.order_by(VocabWord.rank, VocabWord.id).all()
-
+    status_n = (status or "all").lower()
+    length_n = (length or "all").lower()
+    sort_n = (sort or "freq").lower()
     pid = pilot.id if pilot else 0
-    cards = {
-        c.word_id: c
-        for c in db.query(CardProgress).filter(CardProgress.pilot_id == pid).all()
-    } if pid and (status != "all") else {
-        c.word_id: c
-        for c in db.query(CardProgress)
-        .filter(CardProgress.pilot_id == pid, CardProgress.word_id.in_([r.id for r in rows] or [-1]))
-        .all()
-    } if pid else {}
-
-    POS_MAIN = {"noun", "verb", "adjective", "adverb", "pronoun", "preposition", "conjunction"}
-    DIFF_ORDER = {"easy": 0, "medium": 1, "tricky": 2}
-    items: list[WordOut] = []
-    for r in rows:
-        wo = serialize_word(r, cards.get(r.id))
-        n = len(wo.word or "")
-        if length == "short" and n > 4:
-            continue
-        if length == "mid" and not (5 <= n <= 7):
-            continue
-        if length == "long" and n < 8:
-            continue
-        if status == "known" and not wo.known:
-            continue
-        if status == "unknown" and wo.known:
-            continue
-        if status == "review":
-            card = cards.get(r.id)
-            if wo.known or card is None:
-                continue
-        if pos_n and pos_n != "all":
-            p = (wo.pos or "").lower()
-            if pos_n == "other":
-                if p in POS_MAIN:
-                    continue
-            elif p != pos_n:
-                continue
-        if diff_n and diff_n != "all" and (wo.difficulty or "").lower() != diff_n:
-            continue
-        items.append(wo)
-
-    if sort == "random":
-        _rnd.Random(max(1, int(seed) or 1)).shuffle(items)
-    elif sort == "alpha":
-        items.sort(key=lambda w: (w.word or "").lower())
-    elif sort == "difficulty":
-        items.sort(key=lambda w: (DIFF_ORDER.get((w.difficulty or "").lower(), 1), w.rank or 0, w.id))
-    else:
-        items.sort(key=lambda w: (w.rank or 10**9, w.id))
-
-    total = len(items)
-    page = items[offset : offset + limit]
+    query = _set_word_query(
+        db,
+        set_id,
+        q,
+        (pos or "").strip().lower(),
+        (difficulty or "").strip().lower(),
+        status_n,
+        length_n,
+        pid,
+    )
+    total, rows = _ordered_set_page(query, sort_n, seed, offset, limit, db)
+    ids = [r.id for r in rows]
+    cards = {}
+    if pid and ids:
+        cards = {
+            c.word_id: c
+            for c in db.query(CardProgress)
+            .filter(CardProgress.pilot_id == pid, CardProgress.word_id.in_(ids))
+            .all()
+        }
+    page = [serialize_word(r, cards.get(r.id)) for r in rows]
     return {"set_id": set_id, "total": total, "offset": offset, "items": page}
 
 

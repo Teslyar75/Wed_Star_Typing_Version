@@ -7368,12 +7368,12 @@ html {
 .en-starmaps {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.22rem;
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  padding: 0 0.15rem;
+  padding: 0 0.1rem;
 }
 
 /* Strip */
@@ -7384,6 +7384,11 @@ html {
   align-items: center;
   flex: 0 0 auto;
   min-height: 3.1rem;
+}
+.en-starmaps .en-sm-strip {
+  grid-template-columns: 5px minmax(0, 1fr) minmax(11rem, 16rem);
+  gap: 0.4rem;
+  min-height: 0;
 }
 .en-sm-strip-bar {
   width: 5px;
@@ -7399,10 +7404,19 @@ html {
   text-transform: uppercase;
   color: var(--st-text);
 }
+.en-starmaps .en-sm-title {
+  font-size: 0.92rem;
+  line-height: 1.15;
+}
 .en-sm-hint {
   margin: 0.15rem 0 0;
   font-size: 0.72rem;
   color: var(--st-muted);
+}
+.en-starmaps .en-sm-hint {
+  margin: 0.05rem 0 0;
+  font-size: 0.64rem;
+  line-height: 1.2;
 }
 .en-sm-prog { display: flex; flex-direction: column; gap: 0.2rem; }
 .en-sm-prog-lab {
@@ -7429,21 +7443,23 @@ html {
   flex: 0 0 auto;
   border: 1px solid var(--st-line);
   background: color-mix(in srgb, var(--st-panel) 88%, #000);
-  padding: 0.35rem 0.55rem 0.45rem;
+  padding: 0.18rem 0.4rem 0.22rem;
 }
 .en-sm-params-title {
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   letter-spacing: 0.06em;
   color: var(--st-muted);
   text-transform: uppercase;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.08rem;
+  line-height: 1.1;
 }
 .en-sm-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.18rem 0.22rem;
-  margin-top: 0.22rem;
+  gap: 0.1rem 0.14rem;
+  margin-top: 0.12rem;
+  min-width: 0;
 }
 .en-sm-lab {
   font-size: 0.62rem;
@@ -7461,6 +7477,13 @@ html {
   padding: 0.18rem 0.4rem;
   font: inherit;
   font-size: 0.78rem;
+}
+.en-starmaps .en-sm-search {
+  width: 7.2rem;
+  min-width: 0;
+  padding: 0.08rem 0.32rem;
+  font-size: 0.7rem;
+  min-height: 1.35rem;
 }
 .en-sm-found {
   margin-left: auto;
@@ -7482,6 +7505,13 @@ html {
   cursor: pointer;
   line-height: 1.1;
 }
+.en-starmaps .en-sm-chip {
+  padding: 0.06rem 0.28rem;
+  min-height: 1.35rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
 .en-sm-chip:hover { border-color: var(--st-cyan); color: var(--st-cyan); }
 .en-sm-chip.on {
   border-color: var(--st-accent);
@@ -7496,9 +7526,9 @@ html {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   grid-template-rows: repeat(4, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 0.28rem;
   flex: 1 1 auto;
-  min-height: 14rem;
+  min-height: 0;
   overflow: hidden;
   align-content: stretch;
 }
@@ -7523,7 +7553,7 @@ html {
   align-items: center;
   justify-content: center;
   gap: 0.2rem;
-  padding: 0.45rem 0.4rem 0.25rem;
+  padding: 0.28rem 0.28rem 0.1rem;
   background: transparent;
   border: 0;
   color: inherit;
@@ -7548,7 +7578,7 @@ html {
   cursor: pointer;
 }
 .en-sm-word {
-  font-size: clamp(0.95rem, 1.25vw, 1.15rem);
+  font-size: clamp(0.82rem, 1.05vw, 1.02rem);
   font-weight: 700;
   line-height: 1.1;
   word-break: break-word;
@@ -7605,7 +7635,7 @@ html {
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  padding: 0.28rem 0.2rem;
+  padding: 0.12rem 0.16rem;
   cursor: pointer;
   text-transform: none;
 }
@@ -7616,20 +7646,25 @@ html {
 /* Футер */
 .en-sm-foot {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex: 0 0 auto;
-  padding: 0.15rem 0 0.1rem;
+  min-height: 0;
+  padding: 0;
 }
 .en-sm-pager { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; }
 .en-sm-tip {
-  flex: 1 1 12rem;
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   text-align: center;
   color: var(--st-accent);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .en-sm-cta { display: flex; gap: 0.35rem; }
 .en-sm-cta-btn {
@@ -7644,6 +7679,12 @@ html {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
+}
+.en-starmaps .en-sm-cta-btn {
+  padding: 0.16rem 0.5rem;
+  min-height: 1.4rem;
+  font-size: 0.66rem;
+  white-space: nowrap;
 }
 .en-sm-cta-btn.amber {
   color: var(--st-accent);
@@ -8478,6 +8519,8 @@ html {
   .en-sm-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(0, 1fr)); }
   .en-sm-strip { grid-template-columns: 5px minmax(0, 1fr); }
   .en-sm-prog { grid-column: 2; }
+  .en-sm-row { flex-wrap: wrap; }
+  .en-sm-foot { flex-wrap: wrap; }
 }
 @media (max-width: 900px) {
   .en-scanner-grid,
