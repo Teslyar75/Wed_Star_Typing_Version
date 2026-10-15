@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import GuideDialog from "./guide/GuideDialog";
 import { useGuide } from "./guide/guideStore";
+import { zoneName, zoneTrigger } from "./guide/zoneTriggers";
 import BridgeScreen from "./bridge/BridgeScreen";
 import SkinBackground, { bgEngineOf } from "./fx/SkinBackground";
 import IdleSlideshow from "./idle/IdleSlideshow";
@@ -148,6 +149,17 @@ export default function App() {
     g.fire("first_launch", { skin: useSkin.getState().skin.id, onYes: () => setTab("bridge") });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pilotName, crewOpen]);
+  // гид G2: первый вход в зону / подстраницу мостика (после first_launch, по общим лимитам)
+  useEffect(() => {
+    if (!pilotName || crewOpen) return;
+    const tr = zoneTrigger(tab);
+    if (!tr) return;
+    const g = useGuide.getState();
+    if (g.pilot !== pilotName) return;
+    // ждём, пока first_launch не будет показан (он «съедает» мостик и запускает лимит)
+    if (!g.st.seen.includes("first_launch") && g.st.id !== "none") return;
+    g.fire(tr, { skin: useSkin.getState().skin.id, vars: { zone: zoneName(tab) } });
+  }, [tab, pilotName, crewOpen]);
   useEffect(() => {
     bootSkin({ preferBase: true });
     useCabin.getState().hydrate();

@@ -28,6 +28,7 @@ describe("гид: логика", () => {
   });
   it("markShown не трогает лимит для исключений", () => {
     expect(markShown(st, "rank_up", T).last_popup).toBe(0);
+    expect(markShown(st, "first_launch", T)).toMatchObject({ last_popup: T, seen: ["first_launch", "first_zone:bridge"] });
     expect(markShown(st, "tip", T).last_popup).toBe(T);
   });
   it("фолбэк реплик и подстановки", () => {
@@ -74,5 +75,33 @@ describe("ОРИОН: характер", () => {
   it("никаких чужих имён и вселенных в репликах", () => {
     const all = JSON.stringify(shipRu).toLowerCase();
     for (const w of ["jarvis", "джарвис", "marvel", "марвел", "тони", "старк", "stark"]) expect(all).not.toContain(w);
+  });
+});
+
+import { ZONE_TRIGGERS, zoneTrigger } from "./zoneTriggers";
+describe("гид G2: первый вход в зоны", () => {
+  it("каждая зона и подстраница мостика — 2–3 реплики с {zone}, обращение «сэр»", () => {
+    const own = linesOf("ship_ai")!;
+    for (const tr of ZONE_TRIGGERS) {
+      const l = own[tr]?.default || [];
+      expect(l.length, tr).toBeGreaterThanOrEqual(2);
+      expect(l.length, tr).toBeLessThanOrEqual(3);
+      expect(l.join(" "), tr).toContain("{zone}");
+      expect(l.join(" "), tr).toContain("{sir}");
+    }
+    expect(ZONE_TRIGGERS).toHaveLength(10);
+  });
+  it("один раз на зону; лимит 10 минут; мостик уже показан первым запуском", () => {
+    const s = markShown(st, "first_launch", T);
+    expect(canShow("first_zone:bridge", s, { now: T + 20 * 60_000, lastTypeAt: 0 })).toBe("drop");
+    expect(canShow("first_zone:radio", s, { now: T + 60_000, lastTypeAt: 0 })).toBe("drop");
+    const later = { now: T + 11 * 60_000, lastTypeAt: 0 };
+    expect(canShow("first_zone:radio", s, later)).toBe("show");
+    const s2 = markShown(s, "first_zone:radio", later.now);
+    expect(canShow("first_zone:radio", s2, { now: T + 60 * 60_000, lastTypeAt: 0 })).toBe("drop");
+  });
+  it("вкладка → триггер; имя зоны берётся из словаря скина", () => {
+    expect(zoneTrigger("cargo")).toBe("first_zone:cargo");
+    expect(zoneTrigger("nope")).toBeNull();
   });
 });

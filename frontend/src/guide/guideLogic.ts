@@ -27,6 +27,11 @@ export const EXEMPT = new Set(["rank_up", "story", "first_launch"]);
 /** Триггеры «один раз». */
 export const ONCE = new Set(["first_launch"]);
 
+/** first_launch, first_zone:* — один раз (на зону). */
+export function isOnce(trigger: string): boolean {
+  return ONCE.has(trigger) || trigger.startsWith("first_zone:");
+}
+
 export const FREQ_MS: Record<GuideFreq, number> = {
   often: 5 * 60_000,
   normal: 10 * 60_000,
@@ -45,7 +50,7 @@ export type Verdict = "show" | "wait" | "drop";
 export function canShow(trigger: string, st: GuideState, ctx: ShowCtx): Verdict {
   if (st.id === "none") return "drop";
   if (st.muted_triggers.includes(trigger)) return "drop";
-  if (ONCE.has(trigger) && st.seen.includes(trigger)) return "drop";
+  if (isOnce(trigger) && st.seen.includes(trigger)) return "drop";
   if (!EXEMPT.has(trigger)) {
     const gap = FREQ_MS[st.freq];
     if (!Number.isFinite(gap)) return "drop";
@@ -72,11 +77,16 @@ export function fill(line: string, vars: Record<string, string | number | undefi
   return line.replace(/\{(\w+)\}/g, (m, k: string) => (vars[k] !== undefined ? String(vars[k]) : m));
 }
 
+/** Что ещё считать показанным вместе с триггером (первый запуск уже рассказал о мостике). */
+const IMPLIES: Record<string, string[]> = { first_launch: ["first_zone:bridge"] };
+
 export function markShown(st: GuideState, trigger: string, now: number): GuideState {
+  const add = [trigger, ...(IMPLIES[trigger] || [])].filter((x) => !st.seen.includes(x));
   return {
     ...st,
-    last_popup: EXEMPT.has(trigger) ? st.last_popup : now,
-    seen: st.seen.includes(trigger) ? st.seen : [...st.seen, trigger],
+    // первый запуск — тоже окно: следующее (зона) не раньше чем через лимит
+    last_popup: EXEMPT.has(trigger) && trigger !== "first_launch" ? st.last_popup : now,
+    seen: [...st.seen, ...add],
   };
 }
 
