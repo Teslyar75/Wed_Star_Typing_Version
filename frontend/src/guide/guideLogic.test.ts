@@ -51,3 +51,28 @@ describe("гид: логика", () => {
     expect(GUIDES.filter((g) => g.soon).map((g) => g.name)).toEqual(["Мистер Хоббс", "Вера Павловна", "Кадет Тим"]);
   });
 });
+
+import { dialogBottom } from "./placement";
+describe("гид: окно не закрывает «Пауза / Заново»", () => {
+  it("ряд внизу — окно над ним; ряд высоко — окно внизу", () => {
+    expect(dialogBottom(800, 90, [{ top: 700, bottom: 730 }])).toBe(108);
+    expect(dialogBottom(800, 90, [{ top: 660, bottom: 690 }])).toBe(14);
+    expect(dialogBottom(800, 90, [{ top: 400, bottom: 430 }])).toBe(14);
+    expect(dialogBottom(800, 90, [])).toBe(14);
+  });
+});
+
+import { addressOf as addr } from "./guideLogic";
+import shipRu from "../../../packages/guides/lines/ship_ai.ru.json";
+describe("ОРИОН: характер", () => {
+  it("обращение сэр/мэм/пилот", () => {
+    expect(addr()).toBe("сэр");
+    expect(addr("f")).toBe("мэм");
+    expect(addr("m")).toBe("сэр");
+    expect(addr("x")).toBe("пилот");
+  });
+  it("никаких чужих имён и вселенных в репликах", () => {
+    const all = JSON.stringify(shipRu).toLowerCase();
+    for (const w of ["jarvis", "джарвис", "marvel", "марвел", "тони", "старк", "stark"]) expect(all).not.toContain(w);
+  });
+});

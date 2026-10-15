@@ -1,6 +1,6 @@
 /** Гид: состояние на пилота (localStorage st_guide::<позывной>) + очередь окон. */
 import { create } from "zustand";
-import { canShow, DEFAULT_STATE, fill, markShown, muteTrigger, normalize, pickLines, type GuideState } from "./guideLogic";
+import { addressOf, canShow, DEFAULT_STATE, fill, markShown, muteTrigger, normalize, pickLines, type GuideState } from "./guideLogic";
 import { linesOf } from "./guides";
 
 const KEY = (pilot: string) => `st_guide::${pilot || "guest"}`;
@@ -69,7 +69,7 @@ export const useGuide = create<S>((set, get) => {
     setPilot: (pilot) => set({ pilot, st: loadGuideState(pilot), popup: null, queue: [] }),
     patch: (p) => commit({ ...get().st, ...p }),
     fire: (trigger, opts = {}) => {
-      const p: Pending = { trigger, vars: { pilot: get().pilot, ...opts.vars }, skin: opts.skin || "spaceship", onYes: opts.onYes };
+      const p: Pending = { trigger, vars: { pilot: get().pilot, sir: addressOf(), ...opts.vars }, skin: opts.skin || "spaceship", onYes: opts.onYes };
       if (get().queue.some((q) => q.trigger === trigger)) return;
       if (tryShow(p) === "wait") set({ queue: [...get().queue, p] });
     },

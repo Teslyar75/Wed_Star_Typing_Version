@@ -95,3 +95,12 @@ export function normalize(raw: unknown): GuideState {
     last_popup: typeof r.last_popup === "number" ? r.last_popup : 0,
   };
 }
+
+/** Обращение ОРИОНа: «сэр» по умолчанию; если в профиле есть пол — «сэр»/«мэм», иначе нейтральное «пилот». */
+export function addressOf(gender?: string | null): string {
+  if (gender === undefined || gender === null || gender === "") return "сэр";
+  const g = gender.toLowerCase();
+  if (g === "m" || g === "male" || g === "м") return "сэр";
+  if (g === "f" || g === "female" || g === "ж") return "мэм";
+  return "пилот";
+}

@@ -11,6 +11,7 @@ import { cycleGuide, guideById, GUIDES, NO_GUIDE } from "../guide/guides";
 import { loadGuideState, saveGuideState, useGuide } from "../guide/guideStore";
 import { speakGuide } from "../guide/voice";
 import { linesOf } from "../guide/guides";
+import { addressOf, fill } from "../guide/guideLogic";
 import type { SkinTheme } from "../theme/applyTheme";
 import { getLang } from "../i18n";
 import { te } from "./entryI18n";
@@ -326,7 +327,7 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
   const sampleGuide = () => {
     if (guideId === NO_GUIDE) return;
     const line = linesOf(guideId)?.sample?.default?.[0];
-    if (line) speakGuide(guideId, line);
+    if (line) speakGuide(guideId, fill(line, { sir: addressOf(), pilot: guideOwner }));
   };
 
   const entered = (p: { id: number; callsign: string; skin: string; xp: number }, card?: RosterCard) => {

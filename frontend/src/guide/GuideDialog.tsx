@@ -1,14 +1,33 @@
 /** Окно гида: низ экрана, ≤25% высоты, без затемнения и прокрутки. Только клавиатура. */
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { guideById } from "./guides";
 import { speakGuide } from "./voice";
 import { useGuide } from "./guideStore";
+import { dialogBottom } from "./placement";
 import "./guide.css";
 
 export default function GuideDialog() {
   const popup = useGuide((s) => s.popup);
   const st = useGuide((s) => s.st);
   const stopRef = useRef<() => void>(() => undefined);
+  const boxRef = useRef<HTMLElement>(null);
+  const [bottom, setBottom] = useState<number | null>(null);
+
+  // не закрывать ряд «Пауза / Заново» (и прочие .guide-avoid): ставим окно под ним или над ним
+  useLayoutEffect(() => {
+    if (!popup) return;
+    const place = () => {
+      const h = boxRef.current?.getBoundingClientRect().height || 0;
+      const avoid = [...document.querySelectorAll<HTMLElement>(".bridge-actions, .guide-avoid")]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0)
+        .map((r) => ({ top: r.top, bottom: r.bottom }));
+      setBottom(dialogBottom(window.innerHeight, h, avoid));
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [popup]);
 
   // набор текста на мостике → окна ждут паузы
   useEffect(() => {
@@ -53,7 +72,7 @@ export default function GuideDialog() {
   const g = guideById(st.id);
   const last = popup.idx + 1 >= popup.lines.length;
   return (
-    <aside className="guide-dlg" role="dialog" aria-live="polite" aria-label={g?.name || "Гид"} data-trigger={popup.trigger}>
+    <aside ref={boxRef} style={bottom !== null ? { bottom } : undefined} className="guide-dlg" role="dialog" aria-live="polite" aria-label={g?.name || "Гид"} data-trigger={popup.trigger}>
       <div className="guide-portrait" aria-hidden>
         {g?.portrait || "◎"}
       </div>
