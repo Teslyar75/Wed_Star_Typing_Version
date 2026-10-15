@@ -5,6 +5,9 @@ import { voiceLookup } from "../theme/voice";
 type Dict = Record<string, string>;
 
 const RU: Dict = {
+  guide: "Гид",
+  guide_none: "Без гида",
+  guide_soon: "скоро",
   title: "ВХОД В КАБИНУ",
   sub: "Выберите пилота или зачислите нового",
   crew_n: "Экипаж: {0}",
@@ -116,7 +119,7 @@ const RU: Dict = {
   e_too_large: "Слишком большой объём (до 200 МБ)",
   e_already_imported: "Этот пакет уже перенесён в этого пилота",
   keys_first: "1 / 2 / 3 или ←→ + Enter · F1 справка · Esc закрыть",
-  keys_roster: "←→↑↓ выбор · Enter взлёт · N новый · I перенос · G гость · S скин · H почёт · Del списать · F1 справка",
+  keys_roster: "←→↑↓ выбор · Enter взлёт · N новый · I перенос · G гость · S скин · ⇧←→ гид · P голос гида · H почёт · Del списать · F1 справка",
   keys_wizard: "Enter далее · Esc назад · Tab поля · ←→ выбор в ряду · F1 справка",
   keys_import: "Enter/F выбрать · ↑↓ пилот · M режим · Enter перенести · Esc назад · F1 справка",
   keys_help: "↑↓ прокрутка · Esc закрыть",
@@ -124,6 +127,9 @@ const RU: Dict = {
 };
 
 const UK: Dict = {
+  guide: "Гід",
+  guide_none: "Без гіда",
+  guide_soon: "скоро",
   ...RU,
   title: "ВХІД У КАБІНУ",
   sub: "Оберіть пілота або зарахуйте нового",
@@ -243,6 +249,9 @@ const UK: Dict = {
 };
 
 const EN: Dict = {
+  guide: "Guide",
+  guide_none: "No guide",
+  guide_soon: "soon",
   title: "ENTER THE COCKPIT",
   sub: "Pick a pilot or enroll a new one",
   crew_n: "Crew: {0}",
@@ -362,6 +371,9 @@ const EN: Dict = {
 };
 
 const DE: Dict = {
+  guide: "Guide",
+  guide_none: "Ohne Guide",
+  guide_soon: "bald",
   ...EN,
   title: "EINSTIEG INS COCKPIT",
   sub: "Pilot wählen oder neu anmelden",

@@ -1,0 +1,9 @@
+{
+  "id": "ship_ai",
+  "name": { "ru": "ОРИОН" },
+  "title": { "ru": "бортовой ИИ" },
+  "voice": { "ru": "ru-RU-DmitryNeural" },
+  "rate": 0.95,
+  "portrait": "◎",
+  "skins": ["spaceship"]
+}

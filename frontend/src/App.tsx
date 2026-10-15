@@ -1,4 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import GuideDialog from "./guide/GuideDialog";
+import { useGuide } from "./guide/guideStore";
 import BridgeScreen from "./bridge/BridgeScreen";
 import SkinBackground, { bgEngineOf } from "./fx/SkinBackground";
 import IdleSlideshow from "./idle/IdleSlideshow";
@@ -137,6 +139,15 @@ export default function App() {
     window.dispatchEvent(new Event("st-cabin-change"));
   }, [tab]);
 
+  // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
+  const pilotName = pilot?.callsign;
+  useEffect(() => {
+    if (!pilotName || crewOpen) return;
+    const g = useGuide.getState();
+    if (g.pilot !== pilotName) g.setPilot(pilotName);
+    g.fire("first_launch", { skin: useSkin.getState().skin.id, onYes: () => setTab("bridge") });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pilotName, crewOpen]);
   useEffect(() => {
     bootSkin({ preferBase: true });
     useCabin.getState().hydrate();
@@ -438,6 +449,7 @@ export default function App() {
         onFullHelp={() => setTab("settings")}
       />
       <IdleSlideshow />
+      <GuideDialog />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />
 
       {crewOpen ? (
