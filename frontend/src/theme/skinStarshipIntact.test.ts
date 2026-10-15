@@ -4,7 +4,7 @@ import { t } from "../i18n";
 import oldEngland from "../../../packages/themes/old_england.json";
 import spaceship from "../../../packages/themes/spaceship.json";
 import type { SkinTheme } from "./applyTheme";
-import { clearSkinVoice, enRank, setSkinVoice, skinRank, voiceLookup } from "./voice";
+import { EN_RANKS, clearSkinVoice, enRank, setSkinVoice, skinRank, voiceLookup } from "./voice";
 
 const OE = oldEngland as unknown as SkinTheme;
 const SS = spaceship as unknown as SkinTheme;
@@ -53,7 +53,11 @@ describe("Starship stays untouched (OE3)", () => {
         expect(t(k)).toBe(i18n.t(k, { ns: "ui" }));
       }
       expect(skinRank("Кадет", l)).toBe("Кадет");
-      expect(enRank("Кадет EN", l)).toBe("Кадет EN");
+      expect(enRank("Кадет EN", l)).toBe({ ru: "Кадет EN", uk: "Кадет EN", en: "Cadet EN", de: "Kadett EN" }[l]);
+      expect(enRank("Лингвист флота", l)).toBe(
+        { ru: "Лингвист флота", uk: "Лінгвіст флоту", en: "Fleet linguist", de: "Flottenlinguist" }[l],
+      );
+      expect(enRank("неизвестно", l)).toBe("неизвестно");
       expect(voiceLookup("uplink_tag", l)).toBeUndefined(); // мостик Звездолёта: «UPLINK //»
     }
   });
@@ -97,5 +101,16 @@ describe("Old England English section (OE3)", () => {
       const left = keys.filter((k) => re[l].test(t(k))).map((k) => `${k}=${t(k)}`);
       expect(left, l).toEqual([]);
     }
+  });
+});
+
+describe("English ranks from backend", () => {
+  it("EN_RANKS mirror backend ENGLISH_RANKS (order and names)", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(path.resolve(process.cwd(), "../backend/app/api_english.py"), "utf-8");
+    const block = src.slice(src.indexOf("ENGLISH_RANKS = ["), src.indexOf("]", src.indexOf("ENGLISH_RANKS = [")));
+    const names = [...block.matchAll(/\(\d+, "([^"]+)"\)/g)].map((m) => m[1]);
+    expect(names).toEqual(EN_RANKS);
   });
 });
