@@ -4,6 +4,12 @@ import { initReactI18next } from "react-i18next";
 /** UI-ключи + stamina JSON (ключ = русская фраза). */
 const UI: Record<string, Record<string, string>> = {
   ru: {
+    // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
+    en_rank_0: "Кадет EN",
+    en_rank_1: "Слушатель",
+    en_rank_2: "Голос экипажа",
+    en_rank_3: "Переводчик",
+    en_rank_4: "Лингвист флота",
     tts_voice: "Голос озвучки",
     tts_engine: "Движок",
     tts_engine_hd: "HD · нейроголос",
@@ -1006,6 +1012,12 @@ const UI: Record<string, Record<string, string>> = {
       "Горячие клавиши: F1 — справка (в т.ч. навигация Tab/стрелки) · F5 — заново · Esc — пауза · F9 — звук · Ctrl+K — команды · Ctrl+1…9 — разделы · F6 — шапка/контент",
   },
   en: {
+    // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
+    en_rank_0: "Cadet EN",
+    en_rank_1: "Listener",
+    en_rank_2: "Crew voice",
+    en_rank_3: "Translator",
+    en_rank_4: "Fleet linguist",
     tts_voice: "Voice",
     tts_engine: "Engine",
     tts_engine_hd: "HD · neural",
@@ -2007,6 +2019,12 @@ const UI: Record<string, Record<string, string>> = {
       "Hotkeys: F1 help (incl. Tab/arrow nav) · F5 again · Esc pause · F9 sound · Ctrl+K commands · Ctrl+1…9 tabs · F6 chrome/stage",
   },
   uk: {
+    // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
+    en_rank_0: "Кадет EN",
+    en_rank_1: "Слухач",
+    en_rank_2: "Голос екіпажу",
+    en_rank_3: "Перекладач",
+    en_rank_4: "Лінгвіст флоту",
     tts_voice: "Голос озвучення",
     tts_engine: "Рушій",
     tts_engine_hd: "HD · нейроголос",
@@ -2999,6 +3017,12 @@ const UI: Record<string, Record<string, string>> = {
       "Гарячі клавіші: F1 — довідка (Tab/стрілки) · F5 — знову · Esc — пауза · F9 — звук · Ctrl+K — команди · Ctrl+1…9 — розділи · F6 — шапка/контент",
   },
   de: {
+    // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
+    en_rank_0: "Kadett EN",
+    en_rank_1: "Zuhörer",
+    en_rank_2: "Stimme der Crew",
+    en_rank_3: "Übersetzer",
+    en_rank_4: "Flottenlinguist",
     tts_voice: "Stimme",
     tts_engine: "Engine",
     tts_engine_hd: "HD · neuronal",
