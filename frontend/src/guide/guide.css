@@ -1,0 +1,81 @@
+.guide-dlg {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(880px, calc(100vw - 28px));
+  max-height: 25vh;
+  overflow: hidden;
+  z-index: 9000;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  background: var(--st-panel, rgba(8, 16, 32, 0.94));
+  color: var(--st-text, #dbeafe);
+  border: 1px solid var(--st-accent, #38bdf8);
+  border-radius: 10px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
+  font-family: var(--st-font-ui, inherit);
+  font-size: 15px;
+  line-height: 1.4;
+  animation: guide-in 0.18s ease-out;
+}
+@keyframes guide-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+}
+.guide-portrait {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--st-accent, #38bdf8);
+  color: var(--st-accent, #38bdf8);
+}
+.guide-body { flex: 1; min-width: 0; }
+.guide-who { font-size: 13px; opacity: 0.9; display: flex; gap: 6px; }
+.guide-who b { color: var(--st-accent, #38bdf8); letter-spacing: 0.06em; }
+.guide-count { margin-left: auto; opacity: 0.6; }
+.guide-line { margin: 4px 0 6px; }
+.guide-keys { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; opacity: 0.75; }
+.guide-keys kbd { font: inherit; padding: 0 4px; border: 1px solid currentColor; border-radius: 3px; }
+.ce-guiderow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.ce-guide { font-size: 12px; padding: 3px 8px; border-radius: 12px; border: 1px solid var(--st-line, #335); background: transparent; color: inherit; cursor: pointer; }
+.ce-guide.on { border-color: var(--st-accent, #38bdf8); color: var(--st-accent, #38bdf8); font-weight: 600; }
+.ce-guide[disabled] { opacity: 0.45; cursor: default; }
+.ce-guide small { opacity: 0.8; margin-left: 4px; }
+
+/* Старая Англия: газетная заметка — бумага, чернила, двойная линейка, засечки */
+html[data-skin="old_england"] .guide-dlg {
+  background: var(--st-paper, #efe4c8);
+  background-image: repeating-linear-gradient(0deg, rgba(60, 40, 20, 0.035) 0 1px, transparent 1px 3px);
+  color: var(--st-ink, #2b2117);
+  border: 3px double var(--st-ink, #2b2117);
+  border-radius: 2px;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.35), 0 8px 26px rgba(0, 0, 0, 0.4);
+  font-family: "Old Standard TT", Georgia, serif;
+}
+html[data-skin="old_england"] .guide-portrait {
+  border-radius: 2px;
+  border: 1px solid var(--st-ink, #2b2117);
+  color: var(--st-ink, #2b2117);
+  filter: sepia(1);
+}
+html[data-skin="old_england"] .guide-who {
+  border-bottom: 1px solid var(--st-ink, #2b2117);
+  padding-bottom: 2px;
+  font-variant: small-caps;
+}
+html[data-skin="old_england"] .guide-who b {
+  color: var(--st-ink, #2b2117);
+  font-family: "Playfair Display SC", Georgia, serif;
+}
+html[data-skin="old_england"] .guide-line { font-size: 16px; text-align: justify; }
+html[data-skin="old_england"] .guide-line::first-letter {
+  font-family: "Playfair Display SC", Georgia, serif;
+  font-size: 1.6em;
+  line-height: 1;
+}

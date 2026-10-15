@@ -7,6 +7,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL_SKINS, useSkin } from "../theme/skinStore";
 import { skinRank } from "../theme/voice";
+import { cycleGuide, guideById, GUIDES, NO_GUIDE } from "../guide/guides";
+import { loadGuideState, saveGuideState, useGuide } from "../guide/guideStore";
+import { speakGuide } from "../guide/voice";
+import { linesOf } from "../guide/guides";
+import { addressOf, fill } from "../guide/guideLogic";
 import type { SkinTheme } from "../theme/applyTheme";
 import { getLang } from "../i18n";
 import { te } from "./entryI18n";
@@ -305,6 +310,25 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
   useEffect(() => {
     if (view === "wizard" && step === 1) callRef.current?.focus();
   }, [view, step]);
+
+  /* ---------- гид (на пилота, localStorage) ---------- */
+  const guideOwner = selected?.callsign || "";
+  const [guideId, setGuideId] = useState<string>(NO_GUIDE);
+  useEffect(() => {
+    if (guideOwner) setGuideId(loadGuideState(guideOwner).id);
+  }, [guideOwner]);
+  const pickGuide = (id: string) => {
+    if (!guideOwner || (id !== NO_GUIDE && guideById(id)?.soon)) return;
+    setGuideId(id);
+    const g = useGuide.getState();
+    if (g.pilot === guideOwner) g.patch({ id });
+    else saveGuideState(guideOwner, { ...loadGuideState(guideOwner), id });
+  };
+  const sampleGuide = () => {
+    if (guideId === NO_GUIDE) return;
+    const line = linesOf(guideId)?.sample?.default?.[0];
+    if (line) speakGuide(guideId, fill(line, { sir: addressOf(), pilot: guideOwner }));
+  };
 
   const entered = (p: { id: number; callsign: string; skin: string; xp: number }, card?: RosterCard) => {
     localStorage.setItem("st_last_pilot", p.callsign);
@@ -728,6 +752,11 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
         setSel(v);
         setPage(Math.floor(v / PER_PAGE));
       };
+      if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+        stop();
+        pickGuide(cycleGuide(guideId, e.key === "ArrowRight" ? 1 : -1));
+        return;
+      }
       switch (e.key) {
         case "ArrowRight":
           stop();
@@ -796,7 +825,9 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
         void openHonor();
       } else if (k === "s" || k === "ы") {
         stop();
-        cycleSkin(e.shiftKey ? -1 : 1);
+        cycleSkin(e.shiftKey ? -1 : 1);      } else if (k === "p" || k === "з") {
+        stop();
+        sampleGuide();
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -1009,6 +1040,25 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
                         onClick={() => pickSkin(s.id)}
                       >
                         {SKIN_ICON[s.id] || "✦"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ce-guiderow" role="radiogroup" aria-label={te("guide")}>
+                    <span className="ce-lab">
+                      {te("guide")} <kbd>⇧←→</kbd> <kbd>P</kbd>
+                    </span>
+                    {[...GUIDES.map((g) => ({ id: g.id, name: g.name, soon: !!g.soon })), { id: NO_GUIDE, name: te("guide_none"), soon: false }].map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={guideId === g.id}
+                        disabled={g.soon}
+                        className={`ce-guide ${guideId === g.id ? "on" : ""}`}
+                        onClick={() => pickGuide(g.id)}
+                      >
+                        {g.name}
+                        {g.soon ? <small>{te("guide_soon")}</small> : null}
                       </button>
                     ))}
                   </div>
