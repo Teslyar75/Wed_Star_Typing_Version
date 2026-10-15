@@ -20,6 +20,7 @@ from app.api_reader import router as reader_router
 from app.api_sessions import router as sessions_router
 from app.api_speedread import router as speedread_router
 from app.api_texts import router as texts_router
+from app.api_tts import router as tts_router
 from app.config import settings
 from app.db import init_db
 
@@ -64,6 +65,7 @@ app.include_router(missions_router)
 app.include_router(migrate_router)
 app.include_router(radio_router)
 app.include_router(lounge_router)
+app.include_router(tts_router)
 
 
 @app.get("/api/health")

@@ -8813,3 +8813,19 @@ html {
   .en-settings-grid { grid-template-columns: 1fr; }
   .en-sm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: none; overflow: auto; }
 }
+
+/* ── Выбор голоса озвучки ── */
+.voice-picker .en-set-row { margin: 0.35rem 0; }
+.voice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3rem; }
+.voice-cell { display: flex; gap: 2px; border: 1px solid transparent; border-radius: 4px; }
+.voice-cell.on { border-color: var(--amber, #f5b942); box-shadow: 0 0 6px rgba(245, 185, 66, 0.35); }
+.voice-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.35rem; text-align: left; }
+.voice-pick:focus-visible, .voice-play:focus-visible { outline: 2px solid var(--amber, #f5b942); outline-offset: 1px; }
+.voice-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.voice-meta { font-size: 0.72em; }
+.voice-play { padding: 0.2rem 0.4rem; }
+.voice-tag { font-size: 0.62em; padding: 0 3px; border-radius: 3px; border: 1px solid currentColor; }
+.voice-tag.q-HD { color: #6fe3a1; }
+.voice-tag.q-NET { color: #f5b942; }
+.voice-tag.q-STD { color: #8a95a5; }
+.voice-keys { font-size: 0.75em; margin: 0.2rem 0 0; }
