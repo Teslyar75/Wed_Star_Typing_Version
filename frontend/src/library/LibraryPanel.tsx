@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
+import { PENDING_CARGO_KEY, loadCargoBoard, saveCargoBoard } from "../cargo/processText";
 import { useReadingPos } from "../reading/positionStore";
 import { setModalStack } from "../shell/routeStore";
 import GutenbergModal from "./GutenbergModal";
@@ -150,13 +151,64 @@ export default function LibraryPanel({
     goBook?.();
   };
 
-  const openType = (it: ShelfItem) => {
+  const openType = async (it: ShelfItem) => {
     if (it.print_allowed === false || it.bilingual) {
       setMsg(t("lib_type_blocked"));
       return;
     }
-    remember(it, "bridge");
-    onOpenBridge?.();
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await fetch(`/api/texts/${it.text_id}/prepared`, { credentials: "include" });
+      if (!r.ok) {
+        setMsg((await r.text()) || t("lib_type_blocked"));
+        return;
+      }
+      const prep = (await r.json()) as { body?: string; lang?: string; title?: string; chars?: number };
+      const body = (prep.body || "").trim();
+      if (!body) {
+        setMsg(t("cargo_empty"));
+        return;
+      }
+      let original = "";
+      try {
+        const cr = await fetch(`/api/texts/${it.text_id}/content`, { credentials: "include" });
+        if (cr.ok) {
+          const cj = (await cr.json()) as { body?: string };
+          original = (cj.body || "").trim();
+        }
+      } catch {
+        /* optional */
+      }
+      const board = loadCargoBoard();
+      const sameBook = board?.textId === it.text_id && board.text === body;
+      const index = sameBook && board.index > 0 && board.index < body.length ? board.index : 0;
+      saveCargoBoard({
+        text: body,
+        original: original || body,
+        index,
+        textId: it.text_id,
+        title: prep.title || it.title,
+      });
+      sessionStorage.setItem(
+        PENDING_CARGO_KEY,
+        JSON.stringify({
+          id: "cargo",
+          text: body,
+          lang: prep.lang || it.lang || "en",
+          index,
+          original: original || body,
+          text_id: it.text_id,
+          title: prep.title || it.title,
+        }),
+      );
+      remember(it, "bridge");
+      onOpenBridge?.();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const addToShelf = async (textId: number) => {
@@ -495,7 +547,12 @@ export default function LibraryPanel({
                 {t("lib_book")}
               </button>
               {printAllowed && (
-                <button type="button" className="hud-btn" disabled={busy} onClick={() => openType(selected)}>
+                <button
+                  type="button"
+                  className="hud-btn"
+                  disabled={busy}
+                  onClick={() => void openType(selected)}
+                >
                   {t("lib_type")}
                 </button>
               )}

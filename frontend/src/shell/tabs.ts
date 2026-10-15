@@ -3,6 +3,7 @@ export type Tab =
   | "missions"
   | "cargo"
   | "log"
+  | "bridgeSettings"
   | "english"
   | "speed"
   | "lounge"

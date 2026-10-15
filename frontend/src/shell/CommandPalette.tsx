@@ -14,6 +14,7 @@ const ITEMS: { id: Tab; labelKey: string }[] = [
   { id: "missions", labelKey: "missions" },
   { id: "cargo", labelKey: "own_text" },
   { id: "log", labelKey: "flight_log" },
+  { id: "bridgeSettings", labelKey: "bridge_settings" },
   { id: "english", labelKey: "english" },
   { id: "speed", labelKey: "speed" },
   { id: "lounge", labelKey: "lounge" },

@@ -10,7 +10,12 @@ import {
   playClick,
   playError,
 } from "../fx/sounds";
-import { useCabin, type FontSize, type GlowLevel, type UiScale, type UplinkTarget } from "./cabinStore";
+import {
+  useCabin,
+  type GlowLevel,
+  type UiScale,
+  type UplinkTarget,
+} from "./cabinStore";
 import { ALL_SKINS, useSkin } from "../theme/skinStore";
 import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 
@@ -121,14 +126,6 @@ export default function SettingsHub({
     { key: "frost", name: t("set_living_off") },
     { key: "light", name: t("set_living_light") },
     { key: "full", name: t("set_living_full") },
-  ];
-
-  const fonts: { key: FontSize; name: string }[] = [
-    { key: "S", name: t("set_font_s") },
-    { key: "M", name: t("set_font_m") },
-    { key: "L", name: t("set_font_l") },
-    { key: "XL", name: t("set_font_xl") },
-    { key: "XXL", name: t("set_font_xxl") },
   ];
 
   const scales: { key: UiScale; name: string }[] = [
@@ -283,27 +280,6 @@ export default function SettingsHub({
                 onClick={() => setSkin(th.id)}
               >
                 {skinLabel(th.name)}
-              </button>
-            ))}
-          </Row>
-
-          <Row title={t("set_keyboard")} desc={t("set_keyboard_desc")}>
-            <Toggle on={cabin.keyboard} onClick={() => cabin.toggle("keyboard")} />
-          </Row>
-
-          <Row title={t("set_zones")} desc={t("set_zones_desc")}>
-            <Toggle on={cabin.zones} onClick={() => cabin.toggle("zones")} />
-          </Row>
-
-          <Row title={t("set_font")} desc={t("set_font_desc")}>
-            {fonts.map((b) => (
-              <button
-                key={b.key}
-                type="button"
-                className={`hud-btn ${cabin.font === b.key ? "amber" : ""}`}
-                onClick={() => cabin.set("font", b.key)}
-              >
-                {b.name}
               </button>
             ))}
           </Row>

@@ -134,6 +134,9 @@ export type CargoBoard = {
   text: string;
   original: string;
   index: number;
+  /** Книга с полки — для продолжения печати */
+  textId?: number | null;
+  title?: string;
 };
 
 export function loadCargoBoard(): CargoBoard | null {

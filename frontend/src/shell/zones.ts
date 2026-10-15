@@ -14,10 +14,18 @@ export const ZONE_ORDER: ZoneId[] = [
 ];
 
 /** Подменю Мостика (не на верхнем ряду). */
-export const BRIDGE_SUBTABS: Tab[] = ["missions", "cargo", "log"];
+export const BRIDGE_SUBTABS: Tab[] = ["missions", "cargo", "log", "bridgeSettings"];
 
 export function zoneOf(tab: Tab): ZoneId {
-  if (tab === "missions" || tab === "cargo" || tab === "log" || tab === "bridge") return "bridge";
+  if (
+    tab === "missions" ||
+    tab === "cargo" ||
+    tab === "log" ||
+    tab === "bridgeSettings" ||
+    tab === "bridge"
+  ) {
+    return "bridge";
+  }
   return tab;
 }
 

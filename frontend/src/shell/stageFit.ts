@@ -6,8 +6,29 @@
 const MIN_SCALE = 0.55;
 
 function measureAndFit(stage: HTMLElement) {
-  const panel = stage.querySelector<HTMLElement>(":scope > *");
+  /* Полный экран / chrome-полоса — не сжимать. */
+  if (stage.classList.contains("is-fs") || document.fullscreenElement === stage) {
+    stage.style.setProperty("--st-fit-scale", "1");
+    return;
+  }
+
+  const panel = [...stage.children].find(
+    (el): el is HTMLElement =>
+      el instanceof HTMLElement &&
+      !el.classList.contains("chrome-under-bar") &&
+      !el.classList.contains("stage-fs-bar"),
+  );
   if (!panel) {
+    stage.style.setProperty("--st-fit-scale", "1");
+    return;
+  }
+
+  /* Страницы с собственной прокруткой — не сжимать transform'ом (иначе при XXL всё «перекрывается»). */
+  if (
+    panel.classList.contains("zone-settings") ||
+    panel.classList.contains("bridge-settings") ||
+    panel.classList.contains("settings-hub")
+  ) {
     stage.style.setProperty("--st-fit-scale", "1");
     return;
   }

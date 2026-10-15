@@ -1,6 +1,7 @@
 /** НАСТРОЙКИ EN — две колонки как tab_08. */
 import { useEffect, useState } from "react";
 import { t } from "../i18n";
+import ZoneSettingsShell from "../shell/ZoneSettingsShell";
 import SpeakButton from "./SpeakButton";
 import type { EnSettings } from "./types";
 
@@ -60,8 +61,8 @@ export default function SettingsPage({ onChange }: Props) {
   };
 
   return (
-    <section className="en-settings">
-      <div className="en-settings-grid">
+    <ZoneSettingsShell className="en-settings" navGroup="en-settings" ariaLabel={t("settings")}>
+        <div className="en-settings-grid">
         <div className="inst-panel">
           <div className="lab">{t("en_link_voice")}</div>
           <label className="en-set-row">
@@ -192,8 +193,8 @@ export default function SettingsPage({ onChange }: Props) {
             </div>
           </div>
         </div>
-      </div>
-      {msg && <p className="muted">{msg}</p>}
-    </section>
+        </div>
+        {msg && <p className="muted en-settings-msg">{msg}</p>}
+    </ZoneSettingsShell>
   );
 }

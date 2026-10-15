@@ -145,9 +145,56 @@ body {
   overscroll-behavior: none;
 }
 
-/* ÑÐ¸Ð»ÑÑÑÑ ÑÐ°Ð´Ð¸Ð¾: ÑÐ¿Ð¸ÑÐºÐ¸ ÑÑÑÐ°Ð½/ÑÐ·ÑÐºÐ¾Ð²/Ð¶Ð°Ð½ÑÐ¾Ð² Ð½Ðµ Ð´Ð¾Ð»Ð¶Ð½Ñ ÐºÐ»Ð¸Ð¿Ð°ÑÑÑÑ */
+/* ÑÐ¸Ð»ÑÑÑÑ ÑÐ°ÐґÐ¸Ð¾: ÑÐ¿Ð¸ÑÐºÐ¸ ÑÑÑÐ°Ð½/ÑÐ·ÑÐºÐ¾Ð²/Ð¶Ð°Ð½ÑÐ¾Ð² Ð½Ðµ Ð´Ð¾Ð»Ð¶Ð½Ñ ÐºÐ»Ð¸Ð¿Ð°ÑÑÑÑ */
 .stage .radio-filters.inst-panel {
   overflow: visible !important;
+}
+
+/* Ð¾ÐºÐ½Ð° Ð½Ð°ÑÑÑÐ¾ÐµÐº: .zone-settings ÑÐ°Ð¼ ÑÐºÑÐ¾Ð»Ð»Ð¸ÑÑÑ (Ð²ÑÐµ Ð±Ð»Ð¾ÐºÐ¸ Ð²Ð½ÑÑÑÐ¸) */
+.stage > .zone-settings,
+.stage > .bridge-settings,
+.stage .zone-settings {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  max-height: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  transform: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0% !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+}
+.stage .zone-settings-scroll {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+.stage .bridge-settings .inst-panel,
+.stage .en-settings .inst-panel,
+.stage .sr-set-panel {
+  overflow: visible !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+}
+.stage > .settings-hub {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  max-height: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+.stage .settings-cabin.inst-panel {
+  overflow: auto !important;
 }
 .hud-select {
   overflow: visible !important;
@@ -351,7 +398,27 @@ body {
   max-height: 22vh;
   margin: 0.2rem 0 !important;
   padding: clamp(0.45rem, 1.2vh, 1rem) !important;
-  font-size: clamp(1.45rem, 2.6vh + 0.45rem, 2.35rem) !important;
+  font-size: var(--st-viewport-font, clamp(1.45rem, 2.6vh + 0.45rem, 2.35rem)) !important;
+  font-family: var(--st-sight-face, var(--st-font-mono)) !important;
+}
+
+.bridge-cockpit .viewport.sight-line .sight-left {
+  font-size: var(--st-sight-typed-size, var(--st-viewport-font, 1.35rem)) !important;
+  color: var(--st-sight-typed-color, color-mix(in srgb, var(--st-cyan) 70%, transparent)) !important;
+  font-family: var(--st-sight-face, var(--st-font-mono)) !important;
+}
+
+.bridge-cockpit .viewport.sight-line .sight-right {
+  font-size: var(--st-sight-ahead-size, var(--st-viewport-font, 1.35rem)) !important;
+  color: var(--st-sight-ahead-color, var(--st-text)) !important;
+  font-family: var(--st-sight-face, var(--st-font-mono)) !important;
+}
+
+.bridge-cockpit .cursor.sight-crosshair,
+.bridge-cockpit .cursor.sight-underline {
+  font-size: var(--st-sight-cursor-size, var(--st-sight-ahead-size, var(--st-viewport-font, 1.35rem))) !important;
+  color: var(--st-sight-cursor-color, var(--st-sight-ahead-color, var(--st-text))) !important;
+  font-family: var(--st-sight-face, var(--st-font-mono)) !important;
 }
 
 .bridge-cockpit .cursor.sight-crosshair {
@@ -413,6 +480,25 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Телеметрия: кольцо не съедает список; панель прокручивается при крупном UI */
+.bridge-cockpit .inst-tele {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+.bridge-cockpit .inst-tele .acc-ring {
+  flex: 0 1 auto !important;
+  max-height: min(11rem, 38%);
+}
+.bridge-cockpit .inst-tele .acc-ring-svg {
+  max-height: clamp(4.2rem, 12vh, 9rem);
+}
+.bridge-cockpit .inst-tele .tele-list {
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
 }
 
 .bridge-cockpit .acc-ring-svg {
@@ -477,10 +563,23 @@ body {
 }
 
 .bridge-cockpit .tele-list {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   font-size: clamp(0.7rem, 1.3vh, 0.9rem);
+}
+
+html[data-ui-scale="XL"] .bridge-cockpit .inst-tele .acc-ring,
+html[data-ui-scale="XXL"] .bridge-cockpit .inst-tele .acc-ring {
+  max-height: min(8.5rem, 32%);
+}
+html[data-ui-scale="XL"] .bridge-cockpit .inst-tele .acc-ring-svg,
+html[data-ui-scale="XXL"] .bridge-cockpit .inst-tele .acc-ring-svg {
+  max-height: clamp(3.6rem, 10vh, 7rem);
+}
+html[data-ui-scale="XL"] .bridge-cockpit .tele-list,
+html[data-ui-scale="XXL"] .bridge-cockpit .tele-list {
+  font-size: clamp(0.65rem, 1.15vh, 0.85rem);
 }
 
 /* âââ ÐÐ¾Ð´Ð°Ð»ÐºÐ¸: ÑÐ°Ð·Ð¼ÐµÑÐºÐ° ÐºÐ°Ðº desktop, ÐºÐ½Ð¾Ð¿ÐºÐ¸ Ð²ÑÐµÐ³Ð´Ð° Ð² ÐºÐ°Ð´ÑÐµ âââ */
@@ -796,7 +895,7 @@ body {
   flex: 0 0 auto;
 }
 
-/* Íàñòðîéêè ñêîðî÷òåíèÿ  äâå êîëîíêè âïèñûâàþòñÿ â êàáèíó */
+/* Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ¸ ÑÐºÐ¾ÑÐ¾ÑÑÐµÐ½Ð¸Ñ: ÑÐºÑÐ¾Ð»Ð» Ð¾Ð±ÑÐ¸Ð¹ (zone-settings-scroll), Ð½Ðµ Ð¿Ð¾ ÐºÐ°Ð¶Ð´Ð¾Ð¹ Ð¿Ð°Ð½ÐµÐ»Ð¸ */
 .sr-settings {
   min-height: 0 !important;
   overflow: hidden !important;
@@ -805,8 +904,7 @@ body {
   min-height: 0 !important;
 }
 .sr-set-panel {
-  overflow: auto !important;
-  scrollbar-width: none;
+  overflow: visible !important;
 }
 
 /* âââ ÐÐ´Ð°Ð¿ÑÐ¸Ð² Ð¾ÑÑÐ°Ð»ÑÐ½ÑÑ Ð¾ÐºÐ¾Ð½ (ÐºÐ°Ðº Ð¼Ð¾ÑÑÐ¸Ðº): Ð²Ð¿Ð¸ÑÐ°ÑÑ Ð² stage Ð±ÐµÐ· Ð¾Ð±ÑÐµÐ·ÐºÐ¸ ÑÑÑÐµÑÐ° âââ */

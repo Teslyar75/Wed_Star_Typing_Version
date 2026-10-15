@@ -22,6 +22,7 @@ const BRIDGE_LEAF: Partial<Record<Tab, PathSeg>> = {
   missions: { slug: "missions", labelKey: "missions", tab: "missions" },
   cargo: { slug: "cargo", labelKey: "own_text", tab: "cargo" },
   log: { slug: "log", labelKey: "flight_log", tab: "log" },
+  bridgeSettings: { slug: "settings", labelKey: "bridge_settings", tab: "bridgeSettings" },
 };
 
 /** Базовый путь зоны + лист мостика (без deep). */

@@ -11,6 +11,8 @@ import type { Tab } from "./shell/tabs";
 import { cycleNavZone, handleArrowNav, isTextEditTarget } from "./shell/keyboardNav";
 import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
+import FullscreenButton from "./shell/FullscreenButton";
+import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
 import RadioMinibar from "./radio/RadioMinibar";
 import RadioAudioHost from "./radio/RadioAudioHost";
@@ -28,6 +30,7 @@ const MissionsPanel = lazy(() => import("./missions/MissionsPanel"));
 const SettingsHub = lazy(() => import("./settings/SettingsHub"));
 const CargoPanel = lazy(() => import("./cargo/CargoPanel"));
 const FlightLogPanel = lazy(() => import("./flightlog/FlightLogPanel"));
+const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
 
@@ -43,6 +46,8 @@ function LazyTab({ when, children }: { when: boolean; children: ReactNode }) {
 type PilotChip = { callsign: string; rank?: string; xp?: number; xp_next?: number };
 
 export default function App() {
+  const stageRef = useRef<HTMLElement>(null);
+  const { fullscreen, toggleFullscreen } = useElementFullscreen(stageRef);
   const [tab, setTabState] = useState<Tab>("bridge");
   const [lang, setLangState] = useState(getLang());
   const [helpOpen, setHelpOpen] = useState(false);
@@ -78,7 +83,13 @@ export default function App() {
         prevTabRef.current = cur;
         /* смена зоны — сбросить глубокий хвост крошек */
         if (zoneOf(cur) !== zoneOf(next)) clearDeepRoute();
-        if (next === "bridge" || next === "missions" || next === "cargo" || next === "log") {
+        if (
+          next === "bridge" ||
+          next === "missions" ||
+          next === "cargo" ||
+          next === "log" ||
+          next === "bridgeSettings"
+        ) {
           if (next === "bridge") clearDeepRoute();
         }
       }
@@ -100,7 +111,7 @@ export default function App() {
   }, [setTab]);
 
   useEffect(() => {
-    return installStageFit(() => document.querySelector<HTMLElement>(".stage"));
+    return installStageFit(() => stageRef.current);
   }, []);
 
   /* Колёсико над полосой справа от brand → сдвиг всей полосы (вкладки + XP + радио + кнопки). */
@@ -242,6 +253,7 @@ export default function App() {
     { id: "missions", label: t("missions") },
     { id: "cargo", label: t("own_text") },
     { id: "log", label: t("flight_log") },
+    { id: "bridgeSettings", label: t("bridge_settings") },
   ];
 
   const activeZone = zoneOf(tab);
@@ -336,6 +348,12 @@ export default function App() {
           </div>
         </div>
       </header>
+      {!fullscreen ? (
+        <div className="chrome-under-bar">
+          <PathCrumbs tab={tab} onJump={setTab} />
+          <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+        </div>
+      ) : null}
       <RadioAudioHost />
 
       {isBridgeZone(tab) ? (
@@ -358,9 +376,19 @@ export default function App() {
         </nav>
       ) : null}
 
-      <PathCrumbs tab={tab} onJump={setTab} />
-
-      <main className="stage" data-nav-zone="stage" data-nav-group="stage" tabIndex={-1}>
+      <main
+        ref={stageRef}
+        className={`stage ${fullscreen ? "is-fs" : ""}`}
+        data-nav-zone="stage"
+        data-nav-group="stage"
+        tabIndex={-1}
+      >
+        {fullscreen ? (
+          <div className="chrome-under-bar stage-fs-bar">
+            <PathCrumbs tab={tab} onJump={setTab} />
+            <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+          </div>
+        ) : null}
         {tab === "bridge" && <BridgeScreen />}
         <LazyTab when={tab === "missions"}>
           <MissionsPanel onOpenBridge={() => setTab("bridge")} onOpenCargo={() => setTab("cargo")} />
@@ -370,6 +398,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "log"}>
           <FlightLogPanel onOpenBridge={() => setTab("bridge")} onOpenHonor={() => setTab("settings")} />
+        </LazyTab>
+        <LazyTab when={tab === "bridgeSettings"}>
+          <BridgeSettingsPage />
         </LazyTab>
         <LazyTab when={tab === "english"}>
           <EnglishPanel />
