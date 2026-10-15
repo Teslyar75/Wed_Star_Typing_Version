@@ -20,7 +20,8 @@ import { ALL_SKINS, useSkin } from "../theme/skinStore";
 import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 
 const SkinPicker = lazy(() => import("../theme/SkinPicker"));
-const AuthPanel = lazy(() => import("../auth/AuthPanel"));
+const CockpitEntry = lazy(() => import("../auth/CockpitEntry"));
+import { applyImportClient } from "../auth/applyImportClient";
 
 type Sub = "cabin" | "cabinMore" | "skins" | "crew";
 
@@ -341,7 +342,14 @@ export default function SettingsHub({
         <SkinPicker />
       </Block>
       <Block when={sub === "crew"}>
-        <AuthPanel />
+        <CockpitEntry
+          mode="settings"
+          onEntered={(p) => {
+            if (p.skin) useSkin.getState().setSkin(p.skin);
+            window.location.reload();
+          }}
+          onImportedClient={applyImportClient}
+        />
       </Block>
     </section>
   );

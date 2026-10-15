@@ -19,7 +19,8 @@ import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
 import { installStageFit } from "./shell/stageFit";
 
-const AuthPanel = lazy(() => import("./auth/AuthPanel"));
+const CockpitEntry = lazy(() => import("./auth/CockpitEntry"));
+import { applyImportClient } from "./auth/applyImportClient";
 const ASK_CREW_KEY = "st_ask_crew_on_start";
 
 type SpaceProfile = "frost" | "light" | "full";
@@ -149,6 +150,7 @@ export default function App() {
           const j = await me.json();
           if (j?.id || j?.callsign) {
             hasPilot = true;
+            if (j.skin) useSkin.getState().setSkin(j.skin);
             setPilot({
               callsign: j.callsign || j.name || t("pilot"),
               rank: j.rank,
@@ -435,9 +437,14 @@ export default function App() {
       {crewOpen ? (
         <div className="crew-overlay-host" role="dialog" aria-modal="true" aria-label={t("crew")}>
           <Suspense fallback={<p className="muted">…</p>}>
-            <AuthPanel
+            <CockpitEntry
               mode="gate"
-              onEntered={(p) => setPilot(p)}
+              onEntered={(p) => {
+                setPilot({ callsign: p.callsign, rank: p.rank, xp: p.xp, xp_next: p.xp_next });
+                if (p.skin) useSkin.getState().setSkin(p.skin);
+                setCrewOpen(false);
+              }}
+              onImportedClient={applyImportClient}
               onExit={() => setCrewOpen(false)}
             />
           </Suspense>

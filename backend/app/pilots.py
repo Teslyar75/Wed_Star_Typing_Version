@@ -35,9 +35,35 @@ def hash_pin(pin: str) -> str:
     return bcrypt.hashpw(pin.encode(), bcrypt.gensalt(rounds=10)).decode()
 
 
+DESKTOP_PREFIX = "pbkdf2_sha256$"
+
+
+def desktop_pin_hash(rec: dict) -> str:
+    """Запись PIN десктопа (pilot_pin.make_hash) → строка для pin_hash."""
+    return f"{DESKTOP_PREFIX}{int(rec['iter'])}${rec['salt']}${rec['hash']}"
+
+
+def is_desktop_hash(hashed: str) -> bool:
+    return bool(hashed) and hashed.startswith(DESKTOP_PREFIX)
+
+
+def _verify_desktop(pin: str, hashed: str) -> bool:
+    import hashlib
+    import hmac
+
+    try:
+        _algo, it, salt, h = hashed.split("$")
+        got = hashlib.pbkdf2_hmac("sha256", pin.encode("ascii"), bytes.fromhex(salt), int(it))
+        return hmac.compare_digest(got.hex(), h)
+    except (ValueError, UnicodeEncodeError):
+        return False
+
+
 def verify_pin(pin: str, hashed: str) -> bool:
     if not hashed:
         return not pin
+    if is_desktop_hash(hashed):
+        return _verify_desktop(pin, hashed)
     try:
         return bcrypt.checkpw(pin.encode(), hashed.encode())
     except ValueError:
