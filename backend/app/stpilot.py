@@ -164,13 +164,15 @@ def parse_stpilot(files: dict[str, bytes]) -> Package:
     pkg = Package(source_id=str((man.get("pilot") or {}).get("id") or "stpilot"), from_stpilot=True)
     for rel, h in (man.get("files") or {}).items():
         rel = _safe_rel(rel)
+        if _skipped(rel):
+            # backups/, cache/ … не переносим и не проверяем (их и так отсекает files_from_zip)
+            continue
         data = files.get("data/" + rel)
         if data is None:
             raise ImportError_("missing_file", rel)
         if hashlib.sha256(data).hexdigest() != h:
             raise ImportError_("corrupt_file", rel)
-        if not _skipped(rel):
-            pkg.files[rel] = data
+        pkg.files[rel] = data
     # запись реестра важнее profile.json (как import_package десктопа)
     prof = pkg.json("profile.json")
     prof.update(man.get("pilot") or {})
@@ -623,7 +625,18 @@ def export_stpilot(db: Session, pilot) -> bytes:
             pass
     entry = {"id": f"web-{pilot.id}", "callsign": pilot.callsign, "name": pilot.display_name or "",
              "accent": pilot.accent or "cyan", "avatar": avatar, "locked": False, "pin_setup_pending": False}
-    files["profile.json"] = _j({**entry, "created": now})
+    prof: dict[str, Any] = {**entry, "created": now}
+    from app.pilots import is_desktop_hash
+
+    if is_desktop_hash(pilot.pin_hash or ""):
+        # PIN десктопа (pbkdf2) переносится обратно как есть; bcrypt-веба десктоп проверить не может
+        try:
+            _a, it, salt, h = pilot.pin_hash.split("$")
+            prof["pin"] = {"algo": "pbkdf2_sha256", "iter": int(it), "salt": salt, "hash": h, "set": now}
+            entry["locked"] = prof["locked"] = True
+        except ValueError:
+            pass
+    files["profile.json"] = _j(prof)
 
     wid = {w.id: (w.slug or w.word) for w in db.query(VocabWord).join(
         CardProgress, CardProgress.word_id == VocabWord.id).filter(CardProgress.pilot_id == pilot.id).all()}
@@ -657,9 +670,19 @@ def export_stpilot(db: Session, pilot) -> bytes:
     attempts = [{"ts": a.created_at.timestamp() if a.created_at else 0, "slug": wid.get(a.word_id, ""),
                  "mode": a.mode, "score": a.score, "ok": bool(a.ok)}
                 for a in db.query(SpeechAttempt).filter_by(pilot_id=pilot.id).all()]
-    files["english.json"] = _j({"version": 1, "words": words, "lists": lists, "cards": cards,
-                                "xp": {"total": en_xp, "by_day": {}, "best_streak": 0, "awarded": {}},
-                                "attempts": attempts, "warehouse": wh})
+    from app.api_english import EnglishSettings
+
+    es = db.query(EnglishSettings).filter_by(pilot_id=pilot.id).first()
+    try:
+        en_settings = json.loads(es.data or "{}") if es else {}
+    except ValueError:
+        en_settings = {}
+    en_doc = {"version": 1, "words": words, "lists": lists, "cards": cards,
+              "xp": {"total": en_xp, "by_day": {}, "best_streak": 0, "awarded": {}},
+              "attempts": attempts, "warehouse": wh}
+    if isinstance(en_settings, dict) and en_settings:
+        en_doc["settings"] = en_settings
+    files["english.json"] = _j(en_doc)
     runs = [{"chars": s.chars, "typed": s.typed, "errors": s.errors, "elapsed": s.elapsed, "cpm": s.cpm,
              "acc": s.acc, "rhythm": s.rhythm, "best_streak": s.best_streak, "mode": s.mode,
              "ts": s.created_at.timestamp() if s.created_at else 0}
@@ -682,6 +705,7 @@ def export_stpilot(db: Session, pilot) -> bytes:
                      "favicon": p.get("favicon", ""), "country": p.get("country", ""), "tags": p.get("tags", "")})
     files["radio.json"] = _j({"favorites": favs})
     files["settings.json"] = _j({"skin": pilot.skin or "spaceship"})
+    _export_library(db, pilot, files, now)
 
     manifest = {"format": "stpilot", "version": 1, "app": "Star Typing Web", "exported": now, "pilot": entry,
                 "files": {k: hashlib.sha256(v).hexdigest() for k, v in files.items()}}
@@ -691,6 +715,62 @@ def export_stpilot(db: Session, pilot) -> bytes:
         for k, v in files.items():
             z.writestr("data/" + k, v)
     return buf.getvalue()
+
+
+def _export_library(db: Session, pilot, files: dict[str, bytes], now: str) -> None:
+    """Полка пилота → library/library.json + library/texts/<id>/{meta,original,prepared,translation}."""
+    from app.api_library import PilotText
+    from app.models import Segment, TextDoc
+    from app.texts_service import rebuild_original_body
+
+    rows = []
+    links = db.query(PilotText).filter_by(pilot_id=pilot.id).order_by(PilotText.id).all()
+    for n, link in enumerate(links, 1):
+        doc = db.get(TextDoc, link.text_id)
+        if doc is None:
+            continue
+        original = rebuild_original_body(db, doc.id).strip()
+        segs = db.query(Segment).filter_by(text_id=doc.id).order_by(Segment.idx).all()
+        translation = ""
+        if segs and any((s.translation or "").strip() for s in segs):
+            paras: dict[int, list[str]] = {}
+            for s in segs:
+                paras.setdefault(s.para_idx, []).append((s.translation or "").strip())
+            translation = "\n\n".join(" ".join(x for x in v if x) for _, v in sorted(paras.items())).strip()
+            if not original:
+                o: dict[int, list[str]] = {}
+                for s in segs:
+                    o.setdefault(s.para_idx, []).append((s.original or "").strip())
+                original = "\n\n".join(" ".join(x for x in v if x) for _, v in sorted(o.items())).strip()
+        if not original:
+            continue
+        original += "\n"
+        prepared = (doc.prepared or "").strip() + "\n" if (doc.prepared or "").strip() else original
+        tid = f"w{doc.id:06d}-{n:03d}"
+        lang = (doc.lang or "en") if doc.lang != "und" else "en"
+        meta: dict[str, Any] = {
+            "id": tid, "title": doc.title or tid, "author": "", "lang": lang,
+            "source": {"kind": "web", "web_id": doc.id}, "created": now, "updated": now,
+            "kind": "bilingual" if translation else "text",
+            "original": {"status": "ok", "chars": len(original), "words": len(original.split()),
+                         "sha256": hashlib.sha256(original.encode()).hexdigest(), "note": ""},
+            "prepared": {"opts": {}, "processor": "web", "chars": len(prepared),
+                         "sha256": hashlib.sha256(prepared.encode()).hexdigest(), "generated": now},
+            "positions": {"typing": {"char": 0, "updated": None}, "reading": {"word": 0, "updated": None}},
+            "sync": "ask", "protected": False, "tags": [],
+        }
+        if translation:
+            meta["bilingual"] = {"source": "mt", "lang_a": lang, "lang_b": "ru" if lang != "ru" else "en",
+                                 "align": "paragraph"}
+            files[f"library/texts/{tid}/translation.txt"] = (translation + "\n").encode("utf-8")
+        files[f"library/texts/{tid}/meta.json"] = _j(meta)
+        files[f"library/texts/{tid}/original.txt"] = original.encode("utf-8")
+        files[f"library/texts/{tid}/prepared.txt"] = prepared.encode("utf-8")
+        rows.append({"id": tid, "title": meta["title"], "author": "", "lang": lang, "kind": meta["kind"],
+                     "updated": now})
+    if rows:
+        files["library/library.json"] = _j({"version": 1, "migrated": True, "active_typing": None,
+                                            "active_reading": None, "texts": rows})
 
 
 def _j(d: dict) -> bytes:
