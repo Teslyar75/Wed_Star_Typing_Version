@@ -200,3 +200,36 @@ def test_patch_me_skin() -> None:
     r = c.patch("/api/pilots/me", json={"skin": "neon_city", "accent": "amber", "avatar": "♞"})
     assert r.status_code == 200 and r.json()["skin"] == "neon_city" and r.json()["avatar_data"] == "emoji:♞"
     assert c.patch("/api/pilots/me", json={"skin": "nope"}).status_code == 400
+
+
+def _stpilot_full(files: dict[str, bytes]) -> bytes:
+    """Как pilots.export десктопа: backups/ и cache/ тоже в manifest."""
+    man = {"format": "stpilot", "version": 1,
+           "pilot": {"id": "p-x", "callsign": json.loads(files["profile.json"])["callsign"]},
+           "files": {k: hashlib.sha256(v).hexdigest() for k, v in files.items()}}
+    return _zip({"manifest.json": json.dumps(man).encode(), **{"data/" + k: v for k, v in files.items()}})
+
+
+def test_desktop_export_with_backups_and_full_roundtrip() -> None:
+    c = TestClient(app)
+    cs = f"Rt{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs, pin="4321")
+    files["backups/deleted-texts/x/meta.json"] = b"{}"
+    files["cache/tts/a.mp3"] = b"\x00"
+    pv = _preview(c, "p.stpilot", _stpilot_full(files))
+    s = pv["pilots"][0]
+    r = c.post("/api/import/commit", json={"token": pv["token"], "source_id": s["source_id"], "mode": "new"})
+    assert r.status_code == 200, r.text
+    ex = c.get("/api/import/export")
+    z = zipfile.ZipFile(io.BytesIO(ex.content))
+    names = set(z.namelist())
+    prof = json.loads(z.read("data/profile.json"))
+    assert prof["locked"] and prof["pin"]["iter"] == 1000 and prof["pin"]["hash"] == _pin_rec("4321")["hash"]
+    eng = json.loads(z.read("data/english.json"))
+    assert eng["settings"]["daily_new"] == 7
+    lib = json.loads(z.read("data/library/library.json"))
+    assert len(lib["texts"]) == 1
+    tid = lib["texts"][0]["id"]
+    assert f"data/library/texts/{tid}/original.txt" in names
+    assert "First sentence" in z.read(f"data/library/texts/{tid}/original.txt").decode()
+    assert json.loads(z.read(f"data/library/texts/{tid}/meta.json"))["title"] == "Book"
