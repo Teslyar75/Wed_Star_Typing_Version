@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     allow_dev_secret: bool = False
     secret_key_file: str = "./.jwt_secret"
     stamina_repo_root: Path | None = None
+    # Слайдшоу (E2): ключи только из окружения/.env (в git не попадают).
+    unsplash_access_key: str = ""
+    pexels_api_key: str = ""
 
     def repo_root(self) -> Path:
         """Корень с пакетом stamina (соседний клон My_Stamina) или этот репозиторий."""

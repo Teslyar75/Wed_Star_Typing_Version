@@ -1,3 +1,4 @@
+import IdleSettings from "../idle/IdleSettings";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { t, getLang } from "../i18n";
 import type { SpaceProfile } from "../fx/livingSpace";
@@ -36,6 +37,7 @@ function Block({ when, children }: { when: boolean; children: ReactNode }) {
   if (!when) return null;
   return <Suspense fallback={<p className="muted">…</p>}>{children}</Suspense>;
 }
+
 
 function Row({ title, desc, children }: { title: string; desc: string; children: ReactNode }) {
   return (
@@ -284,6 +286,8 @@ export default function SettingsHub({
               </button>
             ))}
           </Row>
+
+          <IdleSettings Row={Row} />
 
           <Row title={t("set_ui")} desc={t("set_ui_desc")}>
             {scales.map((b) => (

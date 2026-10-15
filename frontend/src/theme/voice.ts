@@ -44,3 +44,9 @@ export function skinRank(rank: string | undefined | null, lang: string): string 
   const list = ranks[lang] || ranks.en || ranks.ru;
   return list?.[i] ?? rank;
 }
+
+/** Название миссии в мире скина (`mission.<num>`), иначе с сервера. */
+export function missionTitle(num: number | undefined, base: string, lang: string): string {
+  if (num == null) return base;
+  return voiceLookup(`mission.${num}`, lang) ?? base;
+}

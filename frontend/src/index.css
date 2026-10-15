@@ -673,6 +673,11 @@ body {
   opacity: 0.4;
 }
 
+/* Не-космические фоны скинов: сами затемняют картинку, без общей прозрачности космоса. */
+.cockpit-desktop .space-bg.skin-bg:not(.skin-bg-living_space) {
+  opacity: 1;
+}
+
 .space-canvas.full {
   width: 100%;
   height: 100%;

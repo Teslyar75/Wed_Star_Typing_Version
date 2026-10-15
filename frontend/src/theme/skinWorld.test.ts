@@ -5,6 +5,8 @@ import { skinSoundsFor } from "./skinStore";
 import oldEngland from "../../../packages/themes/old_england.json";
 import spaceship from "../../../packages/themes/spaceship.json";
 import type { SkinTheme } from "./applyTheme";
+import { bgEngineOf } from "../fx/SkinBackground";
+import { missionTitle, setSkinVoice as setV } from "./voice";
 
 const OE = oldEngland as unknown as SkinTheme;
 const SS = spaceship as unknown as SkinTheme;
@@ -53,5 +55,15 @@ describe("skin world (S8 E1)", () => {
   it("per-skin sounds only when sounds_ready, else starship fallback", () => {
     expect(skinSoundsFor(OE)?.click).toContain("old_england");
     expect(skinSoundsFor({ id: "steampunk", colors: {}, sounds: { click: "/x.wav" } })?.click).toContain("spaceship");
+  });
+
+  it("skin background replaces space; missions in-world", () => {
+    expect(bgEngineOf(SS)).toBe("living_space");
+    expect(bgEngineOf(OE)).toBe("london_fog");
+    setV(OE.voice, OE.ranks_i18n);
+    expect(missionTitle(1, "Стыковка", "ru")).toBe("Первая заметка");
+    expect(missionTitle(1, "Docking", "en")).toBe("First column");
+    clearSkinVoice();
+    expect(missionTitle(1, "Стыковка", "ru")).toBe("Стыковка");
   });
 });

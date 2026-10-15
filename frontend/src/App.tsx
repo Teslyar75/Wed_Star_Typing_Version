@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import BridgeScreen from "./bridge/BridgeScreen";
-import SpaceCanvas from "./fx/SpaceCanvas";
+import SkinBackground, { bgEngineOf } from "./fx/SkinBackground";
+import IdleSlideshow from "./idle/IdleSlideshow";
 import HelpDrawer from "./shell/HelpDrawer";
 import CommandPalette from "./shell/CommandPalette";
 import { bootSkin, useSkin } from "./theme/skinStore";
@@ -264,12 +265,15 @@ export default function App() {
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
       {starsOn && (
-        <div className={`space-bg space-bg-${spaceProfile}`} aria-hidden key={`bg-${skin.id}-${skinGen}`}>
-          <SpaceCanvas
-            key={`space-${skin.id}-${skinGen}-${spaceProfile}`}
+        <div
+          className={`space-bg space-bg-${spaceProfile} skin-bg skin-bg-${bgEngineOf(skin)}`}
+          aria-hidden
+          key={`bg-${skin.id}-${skinGen}`}
+        >
+          <SkinBackground
+            key={`skin-bg-${skin.id}-${skinGen}-${spaceProfile}`}
+            skin={skin}
             profile={spaceProfile === "frost" ? "frost" : spaceProfile === "light" ? "light" : "full"}
-            fullBleed
-            className="space-canvas full"
           />
         </div>
       )}
@@ -433,6 +437,7 @@ export default function App() {
         onClose={() => setHelpOpen(false)}
         onFullHelp={() => setTab("settings")}
       />
+      <IdleSlideshow />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />
 
       {crewOpen ? (
