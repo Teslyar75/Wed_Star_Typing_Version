@@ -130,14 +130,28 @@ export function fmtEta(chars: number, cpm = 150): string {
 export const CARGO_BOARD_KEY = "st_cargo_board";
 export const PENDING_CARGO_KEY = "st_pending_drill";
 
+/**
+ * Порт stamina/session_storage.SessionState + cargo.txt / cargo_original.txt.
+ * Текст груза и позиция набора — в одном LS-ключе (веб).
+ */
 export type CargoBoard = {
   text: string;
   original: string;
   index: number;
+  typed?: number;
+  errors?: number;
+  elapsed?: number;
   /** Книга с полки — для продолжения печати */
   textId?: number | null;
   title?: string;
 };
+
+/** Как SessionState.is_unfinished — есть что продолжать на мостике. */
+export function isUnfinishedCargo(board: CargoBoard | null | undefined): board is CargoBoard {
+  if (!board?.text) return false;
+  const i = board.index ?? 0;
+  return i >= 0 && i < board.text.length;
+}
 
 export function loadCargoBoard(): CargoBoard | null {
   try {
@@ -151,6 +165,22 @@ export function loadCargoBoard(): CargoBoard | null {
   }
 }
 
+/** Незавершённая сессия груза — аналог load_session() + load_cargo(). */
+export function loadTypingSession(): CargoBoard | null {
+  const b = loadCargoBoard();
+  return isUnfinishedCargo(b) ? b : null;
+}
+
 export function saveCargoBoard(board: CargoBoard) {
   localStorage.setItem(CARGO_BOARD_KEY, JSON.stringify(board));
+}
+
+/** Аналог clear_session() — сброс позиции; текст груза оставляем. */
+export function clearTypingSession() {
+  const b = loadCargoBoard();
+  if (!b?.text) {
+    localStorage.removeItem(CARGO_BOARD_KEY);
+    return;
+  }
+  saveCargoBoard({ ...b, index: b.text.length, typed: b.typed ?? 0 });
 }

@@ -2,13 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DONE, ERROR, TypingEngine } from "../typing/engine";
 import { FINGER_COLORS, HOME_BUMPS, keyForChar, MOD_FINGER, ROWS } from "../typing/layouts";
 import { t, onLangChange } from "../i18n";
-import { loadCargoBoard, saveCargoBoard } from "../cargo/processText";
+import {
+  loadCargoBoard,
+  loadTypingSession,
+  saveCargoBoard,
+  type CargoBoard,
+} from "../cargo/processText";
 import { useReadingPos } from "../reading/positionStore";
 import { playClick, playError, playFinish } from "../fx/sounds";
 import { useRadio } from "../radio/radioStore";
 import { getTrStore } from "../speedread/trCache";
 import Heatmap, { type KeyRate } from "./Heatmap";
-import { sentenceAround, wordAt, wordCursor } from "./uplink";
+import { wordAt, wordCursor } from "./uplink";
+import { buildUplinkSegments, uplinkSourceAt, type UplinkSeg } from "./uplinkSegments";
 import AccRing from "./AccRing";
 import SpeedGauge from "./SpeedGauge";
 import RhythmBar from "./RhythmBar";
@@ -16,8 +22,6 @@ import MissionMiniPlaque, { type MissionBrief } from "./MissionMiniPlaque";
 import DebriefModal, { type DebriefData } from "./DebriefModal";
 import { useCabin } from "../settings/cabinStore";
 import { setModalStack } from "../shell/routeStore";
-
-type Segment = { idx: number; original: string; translation: string; status: string; char_start?: number };
 
 function WordSight({ word, cursor }: { word: string; cursor: number }) {
   if (!word) return <span className="sight-word-empty">—</span>;
@@ -40,20 +44,45 @@ function WordSight({ word, cursor }: { word: string; cursor: number }) {
 
 /** Окно вокруг курсора — DOM не держит весь текст (критерий 100k). */
 const WINDOW = 140;
+const DEFAULT_DRAFT = "the quick brown fox jumps over the lazy dog";
+
+/** Порт cockpit._bootstrap → resume_cargo: сразу поднять незаконченный груз. */
+function bootCargo(): CargoBoard | null {
+  try {
+    return loadTypingSession();
+  } catch {
+    return null;
+  }
+}
 
 export default function BridgeScreen() {
   const setSentence = useReadingPos((s) => s.setSentence);
-  const [textId, setTextId] = useState<number | null>(null);
-  const [draft, setDraft] = useState("the quick brown fox jumps over the lazy dog");
+  const [boot] = useState(bootCargo);
+  const [textId, setTextId] = useState<number | null>(() => boot?.textId ?? null);
+  const [draft, setDraft] = useState(() => boot?.text || DEFAULT_DRAFT);
+  const [cargoOriginal, setCargoOriginal] = useState(() => (boot?.original || "").trim());
   const [lang, setLang] = useState("en");
-  const [engine, setEngine] = useState(() => new TypingEngine(draft));
+  const [engine, setEngine] = useState(() => {
+    if (boot?.text) {
+      const idx = Math.max(0, Math.min(boot.index || 0, boot.text.length - 1));
+      return new TypingEngine(boot.text, {
+        index: idx,
+        typed: boot.typed ?? idx,
+        errors: boot.errors ?? 0,
+        elapsed: boot.elapsed ?? 0,
+      });
+    }
+    return new TypingEngine(DEFAULT_DRAFT);
+  });
   const [tick, setTick] = useState(0);
   const [flash, setFlash] = useState(false);
   const [keyErr, setKeyErr] = useState(false);
   const [pauseSub, setPauseSub] = useState("");
   const [status, setStatus] = useState(() => t("ready"));
   const [segStarts, setSegStarts] = useState<number[]>([]);
-  const [segments, setSegments] = useState<Segment[]>([]);
+  const [uplinkSegs, setUplinkSegs] = useState<UplinkSeg[]>(() =>
+    boot?.text ? buildUplinkSegments(boot.text, boot.original || null) : [],
+  );
   const [activeDrill, setActiveDrill] = useState<string | null>(null);
   const [activeMission, setActiveMission] = useState<MissionBrief | null>(null);
   const [keyRates, setKeyRates] = useState<KeyRate[]>([]);
@@ -79,6 +108,12 @@ export default function BridgeScreen() {
   const activeDrillRef = useRef<string | null>(null);
   const activeMissionRef = useRef<MissionBrief | null>(null);
   const draftRef = useRef(draft);
+  const engineRef = useRef(engine);
+  const cargoOriginalRef = useRef(cargoOriginal);
+  const textIdRef = useRef(textId);
+  engineRef.current = engine;
+  cargoOriginalRef.current = cargoOriginal;
+  textIdRef.current = textId;
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const keyErrTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const duckOnType = useRadio((s) => s.duckOnType);
@@ -205,13 +240,15 @@ export default function BridgeScreen() {
       }
       setDraft(j.text);
       setSegStarts([]);
-      setSegments([]);
+      const orig = (j.original || j.text || "").trim();
+      setCargoOriginal(isCargo ? orig : "");
+      setUplinkSegs(isCargo ? buildUplinkSegments(j.text, orig || null) : []);
       setTextId(isCargo && j.text_id != null ? j.text_id : null);
       const idx = j.index && j.index > 0 && j.index < j.text.length ? j.index : 0;
       if (isCargo) {
         saveCargoBoard({
           text: j.text,
-          original: j.original || j.text,
+          original: orig || j.text,
           index: idx,
           textId: j.text_id ?? null,
           title: j.title,
@@ -224,6 +261,17 @@ export default function BridgeScreen() {
       /* ignore */
     }
   }, [reloadEngine]);
+
+  /* Сегменты UPLINK при смене текста (груз с полки / свой текст) */
+  useEffect(() => {
+    if (activeDrill) {
+      setUplinkSegs([]);
+      return;
+    }
+    const board = loadCargoBoard();
+    const orig = cargoOriginal || board?.original || "";
+    if (engine.text) setUplinkSegs(buildUplinkSegments(engine.text, orig || null));
+  }, [activeDrill, engine.text, cargoOriginal]);
 
   const sentenceAt = (charIndex: number) => {
     if (!segStarts.length) return 0;
@@ -354,7 +402,6 @@ export default function BridgeScreen() {
     setDraft(j.text);
     setTextId(null);
     setSegStarts([]);
-    setSegments([]);
     setDebrief(null);
     reloadEngine(j.text);
   };
@@ -497,12 +544,10 @@ export default function BridgeScreen() {
 
   const sightWord = useMemo(() => wordAt(engine.text, engine.index), [engine.text, engine.index, tick]);
   const sightCursor = useMemo(() => wordCursor(engine.text, engine.index), [engine.text, engine.index, tick]);
-  const sightSource = useMemo(() => {
-    const si = sentenceAt(engine.index);
-    const seg = segments[si];
-    if (seg?.original?.trim()) return seg.original.trim();
-    return sentenceAround(engine.text, engine.index);
-  }, [engine.index, engine.text, segments, tick]);
+  const sightSource = useMemo(
+    () => uplinkSourceAt(uplinkSegs, engine.index) || wordAt(engine.text, engine.index),
+    [uplinkSegs, engine.index, engine.text, tick],
+  );
 
   const [wordTr, setWordTr] = useState("…");
   const [sentTr, setSentTr] = useState("");
@@ -510,8 +555,14 @@ export default function BridgeScreen() {
   const sentSrcRef = useRef("");
   const sentAbortRef = useRef<AbortController | null>(null);
   const uplinkOn = showTranslator && !activeDrill;
+  const engineIndexRef = useRef(engine.index);
+  const engineTextRef = useRef(engine.text);
+  const uplinkSegsRef = useRef(uplinkSegs);
+  engineIndexRef.current = engine.index;
+  engineTextRef.current = engine.text;
+  uplinkSegsRef.current = uplinkSegs;
 
-  /* UPLINK как stamina/bridge._update_uplink: слово через trCache; предложение — GET /word-tr (до 900 зн.). */
+  /* UPLINK: одно предложение/чанк (~14 слов), как desktop Segments — без abort на каждом tick. */
   useEffect(() => {
     if (!uplinkOn) {
       setWordTr("");
@@ -526,7 +577,8 @@ export default function BridgeScreen() {
 
     const fetchSentence = (src: string) => {
       const q = src.slice(0, 900);
-      const hit = store.cached(q);
+      /* Как desktop Translator.cached — сначала диск/LS, без «…» при hit. */
+      const hit = store.cached(q) || store.get(q);
       if (hit) {
         setSentTr(hit);
         return;
@@ -558,13 +610,11 @@ export default function BridgeScreen() {
     };
 
     const apply = () => {
-      const w = wordAt(engine.text, engine.index);
-      const si = sentenceAt(engine.index);
-      const seg = segments[si];
-      const readyTr = seg?.translation?.trim() || "";
-      const sentSrc = readyTr
-        ? ""
-        : (seg?.original?.trim() || sentenceAround(engine.text, engine.index)).trim();
+      const idx = engineIndexRef.current;
+      const text = engineTextRef.current;
+      const segs = uplinkSegsRef.current;
+      const w = wordAt(text, idx);
+      const sentSrc = uplinkSourceAt(segs, idx).trim();
 
       if (w !== wordSrcRef.current) {
         wordSrcRef.current = w;
@@ -580,10 +630,7 @@ export default function BridgeScreen() {
         if (hit) setWordTr(hit);
       }
 
-      if (readyTr) {
-        sentSrcRef.current = `__ready:${si}`;
-        setSentTr(readyTr);
-      } else if (sentSrc !== sentSrcRef.current) {
+      if (sentSrc !== sentSrcRef.current) {
         sentSrcRef.current = sentSrc;
         if (!sentSrc) setSentTr("");
         else fetchSentence(sentSrc);
@@ -598,34 +645,58 @@ export default function BridgeScreen() {
     const id = window.setInterval(apply, 280);
     return () => {
       clearInterval(id);
-      sentAbortRef.current?.abort();
+      /* не abort здесь — иначе каждый remount/смена deps рвёт перевод */
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uplinkOn, engine.index, engine.text, segments, tick]);
+  }, [uplinkOn, uplinkSegs]);
 
-  /* Автосохранение позиции печати на борту */
+  /* Автосохранение сессии груза — порт bridge.persist (session.json + cargo). */
   useEffect(() => {
     if (activeDrill) return;
-    const board = loadCargoBoard();
-    if (!board?.text || board.text !== engine.text) return;
+    if (!engine.text || engine.finished) return;
     const tmr = window.setTimeout(() => {
-      saveCargoBoard({ ...board, index: engine.index, textId: textId ?? board.textId ?? null });
+      const prev = loadCargoBoard();
+      saveCargoBoard({
+        text: engine.text,
+        original: (cargoOriginal || prev?.original || engine.text).trim(),
+        index: engine.index,
+        typed: engine.typed,
+        errors: engine.errors,
+        textId: textId ?? prev?.textId ?? null,
+        title: prev?.title,
+      });
     }, 400);
     return () => clearTimeout(tmr);
-  }, [activeDrill, engine.index, engine.text, textId]);
+  }, [activeDrill, engine.index, engine.typed, engine.errors, engine.text, engine.finished, cargoOriginal, textId]);
 
-  const sightSentence = uplinkOn
-    ? sentTr || "…"
-    : (() => {
-        const si = sentenceAt(engine.index);
-        const seg = segments[si];
-        if (seg?.translation?.trim()) return seg.translation.trim();
-        if (seg?.original?.trim()) return seg.original.trim();
-        return sightSource;
-      })();
+  /* Перед закрытием вкладки — force persist, как leave_current. */
+  useEffect(() => {
+    const flush = () => {
+      if (activeDrillRef.current) return;
+      const eng = engineRef.current;
+      if (!eng.text || eng.finished) return;
+      const prev = loadCargoBoard();
+      saveCargoBoard({
+        text: eng.text,
+        original: (cargoOriginalRef.current || prev?.original || eng.text).trim(),
+        index: eng.index,
+        typed: eng.typed,
+        errors: eng.errors,
+        textId: textIdRef.current ?? prev?.textId ?? null,
+        title: prev?.title,
+      });
+    };
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+    };
+  }, []);
+
+  const sightSentence = uplinkOn ? sentTr || "…" : sightSource;
   const sightIsTranslation = uplinkOn
     ? Boolean(sentTr && sentTr !== "…" && sentTr !== "—" && sentTr !== sightSource)
-    : Boolean(segments[sentenceAt(engine.index)]?.translation?.trim());
+    : false;
 
   return (
     <section className="bridge bridge-cockpit">

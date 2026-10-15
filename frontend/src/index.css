@@ -3734,11 +3734,14 @@ html[data-ui-scale="XXL"] .bridge-set-note {
 
 .sight-sentence {
   margin: 0.35rem auto 0;
-  max-width: 52rem;
+  max-width: min(52rem, 96%);
   font-size: clamp(1rem, 1.8vw, 1.2rem);
-  line-height: 1.45;
-  text-align: left;
+  line-height: 1.35;
+  text-align: center;
   padding: 0 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .instruments {

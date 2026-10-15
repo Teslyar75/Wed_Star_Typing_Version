@@ -1,5 +1,5 @@
 /* PWA shell + offline vocab/locales */
-const CACHE = "st-shell-v57";
+const CACHE = "st-shell-v59";
 const SHELL = [
   "/",
   "/index.html",
