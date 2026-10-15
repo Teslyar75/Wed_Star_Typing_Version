@@ -6,12 +6,7 @@ beforeAll(async () => {
   await initI18n("ru");
 });
 
-/**
- * Каждый ru-ключ должен быть в en (fallbackLng = en, иначе на экране сырой ключ вроде SPEED_LABEL).
- * Исключение (задокументировано): uk/de пока переведены частично (~455 ключей — Журнал, Скорочтение,
- * Свой текст, Библиотека, Английский, Чаепитие). Для них отсутствующий ключ показывается на английском
- * через fallback — поэтому для uk/de проверяем «есть в uk/de или в en», а не строгое наличие.
- */
+/** Каждый ru-ключ обязан быть во всех базовых локалях (en/uk/de) — без исключений. */
 describe("base locale keys", () => {
   const ru = () => Object.keys(i18n.getResourceBundle("ru", "ui"));
 
@@ -20,11 +15,20 @@ describe("base locale keys", () => {
     expect(ru().filter((k) => !(k in en))).toEqual([]);
   });
 
-  it("every ru key resolves in uk/de (own string or en fallback)", () => {
-    const en = i18n.getResourceBundle("en", "ui");
+  it("every ru key exists in uk and de", () => {
     for (const l of ["uk", "de"]) {
       const b = i18n.getResourceBundle(l, "ui");
-      expect(ru().filter((k) => !(k in b) && !(k in en)), l).toEqual([]);
+      expect(ru().filter((k) => !(k in b)), l).toEqual([]);
+    }
+  });
+
+  it("placeholders match ru in en/uk/de", () => {
+    const ph = (s: string) => (s.match(/\{\d\}/g) || []).sort().join(",");
+    const r = i18n.getResourceBundle("ru", "ui");
+    for (const l of ["uk", "de"]) {
+      const b = i18n.getResourceBundle(l, "ui");
+      const bad = ru().filter((k) => ph(b[k]) !== ph(r[k]));
+      expect(bad, l).toEqual([]);
     }
   });
 

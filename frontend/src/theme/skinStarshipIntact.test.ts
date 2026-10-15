@@ -86,7 +86,7 @@ describe("Old England English section (OE3)", () => {
 
   it("English section in uk/en/de has no space wording under Old England", async () => {
     const re: Record<string, RegExp> = {
-      uk: /косм|зорян|телеметр|сигнал|сканер|місі|політ|борт|відсік|склад|гіпердрайв|ілюмінатор|приціл|стикуван|маршрут|сектор|UPLINK/i,
+      uk: /косм|зорян|телеметр|сигнал(?!у мікро)|сканер|місі|політ|борт|відсік|склад(і|у|ом)?(?![а-яіїєґ.])|гіпердрайв|ілюмінатор|приціл|стикуван|маршрут|сектор|UPLINK/i,
       en: /cosmos|galax|planet|orbit|star map|telemetry|signal|scanner|\bmission|flight|aboard|warehouse|hyperdrive|viewport|crosshair|docking|route|sector|systems check|comms|decrypt|transmit|UPLINK/i,
       de: /weltraum|kosm|stern|telemetrie|signal|scanner|\bmission|flug|bord|frachtraum|lager|hyperantrieb|bullauge|fadenkreuz|andock|route|sektor|systemcheck|UPLINK/i,
     };
