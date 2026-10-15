@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Heatmap, { type KeyRate } from "../bridge/Heatmap";
 import { colorFor } from "../bridge/heatmapColor";
-import { t } from "../i18n";
+import { t, getLang } from "../i18n";
+import { skinRank } from "../theme/voice";
 
 type Summary = {
   flights: number;
@@ -156,7 +157,7 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
       },
       {
         cap: t("flog_rank"),
-        val: sum.rank.toUpperCase(),
+        val: skinRank(sum.rank, getLang()).toUpperCase(),
         sub: rankSub,
         tone: "amber",
       },

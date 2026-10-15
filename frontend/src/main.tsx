@@ -5,6 +5,7 @@ import { applyTheme } from "./theme/applyTheme";
 import { initI18n } from "./i18n/setup";
 import spaceship from "../../packages/themes/spaceship.json";
 import "./index.css";
+import "./theme/shapes.css";
 import "./viewportFit.css";
 import { installNoWheelScroll } from "./shell/noWheelScroll";
 

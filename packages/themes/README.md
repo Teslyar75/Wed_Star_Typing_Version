@@ -12,5 +12,6 @@
 
 - `spaceship` — текущий «пульт» (дефолт)
 - `bathyscaphe`, `steampunk`, `scriptorium`, `neon_city`, `zen_garden`
+- `old_england` — «Старая Англия» (S8, первый «мир»: `shape`, `voice`, `ranks_i18n`, `fonts.files`, `sounds_ready` — см. docs/skins/OLD_ENGLAND.md)
 
 При добавлении скина: JSON здесь + палитра в SKINS.md + ассеты в `docs/skins/images/<id>/`. Синхронизируйте с десктопом при необходимости.

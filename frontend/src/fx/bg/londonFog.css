@@ -1,0 +1,50 @@
+.lf { position: absolute; inset: 0; overflow: hidden; background: #0e1114; }
+.lf-img {
+  position: absolute; inset: -2%;
+  background: url("/skins/old_england/bg1.jpg") center 30% / cover no-repeat;
+  filter: brightness(0.38) saturate(0.55) sepia(0.25) blur(1.5px);
+}
+.lf-lamps { position: absolute; left: 0; right: 0; bottom: 0; height: 60%; }
+.lf-lamp {
+  position: absolute; bottom: 18%; width: 16vmin; height: 16vmin; margin-left: -8vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 140, 0.55) 0, rgba(255, 190, 100, 0.18) 30%, transparent 68%);
+  animation: lf-flicker 5.5s ease-in-out infinite;
+}
+.lf-lamp::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 3px; height: 30vmin; margin-left: -1.5px;
+  background: linear-gradient(#2a2a2a, #0b0b0b); opacity: 0.8;
+}
+@keyframes lf-flicker { 0%, 100% { opacity: 0.85 } 45% { opacity: 1 } 50% { opacity: 0.7 } 55% { opacity: 0.95 } }
+.lf-bus { position: absolute; bottom: 9%; left: 0; opacity: 0.55; filter: blur(1.2px); animation: lf-bus-r 15s linear forwards; }
+.lf-bus[data-dir="l"] { animation-name: lf-bus-l; }
+.lf-bus[data-dir="l"] svg { transform: scaleX(-1); }
+@keyframes lf-bus-r { from { transform: translateX(-260px) } to { transform: translateX(calc(100vw + 40px)) } }
+@keyframes lf-bus-l { from { transform: translateX(calc(100vw + 40px)) } to { transform: translateX(-260px) } }
+.lf-fog { position: absolute; inset: -20% -50%; pointer-events: none; transition: opacity 2.5s ease; }
+.lf-fog1 {
+  background:
+    radial-gradient(ellipse 40% 22% at 20% 70%, rgba(190, 196, 200, 0.22), transparent 70%),
+    radial-gradient(ellipse 35% 18% at 65% 80%, rgba(190, 196, 200, 0.2), transparent 70%);
+  animation: lf-drift 70s linear infinite alternate; opacity: 0.9;
+}
+.lf-fog2 {
+  background:
+    radial-gradient(ellipse 50% 25% at 40% 50%, rgba(170, 178, 184, 0.18), transparent 70%),
+    radial-gradient(ellipse 30% 20% at 85% 35%, rgba(170, 178, 184, 0.16), transparent 70%);
+  animation: lf-drift 110s linear infinite alternate-reverse; opacity: 0.85;
+}
+.lf-fog3 {
+  background: linear-gradient(0deg, rgba(150, 158, 164, 0.32), transparent 55%);
+  inset: 0; animation: none; opacity: 0.9;
+}
+@keyframes lf-drift { from { transform: translateX(-8%) } to { transform: translateX(8%) } }
+.lf[data-clear="1"] .lf-fog1, .lf[data-clear="1"] .lf-fog2 { opacity: 0.55; }
+.lf[data-clear="1"] .lf-fog3 { opacity: 0.6; }
+.lf[data-clear="2"] .lf-fog1, .lf[data-clear="2"] .lf-fog2 { opacity: 0.25; }
+.lf[data-clear="2"] .lf-fog3 { opacity: 0.35; }
+.lf-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.7)); }
+@media (prefers-reduced-motion: reduce) {
+  .lf-fog, .lf-lamp { animation: none; }
+  .lf-bus { display: none; }
+}

@@ -159,6 +159,8 @@ export const useRadio = create<RadioState>((set, get) => ({
         prev: () => get().prevFav(),
       });
       startIcyPoll(get);
+    }).catch(() => {
+      /* прервано pause()/stop() или автоплей запрещён */
     });
   },
 

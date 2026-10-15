@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DONE, ERROR, TypingEngine } from "../typing/engine";
 import { FINGER_COLORS, HOME_BUMPS, keyForChar, MOD_FINGER, ROWS } from "../typing/layouts";
-import { t, onLangChange } from "../i18n";
+import { t, onLangChange, getLang } from "../i18n";
+import { missionTitle } from "../theme/voice";
 import {
   loadCargoBoard,
   loadTypingSession,
@@ -479,6 +480,8 @@ export default function BridgeScreen() {
     }
     const res = engine.press(ch, now());
     if (res === null) return;
+    /* для фонов скинов (туман редеет при серии) */
+    window.dispatchEvent(new CustomEvent("st-type", { detail: { ok: res !== ERROR, streak: engine.streak } }));
     if (res === ERROR) {
       playError();
       showErrorFlash();
@@ -713,7 +716,7 @@ export default function BridgeScreen() {
         <div className="route-head-left">
           <h2 className="route-title">
             {activeMission
-              ? `${t("missions")} · ${activeMission.title}`
+              ? `${t("missions")} · ${missionTitle(activeMission.num, activeMission.title, getLang())}`
               : `${t("own_text")} · ${t("cargo_run")}`}
           </h2>
           <p className="muted">{t("progress_autosave")}</p>

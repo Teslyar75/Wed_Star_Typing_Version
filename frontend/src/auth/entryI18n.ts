@@ -1,5 +1,6 @@
 /** Строки экрана «ВХОД В КАБИНУ» (ru / uk / en / de). */
 import { getLang } from "../i18n";
+import { voiceLookup } from "../theme/voice";
 
 type Dict = Record<string, string>;
 
@@ -482,7 +483,7 @@ const DICTS: Record<string, Dict> = { ru: RU, uk: UK, en: EN, de: DE };
 
 export function te(key: string, ...args: (string | number)[]): string {
   const d = DICTS[getLang()] || EN;
-  let s = d[key] ?? EN[key] ?? RU[key] ?? key;
+  let s = voiceLookup(`entry.${key}`, getLang()) ?? d[key] ?? EN[key] ?? RU[key] ?? key;
   args.forEach((a, i) => {
     s = s.replace(`{${i}}`, String(a));
   });

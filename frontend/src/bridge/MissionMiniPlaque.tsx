@@ -1,6 +1,7 @@
 /** Мини-плашка текущей миссии в шапке мостика — ширина под число клавиш. */
 import { missionKeycaps } from "./MissionRail";
-import { t } from "../i18n";
+import { t, getLang } from "../i18n";
+import { missionTitle } from "../theme/voice";
 
 export type MissionBrief = {
   id: string;
@@ -63,7 +64,7 @@ export default function MissionMiniPlaque({ mission: m }: Props) {
         <span className="mm-id">{code}</span>
         <span className="mm-sector">{m.sector}</span>
       </div>
-      <div className="mm-title">{m.title}</div>
+      <div className="mm-title">{missionTitle(m.num, m.title, getLang())}</div>
       <div className="mm-keys" aria-hidden>
         {caps.map((cap) => (
           <span key={cap} className={`mm-keycap${cap.length > 1 ? " wide" : ""}`}>

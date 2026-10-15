@@ -1,0 +1,23 @@
+.idle-show { position: fixed; inset: 0; z-index: 200; background: #000; cursor: none; overflow: hidden; }
+.idle-slide {
+  position: absolute; inset: 0; background: center / cover no-repeat; opacity: 0;
+  transition: opacity 2.2s ease; transform: scale(1.04);
+}
+.idle-slide.on { opacity: 1; animation: idle-kb 14s ease-out forwards; }
+@keyframes idle-kb { from { transform: scale(1.04) } to { transform: scale(1.12) translateX(-1.5%) } }
+.idle-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.65)); }
+.idle-top {
+  position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: baseline;
+  padding: 18px 26px; color: #f2ead6; text-shadow: 0 2px 6px #000;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+}
+.idle-skin { font-family: var(--st-font-title, serif); font-size: 1.6rem; letter-spacing: 0.08em; }
+.idle-hint { opacity: 0.8; font-size: 0.95rem; }
+.idle-credit {
+  position: absolute; left: 18px; bottom: 14px; max-width: 70vw; padding: 6px 12px; font-size: 0.8rem;
+  color: #eee; background: rgba(0, 0, 0, 0.5); border-radius: 4px; cursor: default;
+}
+.idle-credit a { color: #f3d58a; }
+@media (prefers-reduced-motion: reduce) { .idle-slide.on { animation: none; } }
+.idle-sources { display: grid; gap: 4px; font-size: 0.85rem; }
+.idle-sources a { color: var(--st-accent); }
