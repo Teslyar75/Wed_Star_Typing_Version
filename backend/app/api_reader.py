@@ -22,10 +22,14 @@ class TranslateJob(BaseModel):
     async_mode: bool = True
 
 
+# Как stamina/translator.MAX_SOURCE_CHARS — слова короткие, предложения до ~900.
+_TR_MAX = 900
+
+
 @router.get("/word-tr")
 def word_tr(q: str = "", src: str = "en", dst: str = "ru", db: Session = Depends(get_db)) -> dict:
-    """Перевод слова/кадра для гипердрайва (кэш + uplink)."""
-    text = (q or "").strip()[:120]
+    """Перевод слова / кадра / предложения для UPLINK (кэш + сеть)."""
+    text = (q or "").strip()[:_TR_MAX]
     if not text:
         return {"tr": ""}
     hit = cache_get(db, text, src, dst)
@@ -48,11 +52,11 @@ class WordTrBatchIn(BaseModel):
 
 @router.post("/word-tr-batch")
 def word_tr_batch(body: WordTrBatchIn, db: Session = Depends(get_db)) -> dict:
-    """Пакетный перевод для прогрева кэша гипердрайва (до 80 уникальных слов)."""
+    """Пакетный перевод для прогрева кэша гипердрайва (до 80 уникальных ключей)."""
     out: dict[str, str] = {}
     seen: set[str] = set()
     for raw in body.words:
-        key = (raw or "").strip()[:120].lower()
+        key = (raw or "").strip()[:_TR_MAX].lower()
         if not key or key in seen:
             continue
         seen.add(key)

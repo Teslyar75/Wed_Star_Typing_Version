@@ -506,71 +506,100 @@ export default function BridgeScreen() {
 
   const [wordTr, setWordTr] = useState("…");
   const [sentTr, setSentTr] = useState("");
+  const wordSrcRef = useRef("");
+  const sentSrcRef = useRef("");
+  const sentAbortRef = useRef<AbortController | null>(null);
   const uplinkOn = showTranslator && !activeDrill;
 
-  /* UPLINK: слово + предложение — как stamina/bridge._update_uplink */
+  /* UPLINK как stamina/bridge._update_uplink: слово через trCache; предложение — GET /word-tr (до 900 зн.). */
   useEffect(() => {
     if (!uplinkOn) {
       setWordTr("");
       setSentTr("");
+      wordSrcRef.current = "";
+      sentSrcRef.current = "";
+      sentAbortRef.current?.abort();
+      sentAbortRef.current = null;
       return;
     }
     const store = getTrStore();
-    const refresh = () => {
-      const w = wordAt(engine.text, engine.index);
-      const src = (() => {
-        const si = sentenceAt(engine.index);
-        const seg = segments[si];
-        if (seg?.translation?.trim()) return { kind: "ready" as const, text: seg.translation.trim() };
-        if (seg?.original?.trim()) return { kind: "src" as const, text: seg.original.trim() };
-        return { kind: "src" as const, text: sentenceAround(engine.text, engine.index) };
-      })();
 
-      if (!w) {
-        setWordTr("—");
-      } else {
+    const fetchSentence = (src: string) => {
+      const q = src.slice(0, 900);
+      const hit = store.cached(q);
+      if (hit) {
+        setSentTr(hit);
+        return;
+      }
+      setSentTr("…");
+      sentAbortRef.current?.abort();
+      const ac = new AbortController();
+      sentAbortRef.current = ac;
+      void (async () => {
+        try {
+          const r = await fetch(
+            `/api/reader/word-tr?q=${encodeURIComponent(q)}&src=en&dst=ru`,
+            { credentials: "include", signal: ac.signal },
+          );
+          if (!r.ok) {
+            if (!ac.signal.aborted && sentSrcRef.current === src) setSentTr("?");
+            return;
+          }
+          const j = (await r.json()) as { tr?: string };
+          const tr = (j.tr || "").trim();
+          if (tr && !tr.startsWith("[ru]")) store.put(q, tr);
+          if (!ac.signal.aborted && sentSrcRef.current === src) {
+            setSentTr(tr && !tr.startsWith("[ru]") ? tr : "?");
+          }
+        } catch {
+          if (!ac.signal.aborted && sentSrcRef.current === src) setSentTr("?");
+        }
+      })();
+    };
+
+    const apply = () => {
+      const w = wordAt(engine.text, engine.index);
+      const si = sentenceAt(engine.index);
+      const seg = segments[si];
+      const readyTr = seg?.translation?.trim() || "";
+      const sentSrc = readyTr
+        ? ""
+        : (seg?.original?.trim() || sentenceAround(engine.text, engine.index)).trim();
+
+      if (w !== wordSrcRef.current) {
+        wordSrcRef.current = w;
+        if (!w) {
+          setWordTr("—");
+        } else {
+          const hit = store.cached(w);
+          setWordTr(hit || "…");
+          if (!hit) store.request(w, 0, "bridge-word");
+        }
+      } else if (w) {
         const hit = store.cached(w);
         if (hit) setWordTr(hit);
-        else {
-          setWordTr((prev) => (prev && prev !== "—" ? prev : "…"));
-          store.request(w, 0, "bridge-word");
-        }
       }
 
-      if (src.kind === "ready") {
-        setSentTr(src.text);
-      } else if (src.text) {
-        const hit = store.cached(src.text);
+      if (readyTr) {
+        sentSrcRef.current = `__ready:${si}`;
+        setSentTr(readyTr);
+      } else if (sentSrc !== sentSrcRef.current) {
+        sentSrcRef.current = sentSrc;
+        if (!sentSrc) setSentTr("");
+        else fetchSentence(sentSrc);
+      } else if (sentSrc) {
+        const hit = store.cached(sentSrc.slice(0, 900));
         if (hit) setSentTr(hit);
-        else {
-          setSentTr((prev) => prev || "…");
-          store.request(src.text, 1, "bridge-sent");
-        }
       } else {
         setSentTr("");
       }
     };
-    refresh();
-    const id = window.setInterval(() => {
-      const store = getTrStore();
-      const w = wordAt(engine.text, engine.index);
-      if (w) {
-        const hit = store.cached(w);
-        if (hit) setWordTr(hit);
-      }
-      const si = sentenceAt(engine.index);
-      const seg = segments[si];
-      if (seg?.translation?.trim()) {
-        setSentTr(seg.translation.trim());
-        return;
-      }
-      const src = seg?.original?.trim() || sentenceAround(engine.text, engine.index);
-      if (src) {
-        const hit = store.cached(src);
-        if (hit) setSentTr(hit);
-      }
-    }, 280);
-    return () => clearInterval(id);
+    apply();
+    const id = window.setInterval(apply, 280);
+    return () => {
+      clearInterval(id);
+      sentAbortRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uplinkOn, engine.index, engine.text, segments, tick]);
 
@@ -586,7 +615,7 @@ export default function BridgeScreen() {
   }, [activeDrill, engine.index, engine.text, textId]);
 
   const sightSentence = uplinkOn
-    ? sentTr || sightSource
+    ? sentTr || "…"
     : (() => {
         const si = sentenceAt(engine.index);
         const seg = segments[si];
@@ -595,7 +624,7 @@ export default function BridgeScreen() {
         return sightSource;
       })();
   const sightIsTranslation = uplinkOn
-    ? Boolean(sentTr && sentTr !== sightSource)
+    ? Boolean(sentTr && sentTr !== "…" && sentTr !== "—" && sentTr !== sightSource)
     : Boolean(segments[sentenceAt(engine.index)]?.translation?.trim());
 
   return (
