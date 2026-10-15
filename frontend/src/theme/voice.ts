@@ -50,3 +50,9 @@ export function missionTitle(num: number | undefined, base: string, lang: string
   if (num == null) return base;
   return voiceLookup(`mission.${num}`, lang) ?? base;
 }
+
+/** Звание английского раздела (backend ENGLISH_RANKS) в мире скина (`en_rank.<базовое>`). */
+export function enRank(rank: string | undefined | null, lang: string): string {
+  if (!rank) return "";
+  return voiceLookup(`en_rank.${rank}`, lang) ?? rank;
+}

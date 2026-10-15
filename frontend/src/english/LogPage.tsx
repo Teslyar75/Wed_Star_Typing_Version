@@ -5,7 +5,8 @@
  *   ЗНАКИ · ОШИБКИ
  */
 import { useEffect, useState } from "react";
-import { t } from "../i18n";
+import { getLang, t } from "../i18n";
+import { enRank, skinRank } from "../theme/voice";
 
 type ModeAcc = { ok: number; n: number; pct: number | null };
 type Journal = {
@@ -126,7 +127,7 @@ export default function LogPage({ onReviewMistakes, onMissionMistakes, onOpenWor
   const totalAns = j.accuracy?.total || 0;
   const heat = j.heat || [];
   const weeks = Math.max(12, Math.ceil(heat.length / 7) || 12);
-  const stRank = j.st_rank || j.rank || "—";
+  const stRank = j.st_rank ? skinRank(j.st_rank, getLang()) : j.rank ? enRank(j.rank, getLang()) : "—";
   const mistakesN = (j.mistakes || []).length;
   const badgesOk = (j.badges || []).filter((b) => b.ok).length;
 
