@@ -1,0 +1,285 @@
+{
+  "id": "old_england",
+  "name": {
+    "ru": "Старая Англия",
+    "uk": "Стара Англія",
+    "en": "Old England",
+    "de": "Altes England"
+  },
+  "icon": "☎",
+  "colors": {
+    "bg": "#14181c",
+    "bg2": "#1c2228",
+    "panel": "#232b31",
+    "panel_hi": "#2e3840",
+    "line": "#c8102e",
+    "line_hi": "#e23a4f",
+    "cyan": "#e8c766",
+    "cyan_dim": "#7a6420",
+    "cyan_deep": "#2a2410",
+    "accent": "#d4af37",
+    "accent_dim": "#7a6420",
+    "error": "#e0475c",
+    "error_dim": "#5a1420",
+    "ok": "#5fa872",
+    "ok_dim": "#2a4a32",
+    "purple": "#6f8fb0",
+    "text": "#ece4d0",
+    "muted": "#a39a86",
+    "faint": "#55524a",
+    "paper": "#efe7d4",
+    "ink": "#1d1d1b",
+    "enamel": "#1f4466"
+  },
+  "fonts": {
+    "ui": [
+      "Old Standard TT",
+      "Georgia"
+    ],
+    "title": [
+      "Playfair Display SC",
+      "Georgia"
+    ],
+    "typing": [
+      "PT Mono",
+      "Consolas"
+    ],
+    "files": [
+      {
+        "family": "Playfair Display SC",
+        "src": "/fonts/old_england/PlayfairDisplaySC-Bold.woff2",
+        "weight": "700"
+      },
+      {
+        "family": "Old Standard TT",
+        "src": "/fonts/old_england/OldStandard-Regular.woff2",
+        "weight": "400"
+      },
+      {
+        "family": "Old Standard TT",
+        "src": "/fonts/old_england/OldStandard-Bold.woff2",
+        "weight": "700"
+      },
+      {
+        "family": "PT Mono",
+        "src": "/fonts/old_england/PTMono-Regular.woff2",
+        "weight": "400"
+      }
+    ]
+  },
+  "frame": {
+    "style": "booth",
+    "radius": 4,
+    "border": 3,
+    "corner_cuts": false
+  },
+  "shape": {
+    "panel": "booth",
+    "button": "enamel",
+    "card": "newspaper",
+    "radius": "14px 14px 3px 3px",
+    "radius_btn": "3px",
+    "border": "3px"
+  },
+  "background": {
+    "engine": "city_rain",
+    "params": {}
+  },
+  "assets": {
+    "images": "/skins/old_england"
+  },
+  "ranks": [
+    "Посыльный",
+    "Младший клерк",
+    "Клерк",
+    "Корректор",
+    "Репортёр",
+    "Обозреватель",
+    "Редактор",
+    "Главный редактор Флит-стрит"
+  ],
+  "ranks_i18n": {
+    "ru": [
+      "Посыльный",
+      "Младший клерк",
+      "Клерк",
+      "Корректор",
+      "Репортёр",
+      "Обозреватель",
+      "Редактор",
+      "Главный редактор Флит-стрит"
+    ],
+    "uk": [
+      "Посильний",
+      "Молодший клерк",
+      "Клерк",
+      "Коректор",
+      "Репортер",
+      "Оглядач",
+      "Редактор",
+      "Головний редактор Фліт-стріт"
+    ],
+    "en": [
+      "Errand boy",
+      "Junior clerk",
+      "Clerk",
+      "Proofreader",
+      "Reporter",
+      "Columnist",
+      "Editor",
+      "Editor-in-chief of Fleet Street"
+    ],
+    "de": [
+      "Laufbursche",
+      "Hilfsschreiber",
+      "Schreiber",
+      "Korrektor",
+      "Reporter",
+      "Kolumnist",
+      "Redakteur",
+      "Chefredakteur der Fleet Street"
+    ]
+  },
+  "voice": {
+    "ru": {
+      "bridge": "Флит-стрит",
+      "missions": "Поручения",
+      "flight_log": "Дневник",
+      "flog_title": "Дневник клерка — статистика смен",
+      "flog_rank": "Должность",
+      "flog_flights": "{0} смен",
+      "flog_time": "Время за конторкой",
+      "radio": "Радиоприёмник",
+      "settings": "Конторка",
+      "bridge_settings": "Конторка",
+      "english": "Школа на Бейкер-стрит",
+      "speed": "Читальный зал",
+      "lounge": "Чаепитие",
+      "own_text": "Своя заметка",
+      "crew": "Редакция",
+      "pilot": "Клерк",
+      "console_sub": "РЕДАКЦИЯ НА ФЛИТ-СТРИТ",
+      "star_map": "Карта поручений редактора",
+      "en_warehouse": "Картотека",
+      "finish": "НОМЕР СДАН",
+      "flying": "● СМЕНА ИДЁТ",
+      "board": "За конторку",
+      "skins": "Скины",
+      "entry.title": "ВХОД В РЕДАКЦИЮ",
+      "entry.sub": "Выберите клерка или примите нового в штат",
+      "entry.crew_n": "Штат: {0}",
+      "entry.new_pilot": "Новый клерк",
+      "entry.guest": "Прохожий",
+      "entry.takeoff": "В ПУТЬ!",
+      "entry.rank": "Должность",
+      "entry.next_rank": "до повышения: {0}",
+      "entry.max_rank": "высшая должность",
+      "entry.sessions": "Смен",
+      "entry.never": "ещё не выходил на смену",
+      "entry.pin": "Пропуск",
+      "entry.pin_ph": "№ пропуска",
+      "entry.skin": "Облик редакции",
+      "entry.you": "за конторкой",
+      "entry.first_title": "Добро пожаловать в редакцию",
+      "entry.first_sub": "Штат пока пуст. С чего начнём?",
+      "entry.first_new": "Принять клерка",
+      "entry.first_guest": "Заглянуть прохожим",
+      "entry.wiz_title": "ПРИЁМ В ШТАТ · шаг {0} из 3",
+      "entry.wiz_s1": "Подпись",
+      "entry.callsign": "Подпись",
+      "entry.dismiss": "Уволить",
+      "entry.honor": "Доска почёта",
+      "skin.help": "Скин «Старая Англия»: вы — клерк лондонской редакции на Флит-стрит. Мостик здесь — Флит-стрит, миссии — поручения редактора, бортжурнал — дневник, звания — должности от посыльного до главного редактора. Логика тренировки та же."
+    },
+    "uk": {
+      "bridge": "Фліт-стріт",
+      "missions": "Доручення",
+      "flight_log": "Щоденник",
+      "flog_title": "Щоденник клерка — статистика змін",
+      "flog_rank": "Посада",
+      "radio": "Радіоприймач",
+      "settings": "Конторка",
+      "bridge_settings": "Конторка",
+      "english": "Школа на Бейкер-стріт",
+      "speed": "Читальна зала",
+      "lounge": "Чаювання",
+      "crew": "Редакція",
+      "pilot": "Клерк",
+      "console_sub": "РЕДАКЦІЯ НА ФЛІТ-СТРІТ",
+      "en_warehouse": "Картотека",
+      "finish": "НОМЕР ЗДАНО",
+      "entry.title": "ВХІД ДО РЕДАКЦІЇ",
+      "entry.new_pilot": "Новий клерк",
+      "entry.guest": "Перехожий",
+      "entry.takeoff": "В ДОРОГУ!",
+      "entry.rank": "Посада",
+      "entry.pin": "Перепустка",
+      "entry.skin": "Вигляд редакції",
+      "entry.callsign": "Підпис",
+      "entry.wiz_s1": "Підпис",
+      "skin.help": "Скін «Стара Англія»: ви — клерк лондонської редакції на Фліт-стріт. Логіка тренування та сама."
+    },
+    "en": {
+      "bridge": "Fleet Street",
+      "missions": "Errands",
+      "flight_log": "Diary",
+      "flog_title": "Clerk's diary — shift statistics",
+      "flog_rank": "Position",
+      "radio": "Wireless",
+      "settings": "Writing desk",
+      "bridge_settings": "Writing desk",
+      "english": "Baker Street School",
+      "speed": "Reading Room",
+      "lounge": "Tea time",
+      "crew": "Newsroom",
+      "pilot": "Clerk",
+      "console_sub": "FLEET STREET NEWSROOM",
+      "en_warehouse": "Card index",
+      "finish": "GONE TO PRESS",
+      "entry.title": "ENTER THE NEWSROOM",
+      "entry.new_pilot": "New clerk",
+      "entry.guest": "Passer-by",
+      "entry.takeoff": "MIND THE GAP!",
+      "entry.rank": "Position",
+      "entry.pin": "Pass",
+      "entry.skin": "Newsroom look",
+      "entry.callsign": "Byline",
+      "entry.wiz_s1": "Byline",
+      "skin.help": "“Old England” skin: you are a clerk at a Fleet Street newsroom. Bridge = Fleet Street, missions = errands, log = diary, ranks = positions. Training logic is unchanged."
+    },
+    "de": {
+      "bridge": "Fleet Street",
+      "missions": "Aufträge",
+      "flight_log": "Tagebuch",
+      "flog_rank": "Stellung",
+      "radio": "Radioempfänger",
+      "settings": "Schreibpult",
+      "bridge_settings": "Schreibpult",
+      "english": "Schule in der Baker Street",
+      "speed": "Lesesaal",
+      "lounge": "Teestunde",
+      "crew": "Redaktion",
+      "pilot": "Schreiber",
+      "console_sub": "REDAKTION FLEET STREET",
+      "en_warehouse": "Kartei",
+      "finish": "IN DRUCK",
+      "entry.title": "EINTRITT IN DIE REDAKTION",
+      "entry.new_pilot": "Neuer Schreiber",
+      "entry.guest": "Passant",
+      "entry.takeoff": "LOS GEHT'S!",
+      "entry.rank": "Stellung",
+      "entry.pin": "Ausweis",
+      "entry.callsign": "Kürzel",
+      "skin.help": "Skin „Altes England“: Sie sind Schreiber in einer Redaktion in der Fleet Street. Die Trainingslogik bleibt gleich."
+    }
+  },
+  "sounds_ready": true,
+  "sounds": {
+    "click": "/sounds/skins/old_england/click.wav",
+    "error": "/sounds/skins/old_england/error.wav",
+    "finish": "/sounds/skins/old_england/finish.wav",
+    "ok": "/sounds/skins/old_england/finish.wav",
+    "start": "/sounds/skins/old_england/start.wav",
+    "bell": "/sounds/skins/old_england/bell.wav"
+  }
+}
