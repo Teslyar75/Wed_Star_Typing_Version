@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.auth_deps import get_current_pilot
 from app.db import get_db
 from app.pilots import Pilot, hash_pin
 from app.sessions import TypingSession
@@ -28,10 +29,17 @@ class PilotMigrateIn(BaseModel):
 
 
 @router.post("/pilot")
-def import_pilot(body: PilotMigrateIn, db: Session = Depends(get_db)) -> dict:
+def import_pilot(
+    body: PilotMigrateIn,
+    db: Session = Depends(get_db),
+    me: Pilot = Depends(get_current_pilot),
+) -> dict:
+    """Устаревший JSON-импорт: только в СВОЕГО пилота (раньше перезаписывал чужих). Новый — /api/import."""
     cs = body.callsign.strip()
     if not cs:
         raise HTTPException(400, "callsign required")
+    if cs.casefold() != me.callsign.casefold():
+        raise HTTPException(403, "can import only into the logged-in pilot")
     display = body.display_name or body.name or cs
     existing = db.query(Pilot).filter(Pilot.callsign == cs).first()
     if existing:
@@ -85,7 +93,11 @@ def import_pilot(body: PilotMigrateIn, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("/bundle")
-def import_bundle(payload: dict[str, Any], db: Session = Depends(get_db)) -> dict:
+def import_bundle(
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+    me: Pilot = Depends(get_current_pilot),
+) -> dict:
     """Принимает профиль десктопа: {pilots:[{callsign,name,xp,...}], ...} или один пилот."""
     pilots = payload.get("pilots")
     if isinstance(pilots, list):
@@ -104,7 +116,7 @@ def import_bundle(payload: dict[str, Any], db: Session = Depends(get_db)) -> dic
                 sessions=list(p.get("sessions") or []),
             )
             if body.callsign:
-                out.append(import_pilot(body, db))
+                out.append(import_pilot(body, db, me))
         return {"imported": len(out), "pilots": out}
     # один объект
     body = PilotMigrateIn(
@@ -117,4 +129,4 @@ def import_bundle(payload: dict[str, Any], db: Session = Depends(get_db)) -> dic
         accent=str(payload.get("accent") or "cyan"),
         sessions=list(payload.get("sessions") or []),
     )
-    return import_pilot(body, db)
+    return import_pilot(body, db, me)

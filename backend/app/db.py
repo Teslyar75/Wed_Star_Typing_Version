@@ -44,6 +44,7 @@ def init_db() -> None:
     from app import api_library as _lib  # noqa: F401
     from app import api_radio as _radio  # noqa: F401
     from app import api_lounge as _lounge  # noqa: F401
+    from app import api_import as _imp  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
