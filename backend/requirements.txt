@@ -11,3 +11,4 @@ pypdf>=4.0
 bcrypt>=4.2
 PyJWT>=2.9
 vosk>=0.3.45
+edge-tts>=7.0

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { t } from "../i18n";
 import ZoneSettingsShell from "../shell/ZoneSettingsShell";
-import SpeakButton from "./SpeakButton";
+import VoicePicker from "./VoicePicker";
 import type { EnSettings } from "./types";
 
 const DEFAULTS: EnSettings = {
@@ -65,19 +65,7 @@ export default function SettingsPage({ onChange }: Props) {
         <div className="en-settings-grid">
         <div className="inst-panel">
           <div className="lab">{t("en_link_voice")}</div>
-          <label className="en-set-row">
-            {t("en_tts_rate")}
-            <input
-              type="range"
-              min={0.6}
-              max={1.3}
-              step={0.05}
-              value={s.tts_rate}
-              onChange={(e) => void patch({ tts_rate: Number(e.target.value) })}
-            />
-            <span className="mono muted">{s.tts_rate.toFixed(2)}</span>
-            <SpeakButton text="Navigation channel online" rate={s.tts_rate} label={t("en_test_voice")} />
-          </label>
+          <VoicePicker />
           {(
             [
               ["auto_speak", "en_auto_speak"],

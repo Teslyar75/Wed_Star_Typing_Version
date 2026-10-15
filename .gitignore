@@ -17,3 +17,4 @@ frontend/blob-report/
 frontend/playwright/.cache/
 frontend/public/models/*.tar.gz
 frontend/public/models/*.zip
+backend/data_cache/

@@ -1,4 +1,5 @@
 /** Обзор АНГЛИЙСКИЙ — паритет stamina/english/pages_main.OverviewPage. */
+import { speakText } from "./speak";
 import { useEffect, useMemo, useState } from "react";
 import { t } from "../i18n";
 
@@ -125,10 +126,7 @@ export default function EnglishOverview({
   }, [prog.learned]);
 
   const speak = (word: string) => {
-    if (!window.speechSynthesis || !word) return;
-    const u = new SpeechSynthesisUtterance(word);
-    u.lang = "en-US";
-    window.speechSynthesis.speak(u);
+    if (word) speakText(word, "en-US");
   };
 
   return (
