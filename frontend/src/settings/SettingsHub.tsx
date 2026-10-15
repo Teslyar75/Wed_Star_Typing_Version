@@ -1,4 +1,5 @@
 import IdleSettings from "../idle/IdleSettings";
+import GuideSettings from "../guide/GuideSettings";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { t, getLang } from "../i18n";
 import type { SpaceProfile } from "../fx/livingSpace";
@@ -24,13 +25,15 @@ const SkinPicker = lazy(() => import("../theme/SkinPicker"));
 const CockpitEntry = lazy(() => import("../auth/CockpitEntry"));
 import { applyImportClient } from "../auth/applyImportClient";
 
-type Sub = "cabin" | "cabinMore" | "skins" | "crew";
+type Sub = "cabin" | "cabinMore" | "guide" | "skins" | "crew";
 
 type Props = {
   spaceProfile: SpaceProfile;
   onSpaceProfile: (p: SpaceProfile) => void;
   lang: string;
   onLang: (code: string) => void;
+  /** «Повторить знакомство» — перейти на мостик и показать first_launch */
+  onGuideReplay?: () => void;
 };
 
 function Block({ when, children }: { when: boolean; children: ReactNode }) {
@@ -71,6 +74,7 @@ export default function SettingsHub({
   onSpaceProfile,
   lang,
   onLang,
+  onGuideReplay,
 }: Props) {
   const [sub, setSub] = useState<Sub>("cabin");
   const cabin = useCabin();
@@ -90,6 +94,7 @@ export default function SettingsHub({
   const subs: { id: Sub; label: string }[] = [
     { id: "cabin", label: t("set_systems") },
     { id: "cabinMore", label: t("set_more") },
+    { id: "guide", label: "Гид" },
     { id: "skins", label: t("skins") },
     { id: "crew", label: t("crew") },
   ];
@@ -103,7 +108,7 @@ export default function SettingsHub({
   useEffect(() => {
     registerGoHandler((slugs) => {
       const id = slugs[0] as Sub | undefined;
-      if (id && ["cabin", "cabinMore", "skins", "crew"].includes(id)) {
+      if (id && ["cabin", "cabinMore", "guide", "skins", "crew"].includes(id)) {
         setSub(id as Sub);
       }
     });
@@ -339,6 +344,13 @@ export default function SettingsHub({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {sub === "guide" && (
+        <div className="settings-cabin inst-panel settings-guide">
+          <div className="lab">Гид</div>
+          <GuideSettings Row={Row} onReplay={onGuideReplay} />
         </div>
       )}
 

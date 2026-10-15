@@ -11,6 +11,16 @@ export type GuideState = {
   muted_triggers: string[];
   /** ms epoch последнего показанного окна */
   last_popup: number;
+  /** громкость голоса 0…4 */
+  volume: number;
+  /** личные рекорды (для триггера record) */
+  bests: { cpm: number; acc: number };
+  /** последнее известное звание (для rank_up) */
+  last_rank: string;
+  /** последний вход, ms (для long_break) */
+  last_seen: number;
+  /** когда триггер показан последний раз (кулдауны record / error_streak) */
+  last_by: Record<string, number>;
 };
 
 export const DEFAULT_STATE: GuideState = {
@@ -20,6 +30,11 @@ export const DEFAULT_STATE: GuideState = {
   seen: [],
   muted_triggers: [],
   last_popup: 0,
+  volume: 3,
+  bests: { cpm: 0, acc: 0 },
+  last_rank: "",
+  last_seen: 0,
+  last_by: {},
 };
 
 /** Триггеры вне лимита частоты. */
@@ -31,6 +46,13 @@ export const ONCE = new Set(["first_launch"]);
 export function isOnce(trigger: string): boolean {
   return ONCE.has(trigger) || trigger.startsWith("first_zone:");
 }
+
+/** Собственные кулдауны (поверх общего лимита). */
+export const COOLDOWN_MS: Record<string, number> = {
+  record: 24 * 3600_000,
+  error_streak: 15 * 60_000,
+};
+const RARE_ONLY_NORMAL = new Set(["error_streak"]);
 
 export const FREQ_MS: Record<GuideFreq, number> = {
   often: 5 * 60_000,
@@ -51,6 +73,10 @@ export function canShow(trigger: string, st: GuideState, ctx: ShowCtx): Verdict 
   if (st.id === "none") return "drop";
   if (st.muted_triggers.includes(trigger)) return "drop";
   if (isOnce(trigger) && st.seen.includes(trigger)) return "drop";
+  const cd = COOLDOWN_MS[trigger];
+  if (cd && st.last_by[trigger] && ctx.now - st.last_by[trigger]! < cd) return "drop";
+  // «редкие» триггеры молчат на частоте «Редко»
+  if (RARE_ONLY_NORMAL.has(trigger) && st.freq === "rare") return "drop";
   if (!EXEMPT.has(trigger)) {
     const gap = FREQ_MS[st.freq];
     if (!Number.isFinite(gap)) return "drop";
@@ -81,12 +107,13 @@ export function fill(line: string, vars: Record<string, string | number | undefi
 const IMPLIES: Record<string, string[]> = { first_launch: ["first_zone:bridge"] };
 
 export function markShown(st: GuideState, trigger: string, now: number): GuideState {
-  const add = [trigger, ...(IMPLIES[trigger] || [])].filter((x) => !st.seen.includes(x));
+  const add = (isOnce(trigger) ? [trigger] : []).concat(IMPLIES[trigger] || []).filter((x) => !st.seen.includes(x));
   return {
     ...st,
     // первый запуск — тоже окно: следующее (зона) не раньше чем через лимит
     last_popup: EXEMPT.has(trigger) && trigger !== "first_launch" ? st.last_popup : now,
     seen: [...st.seen, ...add],
+    last_by: COOLDOWN_MS[trigger] ? { ...st.last_by, [trigger]: now } : st.last_by,
   };
 }
 
@@ -103,6 +130,14 @@ export function normalize(raw: unknown): GuideState {
     seen: Array.isArray(r.seen) ? r.seen.filter((x) => typeof x === "string") : [],
     muted_triggers: Array.isArray(r.muted_triggers) ? r.muted_triggers.filter((x) => typeof x === "string") : [],
     last_popup: typeof r.last_popup === "number" ? r.last_popup : 0,
+    bests: {
+      cpm: typeof r.bests?.cpm === "number" ? r.bests.cpm : 0,
+      acc: typeof r.bests?.acc === "number" ? r.bests.acc : 0,
+    },
+    last_rank: typeof r.last_rank === "string" ? r.last_rank : "",
+    last_seen: typeof r.last_seen === "number" ? r.last_seen : 0,
+    last_by: r.last_by && typeof r.last_by === "object" ? { ...r.last_by } : {},
+    volume: typeof r.volume === "number" && r.volume >= 0 && r.volume <= 4 ? Math.round(r.volume) : 3,
   };
 }
 
@@ -113,4 +148,70 @@ export function addressOf(gender?: string | null): string {
   if (g === "m" || g === "male" || g === "м") return "сэр";
   if (g === "f" || g === "female" || g === "ж") return "мэм";
   return "пилот";
+}
+
+/** «Сбросить показанные подсказки»: всё заново, кроме знакомства (его повторяют отдельной кнопкой). */
+export function resetHints(st: GuideState): GuideState {
+  return { ...st, seen: st.seen.filter((x) => x === "first_launch"), muted_triggers: [], last_popup: 0 };
+}
+
+/** «Повторить знакомство»: first_launch снова не показан. */
+export function forgetFirstLaunch(st: GuideState): GuideState {
+  return { ...st, seen: st.seen.filter((x) => x !== "first_launch") };
+}
+
+export const FREQ_LABELS: { id: GuideFreq; label: string }[] = [
+  { id: "often", label: "Часто" },
+  { id: "normal", label: "Обычно" },
+  { id: "rare", label: "Редко" },
+  { id: "story", label: "Выкл" },
+];
+
+/* ---------- G3: события ---------- */
+
+export const ERROR_STREAK = 6;
+export const LONG_BREAK_DAYS = 3;
+
+/** Рекорд: скорость (при точности ≥ 90%) или точность (≥ 95%). Первая сессия — только база. */
+export function checkRecord(
+  bests: { cpm: number; acc: number },
+  seg: { cpm: number; acc: number; chars: number },
+): { kind: "cpm" | "acc" | null; prev: number; bests: { cpm: number; acc: number } } {
+  if (seg.chars < 50) return { kind: null, prev: 0, bests };
+  const nb = { cpm: bests.cpm, acc: bests.acc };
+  let kind: "cpm" | "acc" | null = null;
+  let prev = 0;
+  if (seg.acc >= 90 && seg.cpm > bests.cpm) {
+    if (bests.cpm > 0) {
+      kind = "cpm";
+      prev = bests.cpm;
+    }
+    nb.cpm = seg.cpm;
+  }
+  if (seg.acc >= 95 && seg.acc > bests.acc) {
+    if (bests.acc > 0 && !kind) {
+      kind = "acc";
+      prev = bests.acc;
+    }
+    nb.acc = seg.acc;
+  }
+  return { kind, prev, bests: nb };
+}
+
+export function breakDays(lastSeen: number, now: number): number {
+  if (!lastSeen) return 0;
+  const d = Math.floor((now - lastSeen) / 86_400_000);
+  return d >= LONG_BREAK_DAYS ? d : 0;
+}
+
+export function isRankUp(lastRank: string, rank: string | undefined): boolean {
+  return !!lastRank && !!rank && rank !== lastRank;
+}
+
+export function daysWord(n: number): string {
+  const a = n % 10;
+  const b = n % 100;
+  if (a === 1 && b !== 11) return "день";
+  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return "дня";
+  return "дней";
 }

@@ -105,3 +105,75 @@ describe("гид G2: первый вход в зоны", () => {
     expect(zoneTrigger("nope")).toBeNull();
   });
 });
+
+import { forgetFirstLaunch, resetHints } from "./guideLogic";
+describe("гид G3: настройки", () => {
+  it("сброс подсказок оставляет знакомство, снимает Shift+Esc и лимит", () => {
+    const s = { ...st, seen: ["first_launch", "first_zone:radio"], muted_triggers: ["record"], last_popup: T };
+    expect(resetHints(s)).toMatchObject({ seen: ["first_launch"], muted_triggers: [], last_popup: 0 });
+    expect(forgetFirstLaunch(s).seen).toEqual(["first_zone:radio"]);
+  });
+  it("громкость 0…4, по умолчанию 3", () => {
+    expect(normalize({}).volume).toBe(3);
+    expect(normalize({ volume: 9 }).volume).toBe(3);
+    expect(normalize({ volume: 1 }).volume).toBe(1);
+  });
+});
+
+import { breakDays, checkRecord, daysWord, isRankUp } from "./guideLogic";
+import { onSession } from "./GuideEvents";
+import { useGuide } from "./guideStore";
+describe("гид G3: события", () => {
+  it("рекорд: первая сессия — база; скорость при точности ≥90; точность ≥95; короткие не в счёт", () => {
+    const b0 = { cpm: 0, acc: 0 };
+    const r0 = checkRecord(b0, { cpm: 150, acc: 96, chars: 200 });
+    expect(r0.kind).toBeNull();
+    expect(r0.bests).toEqual({ cpm: 150, acc: 96 });
+    expect(checkRecord(r0.bests, { cpm: 170, acc: 92, chars: 200 })).toMatchObject({ kind: "cpm", prev: 150 });
+    expect(checkRecord(r0.bests, { cpm: 170, acc: 85, chars: 200 }).kind).toBeNull();
+    expect(checkRecord(r0.bests, { cpm: 120, acc: 99, chars: 200 })).toMatchObject({ kind: "acc", prev: 96 });
+    expect(checkRecord(r0.bests, { cpm: 300, acc: 100, chars: 20 }).kind).toBeNull();
+  });
+  it("кулдауны: рекорд раз в сутки, серия ошибок раз в 15 мин и не на «Редко»; звание — вне лимита", () => {
+    const s = markShown({ ...st, last_popup: 0 }, "record", T);
+    expect(s.seen).toEqual([]);
+    expect(canShow("record", { ...s, last_popup: 0 }, { now: T + 3600_000, lastTypeAt: 0 })).toBe("drop");
+    expect(canShow("record", { ...s, last_popup: 0 }, { now: T + 25 * 3600_000, lastTypeAt: 0 })).toBe("show");
+    expect(canShow("error_streak", { ...st, freq: "rare" }, idle)).toBe("drop");
+    const e = markShown(st, "error_streak", T);
+    expect(canShow("error_streak", { ...e, last_popup: 0 }, { now: T + 10 * 60_000, lastTypeAt: 0 })).toBe("drop");
+    expect(canShow("rank_up", { ...st, last_popup: T }, { now: T + 1000, lastTypeAt: 0 })).toBe("show");
+    expect(canShow("rank_up", { ...st, freq: "story" }, idle)).toBe("show");
+    expect(canShow("rank_up", st, { now: T, lastTypeAt: T - 100 })).toBe("wait");
+  });
+  it("долгий перерыв ≥3 дней, звание, склонение", () => {
+    expect(breakDays(0, T)).toBe(0);
+    expect(breakDays(T - 2 * 86_400_000, T)).toBe(0);
+    expect(breakDays(T - 4 * 86_400_000, T)).toBe(4);
+    expect(isRankUp("", "Мичман")).toBe(false);
+    expect(isRankUp("Кадет", "Мичман")).toBe(true);
+    expect([1, 3, 5, 11, 21, 22].map(daysWord)).toEqual(["день", "дня", "дней", "дней", "день", "дня"]);
+  });
+  it("реплики событий: {sir}, без чужих вселенных", () => {
+    const own = linesOf("ship_ai")!;
+    for (const k of ["rank_up", "record:cpm", "record:acc", "long_break", "error_streak"]) {
+      expect(own[k]?.default?.join(" "), k).toContain("{sir}");
+    }
+  });
+  it("сессия → окно рекорда, потом звания (после паузы)", async () => {
+    const g = useGuide.getState();
+    g.setPilot("Тест");
+    g.patch({ ...DEFAULT_STATE, bests: { cpm: 100, acc: 90 }, last_rank: "Кадет", last_popup: 0 });
+    useGuide.setState({ lastTypeAt: 0 });
+    await onSession({ cpm: 140, acc: 93, chars: 300 }, async () => ({ rank: "Мичман" }));
+    const s = useGuide.getState();
+    expect(s.popup?.trigger).toBe("record");
+    expect(s.popup?.lines[0]).toContain("140 зн/мин");
+    expect(s.popup?.lines[0]).toContain("сэр");
+    expect(s.queue.map((q) => q.trigger)).toEqual(["rank_up"]);
+    s.close();
+    useGuide.getState().pump();
+    expect(useGuide.getState().popup?.lines[0]).toContain("«");
+    expect(useGuide.getState().st.last_rank).toBe("Мичман");
+  });
+});
