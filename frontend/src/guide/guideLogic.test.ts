@@ -105,3 +105,17 @@ describe("гид G2: первый вход в зоны", () => {
     expect(zoneTrigger("nope")).toBeNull();
   });
 });
+
+import { forgetFirstLaunch, resetHints } from "./guideLogic";
+describe("гид G3: настройки", () => {
+  it("сброс подсказок оставляет знакомство, снимает Shift+Esc и лимит", () => {
+    const s = { ...st, seen: ["first_launch", "first_zone:radio"], muted_triggers: ["record"], last_popup: T };
+    expect(resetHints(s)).toMatchObject({ seen: ["first_launch"], muted_triggers: [], last_popup: 0 });
+    expect(forgetFirstLaunch(s).seen).toEqual(["first_zone:radio"]);
+  });
+  it("громкость 0…4, по умолчанию 3", () => {
+    expect(normalize({}).volume).toBe(3);
+    expect(normalize({ volume: 9 }).volume).toBe(3);
+    expect(normalize({ volume: 1 }).volume).toBe(1);
+  });
+});

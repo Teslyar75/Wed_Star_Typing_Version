@@ -10,6 +10,8 @@ export type SpeakOpts = {
   /** принудительно: голос HD (id) или браузерный (name) — для превью */
   voice?: string;
   engine?: "hd" | "browser";
+  /** 0…1 (по умолчанию 1) */
+  volume?: number;
   onStart?: () => void;
   onEnd?: () => void;
   onError?: (msg: string) => void;
@@ -52,6 +54,7 @@ function speakBrowser(opts: SpeakOpts, lang: TtsLang, rate: number, isCancelled:
   }
   const prefs = loadPrefs();
   const u = new SpeechSynthesisUtterance(opts.text);
+  if (opts.volume !== undefined) u.volume = Math.max(0, Math.min(1, opts.volume));
   u.lang = opts.lang || lang;
   u.rate = rate;
   u.pitch = 1;
@@ -93,6 +96,7 @@ export function speakUtterance(opts: SpeakOpts): () => void {
     const voice = (opts.engine === "hd" && opts.voice) || prefs.hd[lang] || HD_DEFAULTS[lang];
     const q = new URLSearchParams({ text: opts.text.slice(0, 1000), voice, rate: rate.toFixed(2) });
     const a = new Audio(`/api/tts?${q}`);
+    if (opts.volume !== undefined) a.volume = Math.max(0, Math.min(1, opts.volume));
     current = a;
     let started = false;
     a.onplaying = () => {

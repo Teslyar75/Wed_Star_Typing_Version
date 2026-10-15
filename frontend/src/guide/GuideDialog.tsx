@@ -44,9 +44,10 @@ export default function GuideDialog() {
   useEffect(() => {
     stopRef.current();
     stopRef.current = () => undefined;
-    if (line && st.voice) stopRef.current = speakGuide(st.id, line);
+    if (line && st.voice) stopRef.current = speakGuide(st.id, line, st.volume);
     return () => stopRef.current();
-  }, [line, st.voice, st.id]);
+  }, [line, st.voice, st.id, st.volume]);
+
 
   useEffect(() => {
     if (!popup) return;

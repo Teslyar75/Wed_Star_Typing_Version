@@ -11,6 +11,8 @@ export type GuideState = {
   muted_triggers: string[];
   /** ms epoch последнего показанного окна */
   last_popup: number;
+  /** громкость голоса 0…4 */
+  volume: number;
 };
 
 export const DEFAULT_STATE: GuideState = {
@@ -20,6 +22,7 @@ export const DEFAULT_STATE: GuideState = {
   seen: [],
   muted_triggers: [],
   last_popup: 0,
+  volume: 3,
 };
 
 /** Триггеры вне лимита частоты. */
@@ -103,6 +106,7 @@ export function normalize(raw: unknown): GuideState {
     seen: Array.isArray(r.seen) ? r.seen.filter((x) => typeof x === "string") : [],
     muted_triggers: Array.isArray(r.muted_triggers) ? r.muted_triggers.filter((x) => typeof x === "string") : [],
     last_popup: typeof r.last_popup === "number" ? r.last_popup : 0,
+    volume: typeof r.volume === "number" && r.volume >= 0 && r.volume <= 4 ? Math.round(r.volume) : 3,
   };
 }
 
@@ -114,3 +118,20 @@ export function addressOf(gender?: string | null): string {
   if (g === "f" || g === "female" || g === "ж") return "мэм";
   return "пилот";
 }
+
+/** «Сбросить показанные подсказки»: всё заново, кроме знакомства (его повторяют отдельной кнопкой). */
+export function resetHints(st: GuideState): GuideState {
+  return { ...st, seen: st.seen.filter((x) => x === "first_launch"), muted_triggers: [], last_popup: 0 };
+}
+
+/** «Повторить знакомство»: first_launch снова не показан. */
+export function forgetFirstLaunch(st: GuideState): GuideState {
+  return { ...st, seen: st.seen.filter((x) => x !== "first_launch") };
+}
+
+export const FREQ_LABELS: { id: GuideFreq; label: string }[] = [
+  { id: "often", label: "Часто" },
+  { id: "normal", label: "Обычно" },
+  { id: "rare", label: "Редко" },
+  { id: "story", label: "Выкл" },
+];

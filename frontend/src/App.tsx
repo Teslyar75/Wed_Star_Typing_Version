@@ -450,6 +450,10 @@ export default function App() {
             onSpaceProfile={setProfile}
             lang={lang}
             onLang={switchLang}
+            onGuideReplay={() => {
+              setTab("bridge");
+              useGuide.getState().fire("first_launch", { skin: useSkin.getState().skin.id, onYes: () => setTab("bridge") });
+            }}
           />
         </LazyTab>
       </main>
