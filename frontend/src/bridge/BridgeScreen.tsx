@@ -372,6 +372,8 @@ export default function BridgeScreen() {
       nextTitle,
     });
     void refreshHeatmap();
+    /* гид: рекорд / звание (окно — после отчёта, в паузе) */
+    window.dispatchEvent(new CustomEvent("st-session", { detail: { cpm: seg.cpm, acc: seg.acc, chars: seg.chars } }));
   };
 
   const startDrillById = async (missionId: string) => {
@@ -481,7 +483,7 @@ export default function BridgeScreen() {
     const res = engine.press(ch, now());
     if (res === null) return;
     /* для фонов скинов (туман редеет при серии) */
-    window.dispatchEvent(new CustomEvent("st-type", { detail: { ok: res !== ERROR, streak: engine.streak } }));
+    window.dispatchEvent(new CustomEvent("st-type", { detail: { ok: res !== ERROR, streak: engine.streak, want: engine.current } }));
     if (res === ERROR) {
       playError();
       showErrorFlash();

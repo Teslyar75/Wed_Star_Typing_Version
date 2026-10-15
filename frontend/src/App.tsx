@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import GuideDialog from "./guide/GuideDialog";
+import GuideEvents, { bridgeName } from "./guide/GuideEvents";
 import { useGuide } from "./guide/guideStore";
 import { zoneName, zoneTrigger } from "./guide/zoneTriggers";
 import BridgeScreen from "./bridge/BridgeScreen";
@@ -142,11 +143,14 @@ export default function App() {
 
   // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
   const pilotName = pilot?.callsign;
+  const pilotRankRef = useRef<string | undefined>(undefined);
+  pilotRankRef.current = pilot?.rank;
   useEffect(() => {
     if (!pilotName || crewOpen) return;
     const g = useGuide.getState();
     if (g.pilot !== pilotName) g.setPilot(pilotName);
     g.fire("first_launch", { skin: useSkin.getState().skin.id, onYes: () => setTab("bridge") });
+    g.onEntry(pilotRankRef.current, { bridge: bridgeName() }, useSkin.getState().skin.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pilotName, crewOpen]);
   // гид G2: первый вход в зону / подстраницу мостика (после first_launch, по общим лимитам)
@@ -466,6 +470,7 @@ export default function App() {
       />
       <IdleSlideshow />
       <GuideDialog />
+      <GuideEvents />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />
 
       {crewOpen ? (
