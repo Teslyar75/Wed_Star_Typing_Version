@@ -4,6 +4,7 @@ import SpaceCanvas from "./fx/SpaceCanvas";
 import HelpDrawer from "./shell/HelpDrawer";
 import CommandPalette from "./shell/CommandPalette";
 import { bootSkin, useSkin } from "./theme/skinStore";
+import { skinRank } from "./theme/voice";
 import { detectSpaceProfile } from "./fx/canvasBudget";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import { setSoundsMuted, soundsMuted } from "./fx/sounds";
@@ -309,7 +310,7 @@ export default function App() {
               {pilot ? (
                 <button type="button" className="pilot-chip" onClick={() => setCrewOpen(true)}>
                   <strong>{pilot.callsign}</strong>
-                  {pilot.rank ? <span className="muted"> · {pilot.rank}</span> : null}
+                  {pilot.rank ? <span className="muted"> · {skinRank(pilot.rank, getLang())}</span> : null}
                   {pilot.xp != null ? (
                     <span className="xp">
                       {" "}

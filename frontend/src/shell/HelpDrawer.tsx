@@ -137,6 +137,8 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
 
   if (!open) return null;
   const page = PAGES[lockedTab.current] || PAGES.bridge!;
+  /* Скин-мир: что значат слова оболочки в текущем скине (voice pack `skin.help`). */
+  const skinHelp = t("skin.help") !== "skin.help" ? t("skin.help") : "";
 
   /* Portal в body: иначе .cockpit > * { position:relative } ломает fixed — справка уезжает вниз страницы. */
   return createPortal(
@@ -166,6 +168,12 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
           {page.body.split("\n").map((line, i) =>
             line.trim() === "" ? <br key={i} /> : <p key={i}>{line}</p>,
           )}
+          {skinHelp ? (
+            <>
+              <hr className="help-sep" />
+              <p className="help-skin">{skinHelp}</p>
+            </>
+          ) : null}
           <hr className="help-sep" />
           {KEYBOARD_NAV.split("\n").map((line, i) =>
             line.trim() === "" ? <br key={`k${i}`} /> : <p key={`k${i}`}>{line}</p>,

@@ -22,7 +22,7 @@ ACCENTS = ("cyan", "amber", "green", "purple", "red", "magenta")
 
 
 CALLSIGN_RE = re.compile(r"^[0-9A-Za-zА-Яа-яЁёІіЇїЄєҐґ][0-9A-Za-zА-Яа-яЁёІіЇїЄєҐґ \-]{1,15}$")
-SKINS = ("spaceship", "bathyscaphe", "steampunk", "scriptorium", "neon_city", "zen_garden")
+SKINS = ("spaceship", "bathyscaphe", "steampunk", "scriptorium", "neon_city", "zen_garden", "old_england")
 # 16 эмблем как в десктопе (stamina/avatars.GLYPHS): ключ → символ
 GLYPHS = {
     "star": "★", "comet": "☄", "plane": "✈", "trident": "♆", "bolt": "⚡", "eye": "◉", "delta": "▲",

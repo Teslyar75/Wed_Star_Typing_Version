@@ -5,7 +5,8 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- FileSystemEntry API и JSON ответов без схем */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ALL_SKINS } from "../theme/skinStore";
+import { ALL_SKINS, useSkin } from "../theme/skinStore";
+import { skinRank } from "../theme/voice";
 import type { SkinTheme } from "../theme/applyTheme";
 import { getLang } from "../i18n";
 import { te } from "./entryI18n";
@@ -62,6 +63,7 @@ const SKIN_ICON: Record<string, string> = {
   scriptorium: "✒",
   neon_city: "◈",
   zen_garden: "☯",
+  old_england: "☎",
 };
 const PER_PAGE = 6;
 const COLS = 3;
@@ -282,6 +284,12 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const selected: RosterCard | undefined = list[sel];
   const shownSkin = previewSkin || selected?.skin || "spaceship";
+
+  // Живой предпросмотр: весь экран входа сразу принимает выбранный скин (без сохранения).
+  useEffect(() => {
+    const cur = view === "wizard" ? wSkin : shownSkin;
+    if (useSkin.getState().skin.id !== cur) useSkin.getState().previewSkin(cur);
+  }, [shownSkin, wSkin, view]);
 
   useEffect(() => {
     setPin("");
@@ -915,7 +923,7 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
                       <Emblem data={p.avatar_data} accent={p.accent} size={46} />
                       <span className="ce-card-txt">
                         <strong className="ce-cs">{p.callsign}</strong>
-                        <span className="ce-rank">★ {p.rank}</span>
+                        <span className="ce-rank">★ {skinRank(p.rank, getLang())}</span>
                         <span className="ce-xpbar">
                           <i style={{ width: `${xpFrac(p)}%` }} />
                         </span>
@@ -961,7 +969,7 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
                         <div className="ce-muted">{selected.display_name}</div>
                       ) : null}
                       <div className="ce-rank">
-                        ★ {selected.rank} · {selected.xp} {te("xp")}
+                        ★ {skinRank(selected.rank, getLang())} · {selected.xp} {te("xp")}
                       </div>
                       <div className="ce-xpbar wide">
                         <i style={{ width: `${xpFrac(selected)}%` }} />

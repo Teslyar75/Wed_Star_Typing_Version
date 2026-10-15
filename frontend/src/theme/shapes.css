@@ -1,0 +1,110 @@
+/*
+ * Shape kit скинов (S8 E1). Формы задаются в теме JSON (shape.*) →
+ * html[data-shape-panel|button|card] + переменные --st-shape-*.
+ * Без атрибутов ничего не меняется (Звездолёт = эталон, срезанные углы через --st-clip).
+ */
+
+/* ── Панель «окно телефонной будки K6»: скруглённый верх, толстая красная рама, переплёт ── */
+html[data-shape-panel="booth"] {
+  --st-clip: none;
+  --st-glow-filter: none;
+}
+html[data-shape-panel="booth"] :is(.panel, .panel-inset, .inst-panel, .mission-card, .crew-card, .help-modal, .pin-modal, .debrief-modal, .gut-modal, .crew-honor, .crew-enroll) {
+  border-radius: var(--st-shape-radius, 14px 14px 3px 3px);
+  clip-path: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    inset 0 0 0 var(--st-shape-border, 3px) var(--st-line),
+    inset 0 0 0 calc(var(--st-shape-border, 3px) + 3px) color-mix(in srgb, var(--st-bg) 70%, transparent),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--st-panel) 96%, transparent), color-mix(in srgb, var(--st-bg2) 94%, transparent)) !important;
+}
+html[data-shape-panel="booth"] :is(.panel, .panel-inset, .inst-panel, .help-modal, .pin-modal, .debrief-modal, .gut-modal, .crew-honor, .crew-enroll)::before {
+  /* переплёт верхнего ряда стёкол вместо неоновой рамки */
+  padding: 0;
+  border-radius: inherit;
+  clip-path: none;
+  filter: none;
+  -webkit-mask: none;
+  mask: none;
+  opacity: 0.55;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(33.33% - 1.5px), var(--st-line) calc(33.33% - 1.5px) 33.33%) top / 100% 10px no-repeat;
+}
+
+/* ── Кнопки «эмалевая табличка»: тёмно-синяя эмаль, двойная белая окантовка, капс ── */
+html[data-shape-button="enamel"] {
+  --st-clip-btn: none;
+}
+html[data-shape-button="enamel"] :is(.hud-btn, .nav-tab, .tab, .ce-btn, .badge) {
+  clip-path: none;
+  border-radius: var(--st-shape-radius-btn, 3px);
+  font-family: var(--st-font-title, serif);
+  letter-spacing: 0.04em;
+  color: #f4efe2;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--st-enamel, #1f4466) 88%, #fff), var(--st-enamel, #1f4466)) !important;
+  border: 1px solid #0d1f30 !important;
+  box-shadow:
+    inset 0 0 0 2px var(--st-enamel, #1f4466),
+    inset 0 0 0 3px #e9e4d8,
+    0 2px 0 rgba(0, 0, 0, 0.5);
+}
+html[data-shape-button="enamel"] :is(.hud-btn, .nav-tab, .tab)::before {
+  display: none;
+}
+html[data-shape-button="enamel"] :is(.hud-btn.amber, .ce-btn.primary, .ce-takeoff) {
+  background: linear-gradient(180deg, #d8263f, var(--st-line, #c8102e)) !important;
+  color: #fff6dc;
+  box-shadow:
+    inset 0 0 0 2px var(--st-line, #c8102e),
+    inset 0 0 0 3px var(--st-accent, #d4af37),
+    0 2px 0 rgba(0, 0, 0, 0.5);
+}
+html[data-shape-button="enamel"] :is(.hud-btn.on, .nav-tab.on, .nav-tab.active, .tab.on, .tab.active, .nav-tab[aria-selected="true"]) {
+  box-shadow:
+    inset 0 0 0 2px var(--st-enamel, #1f4466),
+    inset 0 0 0 3px var(--st-accent, #d4af37),
+    0 0 0 2px var(--st-accent, #d4af37);
+}
+html[data-shape-button="enamel"] :is(.hud-btn, .nav-tab, .tab, .ce-btn):focus-visible {
+  outline: 2px solid var(--st-accent, #d4af37);
+  outline-offset: 2px;
+}
+
+/* Заголовки шрифтом скина (газетная шапка) */
+html[data-skin] :is(.route-title, .brand, .ce-title, .help-modal-h h2) {
+  font-family: var(--st-font-title, inherit);
+}
+
+/* ── Карточки «газета»: светлая бумага, чёрная печать, двойная линейка колонки ── */
+html[data-shape-card="newspaper"] :is(.en-wh-face, .en-wh-row, .ce-card, .mission-card, .en-review-card, .en-card) {
+  --st-text: var(--st-ink, #1d1d1b);
+  --st-muted: #4b463d;
+  --st-cyan: #1f4466;
+  --st-accent: #8a1020;
+  --ce-text: var(--st-ink, #1d1d1b);
+  --ce-muted: #4b463d;
+  --ce-panel: var(--st-paper, #efe7d4);
+  color: var(--st-ink, #1d1d1b);
+  background:
+    linear-gradient(var(--st-ink, #1d1d1b), var(--st-ink, #1d1d1b)) top 6px left 10px / calc(100% - 20px) 1px no-repeat,
+    linear-gradient(var(--st-ink, #1d1d1b), var(--st-ink, #1d1d1b)) top 9px left 10px / calc(100% - 20px) 3px no-repeat,
+    var(--st-paper, #efe7d4) !important;
+  border-radius: 2px !important;
+  clip-path: none;
+  backdrop-filter: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5) !important;
+  padding-top: 18px;
+}
+html[data-shape-card="newspaper"] .en-wh-face :is(.en-wh-line) {
+  font-family: var(--st-font-ui, serif);
+  color: var(--st-ink, #1d1d1b);
+}
+html[data-shape-card="newspaper"] .en-wh-face .en-wh-line.on {
+  background: color-mix(in srgb, #d4af37 30%, transparent);
+}
+html[data-shape-card="newspaper"] :is(.ce-card.on, .mission-card.on) {
+  outline: 3px solid var(--st-line, #c8102e);
+  outline-offset: 2px;
+}

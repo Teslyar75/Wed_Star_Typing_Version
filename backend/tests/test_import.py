@@ -233,3 +233,9 @@ def test_desktop_export_with_backups_and_full_roundtrip() -> None:
     assert f"data/library/texts/{tid}/original.txt" in names
     assert "First sentence" in z.read(f"data/library/texts/{tid}/original.txt").decode()
     assert json.loads(z.read(f"data/library/texts/{tid}/meta.json"))["title"] == "Book"
+
+
+def test_register_old_england_skin() -> None:
+    c = TestClient(app)
+    r = c.post("/api/pilots/register", json={"callsign": f"Oe{uuid.uuid4().hex[:5]}", "skin": "old_england"})
+    assert r.status_code == 200 and r.json()["skin"] == "old_england"
