@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DONE, ERROR, TypingEngine } from "../typing/engine";
 import { FINGER_COLORS, HOME_BUMPS, keyForChar, MOD_FINGER, ROWS } from "../typing/layouts";
 import { t, onLangChange, getLang } from "../i18n";
-import { missionTitle } from "../theme/voice";
+import { missionTitle, voiceLookup } from "../theme/voice";
 import {
   loadCargoBoard,
   loadTypingSession,
@@ -777,7 +777,7 @@ export default function BridgeScreen() {
 
         {showTranslator && (
           <div className="uplink sight-uplink">
-            <div className="uplink-title">UPLINK // {t("uplink")}</div>
+            <div className="uplink-title">{voiceLookup("uplink_tag", getLang()) ?? "UPLINK"} // {t("uplink")}</div>
             <div className="sight-box">
               <div className="sight-tick top" aria-hidden />
               <WordSight word={sightWord} cursor={sightCursor} />
