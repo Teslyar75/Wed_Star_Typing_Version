@@ -2000,6 +2000,9 @@ const UI: Record<string, Record<string, string>> = {
     set_ui_xxl: "Huge",
     set_data: "Data",
     set_data_desc: "Progress and settings live in the browser (localStorage / IndexedDB).",
+    speed_label: "Speed",
+    cpm_unit: "CHARS/MIN",
+    queue_loading: "Loading vocabulary…",
     set_hotkeys:
       "Hotkeys: F1 help (incl. Tab/arrow nav) · F5 again · Esc pause · F9 sound · Ctrl+K commands · Ctrl+1…9 tabs · F6 chrome/stage",
   },
@@ -2537,6 +2540,9 @@ const UI: Record<string, Record<string, string>> = {
     set_ui_xxl: "Величезний",
     set_data: "Дані",
     set_data_desc: "Прогрес і налаштування зберігаються в браузері (localStorage / IndexedDB).",
+    speed_label: "Швидкість",
+    cpm_unit: "ЗН/ХВ",
+    queue_loading: "Завантаження словника…",
     set_hotkeys:
       "Гарячі клавіші: F1 — довідка (Tab/стрілки) · F5 — знову · Esc — пауза · F9 — звук · Ctrl+K — команди · Ctrl+1…9 — розділи · F6 — шапка/контент",
   },
@@ -3074,6 +3080,9 @@ const UI: Record<string, Record<string, string>> = {
     set_ui_xxl: "Riesig",
     set_data: "Daten",
     set_data_desc: "Fortschritt und Einstellungen im Browser (localStorage / IndexedDB).",
+    speed_label: "Tempo",
+    cpm_unit: "ZEICHEN/MIN",
+    queue_loading: "Wörterbuch wird geladen…",
     set_hotkeys:
       "Hotkeys: F1 Hilfe (Tab/Pfeile) · F5 neu · Esc Pause · F9 Sound · Ctrl+K Befehle · Ctrl+1…9 Bereiche · F6 Kopf/Inhalt",
   },
