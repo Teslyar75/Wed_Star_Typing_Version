@@ -27,6 +27,7 @@ import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
 import { installStageFit } from "./shell/stageFit";
 import TabErrorBoundary from "./shell/TabErrorBoundary";
+import UpdateBanner from "./update/UpdateBanner";
 
 const CockpitEntry = lazy(() => import("./auth/CockpitEntry"));
 import { applyImportClient } from "./auth/applyImportClient";
@@ -311,6 +312,12 @@ export default function App() {
           />
         </div>
       )}
+
+      <UpdateBanner
+        onOpenSettings={() => {
+          setTab("settings");
+        }}
+      />
 
       <header className="top-bar" data-nav-zone="chrome">
         <div className="brand">
