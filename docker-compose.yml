@@ -19,8 +19,8 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://star:star@postgres:5432/star_typing
-      # пусто → случайный ключ создаётся в томе backend_secrets
-      SECRET_KEY: ${SECRET_KEY:-}
+      # локально: явный ключ (>=32). В проде задайте SECRET_KEY в .env
+      SECRET_KEY: ${SECRET_KEY:-local-dev-star-typing-jwt-secret-key-32b}
       SECRET_KEY_FILE: /secrets/jwt_secret
       VOSK_MODEL_DIR: /models/vosk-model-small-en-us-0.15
     volumes:

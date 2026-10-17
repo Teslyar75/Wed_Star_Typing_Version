@@ -21,9 +21,14 @@ const RU: D = {
   src_pexels: "Pexels — выдача ключей сейчас приостановлена; при наличии ключа: PEXELS_API_KEY в backend/.env.",
   src_paid: "Платные сервисы (позже):",
   try: "Показать сейчас",
+  btn: "СЛАЙДЫ",
+  btn_tip: "Слайдшоу сейчас (стрелки — радио, другая клавиша — выход)",
   hint: "Любая клавиша — вернуться",
+  hint_arrows: "← → волна · ↑ ↓ громкость · другая клавиша — выход",
+  plate_hint: "Стрелки ← → — волна · ↑ ↓ — громкость · M — звук",
+  muted: "без звука",
   photo: "Фото",
-  help: "Простой: через N минут без клавиатуры (Конторка/Настройки → Дополнительно) включается слайдшоу в стиле скина и радио той же тематики. Любая клавиша закрывает — это нажатие не попадает в набор. Картинки: Wikimedia Commons (или Unsplash, если ключ задан на сервере), автор и лицензия — в углу.",
+  help: "Простой: через 1/3/5 мин без клавиатуры (Настройки → Дополнительно) — слайдшоу скина и радио по жанрам скина. ← → переключают волны, ↑ ↓ громкость; любая другая клавиша закрывает (не попадает в набор). Слайды меняются сами.",
 };
 const EN: D = {
   title: "Idle: slideshow & radio",
@@ -44,9 +49,14 @@ const EN: D = {
   src_pexels: "Pexels — key issuance is currently paused; if you have one: PEXELS_API_KEY in backend/.env.",
   src_paid: "Paid services (later):",
   try: "Show now",
+  btn: "SLIDES",
+  btn_tip: "Start slideshow (arrows — radio, other key — exit)",
   hint: "Any key — back",
+  hint_arrows: "← → station · ↑ ↓ volume · other key — exit",
+  plate_hint: "← → station · ↑ ↓ volume · M — mute",
+  muted: "muted",
   photo: "Photo",
-  help: "Idle: after N minutes without keyboard (Settings → More) a skin-themed slideshow and radio start. Any key closes it; that keypress is not typed. Images: Wikimedia Commons (or Unsplash if a server key is set), author and license shown in the corner.",
+  help: "Idle: after 1/3/5 min without keyboard (Settings → More) — skin slideshow and themed radio. ← → switch stations, ↑ ↓ volume; any other key exits (not typed). Slides advance automatically.",
 };
 const UK: D = {
   ...EN,
@@ -62,7 +72,12 @@ const UK: D = {
   source: "Джерело картинок",
   auto: "Авто",
   try: "Показати зараз",
+  btn: "СЛАЙДИ",
+  btn_tip: "Слайдшоу зараз (стрілки — радіо, інша клавіша — вихід)",
   hint: "Будь-яка клавіша — повернутися",
+  hint_arrows: "← → хвиля · ↑ ↓ гучність · інша клавіша — вихід",
+  plate_hint: "← → хвиля · ↑ ↓ гучність · M — звук",
+  muted: "без звуку",
   photo: "Фото",
 };
 const DE: D = {
@@ -79,7 +94,12 @@ const DE: D = {
   source: "Bildquelle",
   auto: "Auto",
   try: "Jetzt zeigen",
+  btn: "DIAS",
+  btn_tip: "Diashow jetzt (Pfeile — Radio, andere Taste — Ende)",
   hint: "Beliebige Taste — zurück",
+  hint_arrows: "← → Sender · ↑ ↓ Lautstärke · andere Taste — Ende",
+  plate_hint: "← → Sender · ↑ ↓ Lautstärke · M — Stumm",
+  muted: "stumm",
   photo: "Foto",
 };
 const ALL: Record<string, D> = { ru: RU, uk: UK, en: EN, de: DE };

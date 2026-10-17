@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canShow, DEFAULT_STATE, fill, markShown, muteTrigger, normalize, pickLines, TYPING_QUIET_MS } from "./guideLogic";
+import { canShow, DEFAULT_STATE, fill, jokeCount, markShown, muteTrigger, normalize, pickJokeKey, pickLines, TYPING_QUIET_MS } from "./guideLogic";
 import { cycleGuide, GUIDES, linesOf, PICKABLE } from "./guides";
 
 const T = 1_000_000_000;
@@ -43,6 +43,15 @@ describe("гид: логика", () => {
     expect(normalize(null)).toEqual(DEFAULT_STATE);
     expect(normalize({ id: "none", freq: "bad", seen: [1, "x"] })).toMatchObject({ id: "none", freq: "normal", seen: ["x"] });
   });
+  it("шутки: выкл / story — drop; joke_offer кулдаун 10 мин, вне общего лимита", () => {
+    expect(canShow("joke_offer", { ...st, jokes: false }, idle)).toBe("drop");
+    expect(canShow("joke_offer", { ...st, freq: "story" }, idle)).toBe("drop");
+    expect(canShow("joke_offer", { ...st, last_by: { joke_offer: T - 1000 } }, idle)).toBe("drop");
+    expect(canShow("joke_offer", { ...st, last_by: { joke_offer: T - 9 * 60_000 }, last_popup: T - 1000 }, idle)).toBe("drop");
+    expect(canShow("joke_offer", { ...st, last_by: { joke_offer: T - 10 * 60_000 }, last_popup: T - 1000 }, idle)).toBe("show");
+    /* недавнее другое окно не блокирует — Орион вклинивается сам */
+    expect(canShow("joke_offer", { ...st, last_popup: T - 1000 }, idle)).toBe("show");
+  });
   it("ОРИОН: голос Dmitry, 4 реплики первого запуска; выбор — ОРИОН ⇄ Без гида", () => {
     expect(GUIDES[0]).toMatchObject({ id: "ship_ai", name: "ОРИОН", voice: "ru-RU-DmitryNeural" });
     expect(linesOf("ship_ai")!.first_launch!.default).toHaveLength(4);
@@ -50,6 +59,16 @@ describe("гид: логика", () => {
     expect(cycleGuide("ship_ai", 1)).toBe("none");
     expect(cycleGuide("none", 1)).toBe("ship_ai");
     expect(GUIDES.filter((g) => g.soon).map((g) => g.name)).toEqual(["Мистер Хоббс", "Вера Павловна", "Кадет Тим"]);
+  });
+  it("ОРИОН: пул анекдотов joke:0… и скучающие офферы", () => {
+    const own = linesOf("ship_ai")!;
+    expect(jokeCount(own)).toBeGreaterThanOrEqual(5);
+    expect(own.joke_offer!.default!.length).toBeGreaterThanOrEqual(2);
+    expect(own.joke_offer!.default![0]).toMatch(/Enter/);
+    expect(own.joke_offer_radio!.default!.length).toBeGreaterThanOrEqual(1);
+    expect(own.joke_offer_radio!.default![0]).toMatch(/радио|эфир|волн/i);
+    expect(pickJokeKey(own, () => 0)).toBe("joke:0");
+    expect(pickLines("joke:1", "spaceship", own).length).toBeGreaterThanOrEqual(1);
   });
 });
 

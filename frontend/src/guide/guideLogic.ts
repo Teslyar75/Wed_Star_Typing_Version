@@ -7,6 +7,8 @@ export type GuideState = {
   id: string;
   freq: GuideFreq;
   voice: boolean;
+  /** иногда предлагать анекдот (ОРИОН) */
+  jokes: boolean;
   seen: string[];
   muted_triggers: string[];
   /** ms epoch последнего показанного окна */
@@ -27,6 +29,7 @@ export const DEFAULT_STATE: GuideState = {
   id: "ship_ai",
   freq: "normal",
   voice: true,
+  jokes: true,
   seen: [],
   muted_triggers: [],
   last_popup: 0,
@@ -37,8 +40,8 @@ export const DEFAULT_STATE: GuideState = {
   last_by: {},
 };
 
-/** Триггеры вне лимита частоты. */
-export const EXEMPT = new Set(["rank_up", "story", "first_launch"]);
+/** Триггеры вне лимита частоты (Орион сам вклинивается по своему кулдауну). */
+export const EXEMPT = new Set(["rank_up", "story", "first_launch", "joke_offer"]);
 /** Триггеры «один раз». */
 export const ONCE = new Set(["first_launch"]);
 
@@ -51,8 +54,12 @@ export function isOnce(trigger: string): boolean {
 export const COOLDOWN_MS: Record<string, number> = {
   record: 24 * 3600_000,
   error_streak: 15 * 60_000,
+  /** шутки — не чаще ~10 мин (разбавляют тишину) */
+  joke_offer: 10 * 60_000,
 };
 const RARE_ONLY_NORMAL = new Set(["error_streak"]);
+/** На «Выкл» (story) и при выключенных шутках — без анекдотов. */
+const JOKE_TRIGGERS = new Set(["joke_offer", "joke"]);
 
 export const FREQ_MS: Record<GuideFreq, number> = {
   often: 5 * 60_000,
@@ -72,8 +79,12 @@ export type Verdict = "show" | "wait" | "drop";
 export function canShow(trigger: string, st: GuideState, ctx: ShowCtx): Verdict {
   if (st.id === "none") return "drop";
   if (st.muted_triggers.includes(trigger)) return "drop";
+  if (JOKE_TRIGGERS.has(trigger) || trigger.startsWith("joke:")) {
+    if (!st.jokes) return "drop";
+    if (st.freq === "story") return "drop";
+  }
   if (isOnce(trigger) && st.seen.includes(trigger)) return "drop";
-  const cd = COOLDOWN_MS[trigger];
+  const cd = COOLDOWN_MS[trigger] ?? (trigger.startsWith("joke:") ? COOLDOWN_MS.joke_offer : undefined);
   if (cd && st.last_by[trigger] && ctx.now - st.last_by[trigger]! < cd) return "drop";
   // «редкие» триггеры молчат на частоте «Редко»
   if (RARE_ONLY_NORMAL.has(trigger) && st.freq === "rare") return "drop";
@@ -84,6 +95,33 @@ export function canShow(trigger: string, st: GuideState, ctx: ShowCtx): Verdict 
   }
   if (!ctx.paused && ctx.now - ctx.lastTypeAt < TYPING_QUIET_MS) return "wait";
   return "show";
+}
+
+/** Сколько анекдотов в файле реплик (ключи joke:0, joke:1, …). */
+export function jokeCount(own: LinesFile | undefined): number {
+  if (!own) return 0;
+  let n = 0;
+  while (own[`joke:${n}`]?.default?.length || own[`joke:${n}`]?.spaceship?.length) n += 1;
+  return n;
+}
+
+export function pickJokeKey(own: LinesFile | undefined, rnd: () => number = Math.random): string | null {
+  const n = jokeCount(own);
+  if (!n) return null;
+  return `joke:${Math.floor(rnd() * n)}`;
+}
+
+/** Одна случайная реплика из пула (для вариантов «скучающего» предложения). */
+export function pickOneLine(
+  trigger: string,
+  skin: string,
+  own: LinesFile | undefined,
+  rnd: () => number = Math.random,
+  narrator?: LinesFile,
+): string | null {
+  const lines = pickLines(trigger, skin, own, narrator);
+  if (!lines.length) return null;
+  return lines[Math.floor(rnd() * lines.length)] ?? null;
 }
 
 export type LinesFile = Record<string, Record<string, string[]>>;
@@ -138,6 +176,7 @@ export function normalize(raw: unknown): GuideState {
     last_seen: typeof r.last_seen === "number" ? r.last_seen : 0,
     last_by: r.last_by && typeof r.last_by === "object" ? { ...r.last_by } : {},
     volume: typeof r.volume === "number" && r.volume >= 0 && r.volume <= 4 ? Math.round(r.volume) : 3,
+    jokes: typeof r.jokes === "boolean" ? r.jokes : true,
   };
 }
 

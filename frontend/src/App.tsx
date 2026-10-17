@@ -18,6 +18,7 @@ import { cycleNavZone, handleArrowNav, isTextEditTarget } from "./shell/keyboard
 import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
 import FullscreenButton from "./shell/FullscreenButton";
+import SlideshowButton from "./idle/SlideshowButton";
 import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
 import RadioMinibar from "./radio/RadioMinibar";
@@ -385,7 +386,10 @@ export default function App() {
       {!fullscreen ? (
         <div className="chrome-under-bar">
           <PathCrumbs tab={tab} onJump={setTab} />
-          <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+          <div className="chrome-under-actions">
+            <SlideshowButton />
+            <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+          </div>
         </div>
       ) : null}
       <RadioAudioHost />
@@ -420,7 +424,10 @@ export default function App() {
         {fullscreen ? (
           <div className="chrome-under-bar stage-fs-bar">
             <PathCrumbs tab={tab} onJump={setTab} />
-            <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+            <div className="chrome-under-actions">
+              <SlideshowButton />
+              <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+            </div>
           </div>
         ) : null}
         {tab === "bridge" && <BridgeScreen />}

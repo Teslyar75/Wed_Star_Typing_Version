@@ -45,6 +45,31 @@ _FALLBACK: dict[str, dict[str, Any]] = {
                       "Category:London in fog"],
         "queries": ["red telephone box london", "routemaster bus", "big ben fog", "victorian london street"],
     },
+    "spaceship": {
+        "wikimedia": [
+            "Category:Hubble Space Telescope images",
+            "Category:James Webb Space Telescope images",
+            "Category:Spiral galaxies",
+            "Category:Nebulae",
+            "Category:Earth from space",
+        ],
+        "topics": [
+            "Hubble nebula",
+            "James Webb Space Telescope image",
+            "spiral galaxy Hubble",
+            "Earth from ISS",
+            "rocket launch night",
+            "Milky Way night sky",
+        ],
+        "queries": [
+            "hubble nebula",
+            "james webb telescope",
+            "spiral galaxy",
+            "earth from iss",
+            "rocket launch night",
+        ],
+        "per_topic": 3,
+    },
 }
 
 _cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
@@ -71,6 +96,53 @@ def theme_slideshow(skin: str) -> dict[str, Any]:
 
 def _strip_html(s: str) -> str:
     return re.sub(r"<[^>]+>", "", s or "").strip()
+
+
+def fetch_topics(topics: list[str], per_topic: int = 3) -> list[dict[str, Any]]:
+    """Поиск bitmap по Commons (как desktop idle.images.fetch_topic)."""
+    out: list[dict[str, Any]] = []
+    for topic in topics[:12]:
+        offset = random.choice((0, 0, 10, 20))
+        q = urllib.parse.urlencode({
+            "action": "query", "format": "json", "generator": "search",
+            "gsrsearch": f"filetype:bitmap {topic}", "gsrnamespace": "6",
+            "gsrlimit": "30", "gsroffset": str(offset),
+            "prop": "imageinfo", "iiprop": "url|size|extmetadata|mime", "iiurlwidth": "1920",
+        })
+        try:
+            data = _get_json(f"https://commons.wikimedia.org/w/api.php?{q}")
+        except Exception:  # noqa: BLE001
+            continue
+        pages = (data.get("query") or {}).get("pages") or {}
+        n = 0
+        batch: list[dict[str, Any]] = []
+        for pg in pages.values():
+            info = (pg.get("imageinfo") or [{}])[0]
+            if info.get("mime") not in ("image/jpeg", "image/png"):
+                continue
+            if (info.get("width") or 0) < 1200 or (info.get("width") or 0) < (info.get("height") or 0):
+                continue
+            meta = info.get("extmetadata") or {}
+            lic = _strip_html((meta.get("LicenseShortName") or {}).get("value", ""))
+            if not lic:
+                continue
+            batch.append({
+                "provider": "wikimedia",
+                "url": info.get("thumburl") or info.get("url"),
+                "author": _strip_html((meta.get("Artist") or {}).get("value", ""))[:80] or "Wikimedia Commons",
+                "author_url": info.get("descriptionurl"),
+                "license": lic,
+                "source": "Wikimedia Commons",
+                "source_url": info.get("descriptionurl"),
+                "title": str(pg.get("title", "")).removeprefix("File:"),
+                "topic": topic,
+            })
+            n += 1
+            if n >= per_topic * 3:
+                break
+        random.shuffle(batch)
+        out.extend(batch[:per_topic])
+    return out
 
 
 def fetch_wikimedia(categories: list[str], per_cat: int = 12) -> list[dict[str, Any]]:
@@ -179,13 +251,24 @@ def get_images(
     if hit and now - hit[0] < TTL and hit[1]:
         items = hit[1]
     else:
+        queries = list(conf.get("queries") or conf.get("topics") or [])
+        cats = list(conf.get("wikimedia") or [])
+        topics = list(conf.get("topics") or [])
+        per_topic = int(conf.get("per_topic") or 3)
         if prov == "unsplash":
-            items = fetch_unsplash(list(conf.get("queries") or []), settings.unsplash_access_key)
+            items = fetch_unsplash(queries, settings.unsplash_access_key)
             if not items:  # ключ/лимит — тихо на Wikimedia
                 prov, ck = "wikimedia", f"wikimedia:{skin}"
-                items = fetch_wikimedia(list(conf.get("wikimedia") or []))
+                items = fetch_wikimedia(cats) if cats else []
+                if topics:
+                    items = items + fetch_topics(topics, per_topic)
         else:
-            items = fetch_wikimedia(list(conf.get("wikimedia") or []))
+            items = fetch_wikimedia(cats) if cats else []
+            if topics:
+                items = items + fetch_topics(topics, per_topic)
+            if not items and queries:
+                # topics/queries без категорий — всё равно ищем на Commons
+                items = fetch_topics(queries, per_topic)
         items = [i for i in items if i.get("url")]
         if items:
             with _lock:

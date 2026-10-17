@@ -87,10 +87,10 @@ export default function GuideDialog() {
         <p className="guide-line">{line}</p>
         <div className="guide-keys">
           <span>
-            <kbd>Enter</kbd> {last && popup.onYes ? "да" : last ? "понятно" : "дальше"}
+            <kbd>Enter</kbd> {last && popup.onYes ? "слушать" : last ? "понятно" : "дальше"}
           </span>
           <span>
-            <kbd>Esc</kbd> {last && popup.onYes ? "позже" : "закрыть"}
+            <kbd>Esc</kbd> {last && popup.onYes ? "не сейчас" : "закрыть"}
           </span>
           <span>
             <kbd>Shift+Esc</kbd> больше не показывать

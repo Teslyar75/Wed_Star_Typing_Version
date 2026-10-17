@@ -3052,6 +3052,12 @@ html[data-ui-scale="XXL"] .bridge-set-note {
   padding: 0;
   min-width: 0;
 }
+.chrome-under-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
 .chrome-under-bar .zone-fs-btn {
   flex: 0 0 auto;
   font-size: 0.68rem;

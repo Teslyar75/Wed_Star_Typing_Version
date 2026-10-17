@@ -1,15 +1,16 @@
 /**
- * Простой (S8 E2): через N минут без клавиатуры — полноэкранное слайдшоу в стиле скина
- * + радио по жанрам скина с плавным входом до ~30 %. Первое нажатие закрывает и НЕ уходит в набор.
+ * Простой (порт stamina/idle): через N мин без клавиатуры — слайдшоу скина + радио по жанрам.
+ * ← → волна · ↑ ↓ громкость · M mute · любая другая клавиша / клик — выход (не уходит в набор).
+ * Слайды сменяются сами каждые SLIDE_MS.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSkin } from "../theme/skinStore";
 import { useRadio } from "../radio/radioStore";
-import { searchStations } from "../radio/api";
+import { searchStations, type Station } from "../radio/api";
 import { useIdle } from "./idleStore";
 import { ti } from "./idleI18n";
-import { fadeVolume, isIdle, pickStation } from "./idleLogic";
+import { dedupeStations, fadeVolume, isIdle, orderStations, stationGenre } from "./idleLogic";
 import "./idle.css";
 
 type Img = {
@@ -24,13 +25,37 @@ type Img = {
   download_location?: string;
 };
 
-type SkinExtra = { radio?: { tags?: string[]; country?: string; pinned?: string[] } };
+type SkinExtra = {
+  radio?: { tags?: string[]; country?: string; pinned?: string[] };
+  slideshow?: unknown;
+};
 
 const SLIDE_MS = 12_000;
 const FADE_MS = 6_000;
 const RADIO_TARGET = 0.3;
+const VOL_STEP = 0.05;
+const STATION_KEY = "st_idle_station";
 
 export const IDLE_OPEN_EVENT = "st-idle-open";
+
+function loadSavedStation(skinId: string): string | null {
+  try {
+    const j = JSON.parse(localStorage.getItem(STATION_KEY) || "{}") as Record<string, string>;
+    return j[skinId] || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStation(skinId: string, name: string) {
+  try {
+    const j = JSON.parse(localStorage.getItem(STATION_KEY) || "{}") as Record<string, string>;
+    j[skinId] = name;
+    localStorage.setItem(STATION_KEY, JSON.stringify(j));
+  } catch {
+    /* ignore */
+  }
+}
 
 export default function IdleSlideshow() {
   const skin = useSkin((s) => s.skin);
@@ -38,46 +63,98 @@ export default function IdleSlideshow() {
   const [open, setOpen] = useState(false);
   const [imgs, setImgs] = useState<Img[]>([]);
   const [idx, setIdx] = useState(0);
+  const [stations, setStations] = useState<Station[]>([]);
+  const [stI, setStI] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [volTarget, setVolTarget] = useState(RADIO_TARGET);
   const last = useRef(Date.now());
   const startedRadio = useRef(false);
   const fadeTimer = useRef(0);
+  const stationsRef = useRef<Station[]>([]);
+  const stIRef = useRef(0);
+  const mutedRef = useRef(false);
+  const volTargetRef = useRef(RADIO_TARGET);
+  const radioFull = useRef(0.7);
+
+  stationsRef.current = stations;
+  stIRef.current = stI;
+  mutedRef.current = muted;
+  volTargetRef.current = volTarget;
 
   const stopFade = () => {
     if (fadeTimer.current) window.clearInterval(fadeTimer.current);
     fadeTimer.current = 0;
   };
 
-  const startRadio = useCallback(async () => {
-    const conf = (skin as unknown as SkinExtra).radio;
-    if (!radio || !conf?.tags?.length) return;
-    const r = useRadio.getState();
-    if (r.playing) return; // уже играет — не трогаем
-    for (const tag of conf.tags) {
-      try {
-        const list = await searchStations({ tag, country: conf.country, limit: 30 });
-        const st = pickStation(list, conf.pinned);
-        if (!st) continue;
-        const target = Math.min(RADIO_TARGET, r.volume);
+  const fadeTo = useCallback((target: number) => {
+    stopFade();
+    const t0 = performance.now();
+    fadeTimer.current = window.setInterval(() => {
+      const a = useRadio.getState().audio;
+      const el = performance.now() - t0;
+      if (a) a.volume = fadeVolume(el, FADE_MS, target);
+      if (el >= FADE_MS) stopFade();
+    }, 150);
+  }, []);
+
+  const playStation = useCallback(
+    (st: Station, fadeIn: boolean) => {
+      const r = useRadio.getState();
+      if (!r.audio) return;
+      const target = Math.min(RADIO_TARGET, radioFull.current);
+      setVolTarget(target);
+      volTargetRef.current = target;
+      setMuted(false);
+      mutedRef.current = false;
+      if (fadeIn) {
+        if (r.audio) r.audio.volume = 0;
         r.play(st);
         startedRadio.current = true;
-        const t0 = performance.now();
-        stopFade();
-        fadeTimer.current = window.setInterval(() => {
-          const a = useRadio.getState().audio;
-          const el = performance.now() - t0;
-          if (a) a.volume = fadeVolume(el, FADE_MS, target);
-          if (el >= FADE_MS) stopFade();
-        }, 150);
-        return;
+        fadeTo(target);
+      } else {
+        r.play(st);
+        startedRadio.current = true;
+        if (r.audio) r.audio.volume = mutedRef.current ? 0 : volTargetRef.current;
+      }
+      saveStation(skin.id, st.name);
+    },
+    [fadeTo, skin.id],
+  );
+
+  const loadStations = useCallback(async () => {
+    const conf = (skin as unknown as SkinExtra).radio;
+    if (!radio || !conf?.tags?.length) {
+      setStations([]);
+      return;
+    }
+    const r = useRadio.getState();
+    radioFull.current = r.volume;
+    const collected: Station[] = [];
+    for (const tag of conf.tags) {
+      try {
+        const list = await searchStations({ tag, country: conf.country, limit: 24 });
+        collected.push(...list);
       } catch {
-        /* следующий тег */
+        /* next tag */
       }
     }
-  }, [skin, radio]);
+    const ordered = orderStations(dedupeStations(collected), loadSavedStation(skin.id), conf.pinned);
+    setStations(ordered);
+    stationsRef.current = ordered;
+    if (!ordered.length) return;
+    setStI(0);
+    stIRef.current = 0;
+    if (!r.playing) playStation(ordered[0]!, true);
+    else {
+      /* уже играет — только список для ← → */
+      startedRadio.current = false;
+    }
+  }, [skin, radio, playStation]);
 
   const openShow = useCallback(async () => {
     setOpen(true);
     setIdx(0);
+    setStations([]);
     const fallback: Img[] = [
       { provider: "skin", url: `/skins/${skin.id}/bg1.jpg`, source: "Star Typing", title: skin.id },
     ];
@@ -88,13 +165,14 @@ export default function IdleSlideshow() {
     } catch {
       setImgs(fallback);
     }
-    void startRadio();
-  }, [skin.id, provider, startRadio]);
+    void loadStations();
+  }, [skin.id, provider, loadStations]);
 
   const close = useCallback(() => {
     setOpen(false);
     last.current = Date.now();
     stopFade();
+    setStations([]);
     if (startedRadio.current) {
       const r = useRadio.getState();
       if (after === "stop") r.stop();
@@ -103,7 +181,41 @@ export default function IdleSlideshow() {
     }
   }, [after]);
 
-  // активность: клавиатура (и клик), таймер простоя
+  const switchStation = useCallback(
+    (delta: number) => {
+      const list = stationsRef.current;
+      if (!list.length) return;
+      const next = (stIRef.current + delta + list.length) % list.length;
+      setStI(next);
+      stIRef.current = next;
+      playStation(list[next]!, false);
+    },
+    [playStation],
+  );
+
+  const changeVolume = useCallback((delta: number) => {
+    if (!startedRadio.current && !useRadio.getState().playing) return;
+    stopFade();
+    const next = Math.max(0, Math.min(1, volTargetRef.current + delta));
+    setVolTarget(next);
+    volTargetRef.current = next;
+    setMuted(false);
+    mutedRef.current = false;
+    const a = useRadio.getState().audio;
+    if (a) a.volume = next;
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (!startedRadio.current && !useRadio.getState().playing) return;
+    stopFade();
+    const next = !mutedRef.current;
+    setMuted(next);
+    mutedRef.current = next;
+    const a = useRadio.getState().audio;
+    if (a) a.volume = next ? 0 : volTargetRef.current;
+  }, []);
+
+  /* таймер простоя + «Показать сейчас» */
   useEffect(() => {
     const touch = () => {
       last.current = Date.now();
@@ -125,11 +237,31 @@ export default function IdleSlideshow() {
     };
   }, [open, minutes, openShow]);
 
-  // первое нажатие закрывает и не уходит в набор (capture на window — раньше всех)
+  /* стрелки = радио; остальное / клик = выход (capture — раньше набора) */
   useEffect(() => {
     if (!open) return;
     let swallowed = "";
     const onDown = (e: KeyboardEvent) => {
+      const k = e.key;
+      const hasRadio = stationsRef.current.length > 0;
+      if (hasRadio && (k === "ArrowLeft" || k === "ArrowRight")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        switchStation(k === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+      if (hasRadio && (k === "ArrowUp" || k === "ArrowDown")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        changeVolume(k === "ArrowUp" ? VOL_STEP : -VOL_STEP);
+        return;
+      }
+      if (hasRadio && (k === "m" || k === "M" || k === "ь" || k === "Ь")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toggleMute();
+        return;
+      }
       e.preventDefault();
       e.stopImmediatePropagation();
       swallowed = e.code || e.key;
@@ -138,7 +270,6 @@ export default function IdleSlideshow() {
     window.addEventListener("keydown", onDown, true);
     return () => {
       window.removeEventListener("keydown", onDown, true);
-      // keypress/keyup той же клавиши тоже глотаем
       const eat = (e: KeyboardEvent) => {
         if ((e.code || e.key) === swallowed) {
           e.preventDefault();
@@ -154,16 +285,15 @@ export default function IdleSlideshow() {
         window.addEventListener("keyup", eat, true);
       }
     };
-  }, [open, close]);
+  }, [open, close, switchStation, changeVolume, toggleMute]);
 
-  // смена слайдов
+  /* автосмена слайдов */
   useEffect(() => {
     if (!open || imgs.length < 2) return;
     const id = window.setInterval(() => setIdx((i) => (i + 1) % imgs.length), SLIDE_MS);
     return () => window.clearInterval(id);
   }, [open, imgs.length]);
 
-  // Unsplash: отметить показ (правило API), через сервер
   useEffect(() => {
     const cur = imgs[idx];
     if (open && cur?.provider === "unsplash" && cur.download_location) {
@@ -176,8 +306,18 @@ export default function IdleSlideshow() {
   if (!open) return null;
   const cur = imgs[idx];
   const name = typeof skin.name === "string" ? skin.name : skin.name?.ru || skin.id;
+  const st = stations[stI];
+  const volLabel = muted ? ti("muted") : `${Math.round(volTarget * 100)}%`;
+
   return createPortal(
-    <div className="idle-show" role="dialog" aria-modal="true" aria-label={ti("title")} onClick={close} data-skin-show={skin.id}>
+    <div
+      className="idle-show"
+      role="dialog"
+      aria-modal="true"
+      aria-label={ti("title")}
+      onClick={close}
+      data-skin-show={skin.id}
+    >
       {imgs.map((im, i) => (
         <div
           key={im.url + i}
@@ -188,8 +328,19 @@ export default function IdleSlideshow() {
       <div className="idle-vignette" />
       <div className="idle-top">
         <span className="idle-skin">{name}</span>
-        <span className="idle-hint">{ti("hint")}</span>
+        <span className="idle-hint">{stations.length ? ti("hint_arrows") : ti("hint")}</span>
       </div>
+      {st ? (
+        <div className="idle-plate" onClick={(e) => e.stopPropagation()}>
+          <div className="idle-plate-name">
+            ♪ {st.name}
+            {stationGenre(st) ? `  ·  ${stationGenre(st)}` : ""}
+          </div>
+          <div className="idle-plate-hint">
+            {ti("plate_hint")} [{stI + 1}/{stations.length} · {volLabel}]
+          </div>
+        </div>
+      ) : null}
       {cur && (
         <div className="idle-credit">
           {cur.provider === "unsplash" ? (

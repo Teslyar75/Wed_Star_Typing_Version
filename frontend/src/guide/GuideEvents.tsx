@@ -59,9 +59,15 @@ export default function GuideEvents() {
     };
     window.addEventListener("st-type", onType);
     window.addEventListener(SESSION_EVENT, onSess);
+    /* шутки: раз в ~60 с проверяем тишину и кулдаун (~10 мин) */
+    const jokeIv = window.setInterval(() => useGuide.getState().maybeOfferJoke(), 60_000);
+    /* первый шанс через 2 мин после входа в кабину (не сразу после знакомства) */
+    const jokeSoon = window.setTimeout(() => useGuide.getState().maybeOfferJoke(), 120_000);
     return () => {
       window.removeEventListener("st-type", onType);
       window.removeEventListener(SESSION_EVENT, onSess);
+      window.clearInterval(jokeIv);
+      window.clearTimeout(jokeSoon);
     };
   }, []);
   return null;

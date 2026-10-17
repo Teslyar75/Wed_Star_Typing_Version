@@ -1,7 +1,23 @@
 /** Гид: состояние на пилота (localStorage st_guide::<позывной>) + очередь окон. */
 import { create } from "zustand";
-import { addressOf, breakDays, canShow, daysWord, DEFAULT_STATE, fill, markShown, muteTrigger, normalize, pickLines, type GuideState } from "./guideLogic";
+import {
+  addressOf,
+  breakDays,
+  canShow,
+  daysWord,
+  DEFAULT_STATE,
+  fill,
+  markShown,
+  muteTrigger,
+  normalize,
+  pickJokeKey,
+  pickLines,
+  pickOneLine,
+  type GuideState,
+} from "./guideLogic";
 import { linesOf } from "./guides";
+import { useRadio } from "../radio/radioStore";
+import { useSkin } from "../theme/skinStore";
 
 const KEY = (pilot: string) => `st_guide::${pilot || "guest"}`;
 
@@ -23,7 +39,15 @@ export function saveGuideState(pilot: string, st: GuideState): void {
 }
 
 export type GuidePopup = { trigger: string; lines: string[]; idx: number; onYes?: () => void };
-type Pending = { trigger: string; linesKey?: string; vars: Record<string, string | number | undefined>; skin: string; onYes?: () => void };
+type Pending = {
+  trigger: string;
+  linesKey?: string;
+  /** готовые реплики (одна из пула) — иначе берём из файла по trigger/linesKey */
+  lines?: string[];
+  vars: Record<string, string | number | undefined>;
+  skin: string;
+  onYes?: () => void;
+};
 
 type S = {
   pilot: string;
@@ -34,7 +58,7 @@ type S = {
   paused: boolean;
   setPilot: (pilot: string) => void;
   patch: (p: Partial<GuideState>) => void;
-  fire: (trigger: string, opts?: { vars?: Pending["vars"]; skin?: string; onYes?: () => void; linesKey?: string }) => void;
+  fire: (trigger: string, opts?: { vars?: Pending["vars"]; skin?: string; onYes?: () => void; linesKey?: string; lines?: string[] }) => void;
   pump: () => void;
   next: () => void;
   close: () => void;
@@ -42,6 +66,8 @@ type S = {
   noteTyping: (paused?: boolean) => void;
   /** вход пилота: long_break, база звания, отметка визита */
   onEntry: (rank: string | undefined, vars: Pending["vars"], skin: string) => void;
+  /** Орион сам вклинивается: тишина или радио → предложение анекдота */
+  maybeOfferJoke: () => void;
 };
 
 export const useGuide = create<S>((set, get) => {
@@ -55,7 +81,8 @@ export const useGuide = create<S>((set, get) => {
     const v = canShow(p.trigger, st, { now: Date.now(), lastTypeAt, paused });
     if (v === "wait") return "wait";
     if (v === "drop") return "done";
-    const lines = pickLines(p.linesKey || p.trigger, p.skin, linesOf(st.id)).map((l) => fill(l, p.vars));
+    const raw = p.lines?.length ? p.lines : pickLines(p.linesKey || p.trigger, p.skin, linesOf(st.id));
+    const lines = raw.map((l) => fill(l, p.vars));
     if (!lines.length) return "done";
     commit(markShown(st, p.trigger, Date.now()));
     set({ popup: { trigger: p.trigger, lines, idx: 0, onYes: p.onYes } });
@@ -71,7 +98,14 @@ export const useGuide = create<S>((set, get) => {
     setPilot: (pilot) => set({ pilot, st: loadGuideState(pilot), popup: null, queue: [] }),
     patch: (p) => commit({ ...get().st, ...p }),
     fire: (trigger, opts = {}) => {
-      const p: Pending = { trigger, vars: { pilot: get().pilot, sir: addressOf(), ...opts.vars }, skin: opts.skin || "spaceship", onYes: opts.onYes, linesKey: opts.linesKey };
+      const p: Pending = {
+        trigger,
+        vars: { pilot: get().pilot, sir: addressOf(), ...opts.vars },
+        skin: opts.skin || "spaceship",
+        onYes: opts.onYes,
+        linesKey: opts.linesKey,
+        lines: opts.lines,
+      };
       if (get().queue.some((q) => q.trigger === trigger)) return;
       if (tryShow(p) === "wait") set({ queue: [...get().queue, p] });
     },
@@ -110,6 +144,30 @@ export const useGuide = create<S>((set, get) => {
       const days = breakDays(st.last_seen, now);
       commit({ ...get().st, last_seen: now, last_rank: st.last_rank || rank || "" });
       if (days) get().fire("long_break", { vars: { ...vars, days, days_word: daysWord(days) }, skin });
+    },
+    maybeOfferJoke: () => {
+      const { st, popup, queue, pilot } = get();
+      if (!pilot || !st.jokes || st.id === "none" || popup || queue.length) return;
+      const skin = useSkin.getState().skin.id;
+      const own = linesOf(st.id);
+      const key = pickJokeKey(own);
+      if (!key) return;
+      /* скучает: вклинивается в тишину или в радио */
+      const offerPool = useRadio.getState().playing ? "joke_offer_radio" : "joke_offer";
+      const offer = pickOneLine(offerPool, skin, own) || pickOneLine("joke_offer", skin, own);
+      if (!offer) return;
+      get().fire("joke_offer", {
+        skin,
+        lines: [offer],
+        onYes: () => {
+          const lines = pickLines(key, skin, linesOf(get().st.id)).map((l) =>
+            fill(l, { pilot: get().pilot, sir: addressOf() }),
+          );
+          if (!lines.length) return;
+          /* сразу окно шутки — без повторного canShow (лимит уже сработал на offer) */
+          set({ popup: { trigger: key, lines, idx: 0 } });
+        },
+      });
     },
   };
 });

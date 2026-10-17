@@ -51,6 +51,30 @@ export default function GuideSettings({ Row, onReplay }: { Row: RowT; onReplay?:
           </button>
         ))}
       </Row>
+      <Row title="Шутки Ориона" desc="Орион иногда сам прерывает тишину или приглушает радио — ему скучно. Enter — послушать, Esc — не сейчас. Около раз в 10 минут, не во время набора.">
+        <button
+          type="button"
+          disabled={off}
+          className={`hud-btn settings-toggle ${st.jokes ? "ok" : ""}`}
+          aria-pressed={st.jokes}
+          onClick={() => patch({ jokes: !st.jokes })}
+        >
+          {st.jokes ? "● вкл" : "○ выкл"}
+        </button>
+        <button
+          type="button"
+          disabled={off || !st.jokes}
+          className="hud-btn"
+          onClick={() => {
+            const g = useGuide.getState();
+            /* сброс кулдауна — сразу предложить */
+            g.patch({ last_by: { ...g.st.last_by, joke_offer: 0 }, last_popup: 0 });
+            g.maybeOfferJoke();
+          }}
+        >
+          ▶ Предложить шутку
+        </button>
+      </Row>
       <Row title="Голос гида" desc="Нейроголос с сервера, без сети — голос браузера. В окне гида — клавиша V.">
         <button type="button" disabled={off} className={`hud-btn settings-toggle ${st.voice ? "ok" : ""}`} onClick={() => patch({ voice: !st.voice })}>
           {st.voice ? "● вкл" : "○ выкл"}
