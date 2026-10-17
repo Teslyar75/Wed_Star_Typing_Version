@@ -145,7 +145,9 @@ def list_shelf(
         out: list[LibraryItem] = []
         for d in docs:
             chars, words, n = _stats(db, d.id)
-            out.append(_item(d, sentence_id=0, mode="reader", chars=chars, words=words, segments=n))
+            out.append(
+                _item(db, d, sentence_id=0, mode="reader", chars=chars, words=words, segments=n)
+            )
         return out
 
     rows = db.query(PilotText).filter_by(pilot_id=pilot.id).order_by(PilotText.updated_at.desc()).all()
@@ -157,6 +159,7 @@ def list_shelf(
         chars, words, n = _stats(db, doc.id)
         out.append(
             _item(
+                db,
                 doc,
                 sentence_id=row.sentence_id,
                 mode=row.mode,
@@ -185,6 +188,7 @@ def add_to_shelf(
         db.refresh(row)
     chars, words, n = _stats(db, doc.id)
     return _item(
+        db,
         doc,
         sentence_id=row.sentence_id,
         mode=row.mode,
@@ -217,7 +221,7 @@ def rename_shelf_item(
     chars, words, n = _stats(db, doc.id)
     sid = row.sentence_id if row else 0
     mode = row.mode if row else "reader"
-    return _item(doc, sentence_id=sid, mode=mode, chars=chars, words=words, segments=n)
+    return _item(db, doc, sentence_id=sid, mode=mode, chars=chars, words=words, segments=n)
 
 
 @router.delete("/{text_id}")
@@ -268,6 +272,7 @@ def put_position(
     db.refresh(row)
     chars, words, n = _stats(db, doc.id)
     return _item(
+        db,
         doc,
         sentence_id=row.sentence_id,
         mode=row.mode,

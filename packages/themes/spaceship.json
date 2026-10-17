@@ -85,5 +85,51 @@
     "finish": "/sounds/skins/spaceship/finish.wav",
     "ok": "/sounds/skins/spaceship/finish.wav",
     "start": "/sounds/skins/spaceship/start.wav"
+  },
+  "slideshow": {
+    "topics": [
+      "Hubble nebula",
+      "James Webb Space Telescope image",
+      "spiral galaxy Hubble",
+      "Carina Nebula",
+      "Orion Nebula",
+      "Jupiter planet",
+      "Saturn Cassini",
+      "Mars surface rover",
+      "Moon surface Apollo",
+      "International Space Station orbit",
+      "Earth from ISS",
+      "aurora from space ISS",
+      "rocket launch night",
+      "Space Shuttle launch",
+      "Milky Way night sky"
+    ],
+    "per_topic": 3,
+    "wikimedia": [
+      "Category:Hubble Space Telescope images",
+      "Category:James Webb Space Telescope images",
+      "Category:Spiral galaxies",
+      "Category:Nebulae",
+      "Category:Earth from space"
+    ],
+    "queries": [
+      "hubble nebula",
+      "james webb telescope",
+      "spiral galaxy",
+      "earth from iss",
+      "rocket launch night",
+      "milky way sky"
+    ]
+  },
+  "radio": {
+    "tags": ["ambient", "chillout", "lofi", "synthwave", "trance", "electronic"],
+    "pinned": [
+      "Groove Salad",
+      "Deep Space One",
+      "Space Station Soma",
+      "DEF CON",
+      "Drone Zone",
+      "Lofi"
+    ]
   }
 }

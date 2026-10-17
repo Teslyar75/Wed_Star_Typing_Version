@@ -5,6 +5,7 @@ import { applyTheme } from "./theme/applyTheme";
 import { initI18n } from "./i18n/setup";
 import spaceship from "../../packages/themes/spaceship.json";
 import "./index.css";
+import "./theme/shapes.css";
 import "./viewportFit.css";
 import { installNoWheelScroll } from "./shell/noWheelScroll";
 
@@ -16,7 +17,12 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      void navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          void reg.update();
+        })
+        .catch(() => undefined);
     });
   }
 

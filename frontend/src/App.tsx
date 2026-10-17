@@ -1,9 +1,15 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import GuideDialog from "./guide/GuideDialog";
+import GuideEvents, { bridgeName } from "./guide/GuideEvents";
+import { useGuide } from "./guide/guideStore";
+import { zoneName, zoneTrigger } from "./guide/zoneTriggers";
 import BridgeScreen from "./bridge/BridgeScreen";
-import SpaceCanvas from "./fx/SpaceCanvas";
+import SkinBackground, { bgEngineOf } from "./fx/SkinBackground";
+import IdleSlideshow from "./idle/IdleSlideshow";
 import HelpDrawer from "./shell/HelpDrawer";
 import CommandPalette from "./shell/CommandPalette";
 import { bootSkin, useSkin } from "./theme/skinStore";
+import { skinRank } from "./theme/voice";
 import { detectSpaceProfile } from "./fx/canvasBudget";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import { setSoundsMuted, soundsMuted } from "./fx/sounds";
@@ -11,13 +17,19 @@ import type { Tab } from "./shell/tabs";
 import { cycleNavZone, handleArrowNav, isTextEditTarget } from "./shell/keyboardNav";
 import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
+import FullscreenButton from "./shell/FullscreenButton";
+import SlideshowButton from "./idle/SlideshowButton";
+import OrionCallButton from "./guide/OrionCallButton";
+import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
 import RadioMinibar from "./radio/RadioMinibar";
 import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
 import { installStageFit } from "./shell/stageFit";
+import TabErrorBoundary from "./shell/TabErrorBoundary";
 
-const AuthPanel = lazy(() => import("./auth/AuthPanel"));
+const CockpitEntry = lazy(() => import("./auth/CockpitEntry"));
+import { applyImportClient } from "./auth/applyImportClient";
 const ASK_CREW_KEY = "st_ask_crew_on_start";
 
 type SpaceProfile = "frost" | "light" | "full";
@@ -28,6 +40,7 @@ const MissionsPanel = lazy(() => import("./missions/MissionsPanel"));
 const SettingsHub = lazy(() => import("./settings/SettingsHub"));
 const CargoPanel = lazy(() => import("./cargo/CargoPanel"));
 const FlightLogPanel = lazy(() => import("./flightlog/FlightLogPanel"));
+const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
 
@@ -35,14 +48,20 @@ function TabFallback() {
   return <p className="muted">…</p>;
 }
 
-function LazyTab({ when, children }: { when: boolean; children: ReactNode }) {
+function LazyTab({ when, children, label }: { when: boolean; children: ReactNode; label?: string }) {
   if (!when) return null;
-  return <Suspense fallback={<TabFallback />}>{children}</Suspense>;
+  return (
+    <TabErrorBoundary label={label}>
+      <Suspense fallback={<TabFallback />}>{children}</Suspense>
+    </TabErrorBoundary>
+  );
 }
 
 type PilotChip = { callsign: string; rank?: string; xp?: number; xp_next?: number };
 
 export default function App() {
+  const stageRef = useRef<HTMLElement>(null);
+  const { fullscreen, toggleFullscreen } = useElementFullscreen(stageRef);
   const [tab, setTabState] = useState<Tab>("bridge");
   const [lang, setLangState] = useState(getLang());
   const [helpOpen, setHelpOpen] = useState(false);
@@ -78,7 +97,13 @@ export default function App() {
         prevTabRef.current = cur;
         /* смена зоны — сбросить глубокий хвост крошек */
         if (zoneOf(cur) !== zoneOf(next)) clearDeepRoute();
-        if (next === "bridge" || next === "missions" || next === "cargo" || next === "log") {
+        if (
+          next === "bridge" ||
+          next === "missions" ||
+          next === "cargo" ||
+          next === "log" ||
+          next === "bridgeSettings"
+        ) {
           if (next === "bridge") clearDeepRoute();
         }
       }
@@ -100,7 +125,7 @@ export default function App() {
   }, [setTab]);
 
   useEffect(() => {
-    return installStageFit(() => document.querySelector<HTMLElement>(".stage"));
+    return installStageFit(() => stageRef.current);
   }, []);
 
   /* Колёсико над полосой справа от brand → сдвиг всей полосы (вкладки + XP + радио + кнопки). */
@@ -123,6 +148,29 @@ export default function App() {
     window.dispatchEvent(new Event("st-cabin-change"));
   }, [tab]);
 
+  // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
+  const pilotName = pilot?.callsign;
+  const pilotRankRef = useRef<string | undefined>(undefined);
+  pilotRankRef.current = pilot?.rank;
+  useEffect(() => {
+    if (!pilotName || crewOpen) return;
+    const g = useGuide.getState();
+    if (g.pilot !== pilotName) g.setPilot(pilotName);
+    g.fire("first_launch", { skin: useSkin.getState().skin.id, onYes: () => setTab("bridge") });
+    g.onEntry(pilotRankRef.current, { bridge: bridgeName() }, useSkin.getState().skin.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pilotName, crewOpen]);
+  // гид G2: первый вход в зону / подстраницу мостика (после first_launch, по общим лимитам)
+  useEffect(() => {
+    if (!pilotName || crewOpen) return;
+    const tr = zoneTrigger(tab);
+    if (!tr) return;
+    const g = useGuide.getState();
+    if (g.pilot !== pilotName) return;
+    // ждём, пока first_launch не будет показан (он «съедает» мостик и запускает лимит)
+    if (!g.st.seen.includes("first_launch") && g.st.id !== "none") return;
+    g.fire(tr, { skin: useSkin.getState().skin.id, vars: { zone: zoneName(tab) } });
+  }, [tab, pilotName, crewOpen]);
   useEffect(() => {
     bootSkin({ preferBase: true });
     useCabin.getState().hydrate();
@@ -138,6 +186,7 @@ export default function App() {
           const j = await me.json();
           if (j?.id || j?.callsign) {
             hasPilot = true;
+            if (j.skin) useSkin.getState().setSkin(j.skin);
             setPilot({
               callsign: j.callsign || j.name || t("pilot"),
               rank: j.rank,
@@ -242,6 +291,7 @@ export default function App() {
     { id: "missions", label: t("missions") },
     { id: "cargo", label: t("own_text") },
     { id: "log", label: t("flight_log") },
+    { id: "bridgeSettings", label: t("bridge_settings") },
   ];
 
   const activeZone = zoneOf(tab);
@@ -249,12 +299,15 @@ export default function App() {
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
       {starsOn && (
-        <div className={`space-bg space-bg-${spaceProfile}`} aria-hidden key={`bg-${skin.id}-${skinGen}`}>
-          <SpaceCanvas
-            key={`space-${skin.id}-${skinGen}-${spaceProfile}`}
+        <div
+          className={`space-bg space-bg-${spaceProfile} skin-bg skin-bg-${bgEngineOf(skin)}`}
+          aria-hidden
+          key={`bg-${skin.id}-${skinGen}`}
+        >
+          <SkinBackground
+            key={`skin-bg-${skin.id}-${skinGen}-${spaceProfile}`}
+            skin={skin}
             profile={spaceProfile === "frost" ? "frost" : spaceProfile === "light" ? "light" : "full"}
-            fullBleed
-            className="space-canvas full"
           />
         </div>
       )}
@@ -295,7 +348,7 @@ export default function App() {
               {pilot ? (
                 <button type="button" className="pilot-chip" onClick={() => setCrewOpen(true)}>
                   <strong>{pilot.callsign}</strong>
-                  {pilot.rank ? <span className="muted"> · {pilot.rank}</span> : null}
+                  {pilot.rank ? <span className="muted"> · {skinRank(pilot.rank, getLang())}</span> : null}
                   {pilot.xp != null ? (
                     <span className="xp">
                       {" "}
@@ -336,6 +389,16 @@ export default function App() {
           </div>
         </div>
       </header>
+      {!fullscreen ? (
+        <div className="chrome-under-bar">
+          <PathCrumbs tab={tab} onJump={setTab} />
+          <div className="chrome-under-actions">
+            <OrionCallButton />
+            <SlideshowButton />
+            <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+          </div>
+        </div>
+      ) : null}
       <RadioAudioHost />
 
       {isBridgeZone(tab) ? (
@@ -358,9 +421,23 @@ export default function App() {
         </nav>
       ) : null}
 
-      <PathCrumbs tab={tab} onJump={setTab} />
-
-      <main className="stage" data-nav-zone="stage" data-nav-group="stage" tabIndex={-1}>
+      <main
+        ref={stageRef}
+        className={`stage ${fullscreen ? "is-fs" : ""}`}
+        data-nav-zone="stage"
+        data-nav-group="stage"
+        tabIndex={-1}
+      >
+        {fullscreen ? (
+          <div className="chrome-under-bar stage-fs-bar">
+            <PathCrumbs tab={tab} onJump={setTab} />
+            <div className="chrome-under-actions">
+              <OrionCallButton />
+              <SlideshowButton />
+              <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
+            </div>
+          </div>
+        ) : null}
         {tab === "bridge" && <BridgeScreen />}
         <LazyTab when={tab === "missions"}>
           <MissionsPanel onOpenBridge={() => setTab("bridge")} onOpenCargo={() => setTab("cargo")} />
@@ -370,6 +447,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "log"}>
           <FlightLogPanel onOpenBridge={() => setTab("bridge")} onOpenHonor={() => setTab("settings")} />
+        </LazyTab>
+        <LazyTab when={tab === "bridgeSettings"}>
+          <BridgeSettingsPage />
         </LazyTab>
         <LazyTab when={tab === "english"}>
           <EnglishPanel />
@@ -389,6 +469,10 @@ export default function App() {
             onSpaceProfile={setProfile}
             lang={lang}
             onLang={switchLang}
+            onGuideReplay={() => {
+              setTab("bridge");
+              useGuide.getState().fire("first_launch", { skin: useSkin.getState().skin.id, onYes: () => setTab("bridge") });
+            }}
           />
         </LazyTab>
       </main>
@@ -399,14 +483,22 @@ export default function App() {
         onClose={() => setHelpOpen(false)}
         onFullHelp={() => setTab("settings")}
       />
+      <IdleSlideshow />
+      <GuideDialog />
+      <GuideEvents />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />
 
       {crewOpen ? (
         <div className="crew-overlay-host" role="dialog" aria-modal="true" aria-label={t("crew")}>
           <Suspense fallback={<p className="muted">…</p>}>
-            <AuthPanel
+            <CockpitEntry
               mode="gate"
-              onEntered={(p) => setPilot(p)}
+              onEntered={(p) => {
+                setPilot({ callsign: p.callsign, rank: p.rank, xp: p.xp, xp_next: p.xp_next });
+                if (p.skin) useSkin.getState().setSkin(p.skin);
+                setCrewOpen(false);
+              }}
+              onImportedClient={applyImportClient}
               onExit={() => setCrewOpen(false)}
             />
           </Suspense>

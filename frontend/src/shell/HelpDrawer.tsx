@@ -1,7 +1,9 @@
 /** Контекстная справка F1 — порт stamina/page_help.py PageHelpDialog. */
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { t } from "../i18n";
+import { t, getLang } from "../i18n";
+import { voiceLookup } from "../theme/voice";
+import { ti } from "../idle/idleI18n";
 
 type Tab = string;
 
@@ -60,7 +62,15 @@ const PAGES: Record<string, { title: string; body: string }> = {
       "Модуль изучения слов: карты, сканер, миссии, карточки.\n\n" +
       "• Подразделы — верхняя полоса вкладок.\n" +
       "• Сканер — быстрый переход к слову.\n" +
-      "• F1 — справка текущего подраздела.",
+      "• F1 — справка текущего подраздела.\n\n" +
+      "ГОЛОС ОЗВУЧКИ (Английский → Настройки)\n\n" +
+      "• Движок HD — нейроголоса Microsoft (Aria, Jenny, Guy, Andrew, Sonia, Ryan…) с сервера: " +
+      "одинаково чистое произношение в Chrome, Firefox, Edge и Safari. Фразы кэшируются на диске.\n" +
+      "• Движок «Браузер» — голоса самой системы; работает без сети. Авто-выбор: Microsoft Natural → Google US/UK English → прочие сетевые → любой en-*.\n" +
+      "• Если HD недоступен (нет интернета), звучит лучший голос браузера автоматически.\n" +
+      "• Метки: HD — нейроголос, NET — сетевой/улучшенный, STD — старый синтезатор.\n" +
+      "• Язык EN/RU/UK/DE — отдельный голос для каждого языка; акцент US/UK/AU/CA/IE/IN — фильтр.\n" +
+      "• Клавиши: Tab — к сетке голосов; стрелки/Home/End — по голосам; Enter — выбрать; Пробел или P — прослушать; ползунок ← → — скорость.",
   },
   speed: {
     title: "СКОРОЧТЕНИЕ",
@@ -89,7 +99,13 @@ const PAGES: Record<string, { title: string; body: string }> = {
     body:
       "Бортовые системы всего пульта.\n\n" +
       "• Язык интерфейса, звук, звёздное поле.\n" +
-      "• Экипаж, скины, библиотека, читалка.",
+      "• Экипаж, скины, библиотека, читалка.\n\n" +
+      "ГИД (Настройки → Гид)\n\n" +
+      "• Выбор гида или «Без гида»; частота подсказок: часто / обычно / редко / выкл (только звания и сюжет).\n" +
+      "• Голос вкл/выкл и громкость (▮…▮▮▮▮), «Прослушать» — образец.\n" +
+      "• «Знакомство» — повторить первый диалог; «Сбросить» — снова рассказать о зонах и вернуть подсказки, скрытые через Shift+Esc.\n" +
+      "• В окне гида: Enter / Пробел — дальше, Esc — закрыть, Shift+Esc — больше не показывать, V — голос.\n" +
+      "• Tab / стрелки — по кнопкам, Enter — выбрать.",
   },
 };
 
@@ -129,6 +145,8 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
 
   if (!open) return null;
   const page = PAGES[lockedTab.current] || PAGES.bridge!;
+  /* Скин-мир: что значат слова оболочки в текущем скине (voice pack `skin.help`). */
+  const skinHelp = t("skin.help") !== "skin.help" ? t("skin.help") : "";
 
   /* Portal в body: иначе .cockpit > * { position:relative } ломает fixed — справка уезжает вниз страницы. */
   return createPortal(
@@ -146,7 +164,7 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
               ?
             </span>
             <div>
-              <h2 className="route-title">{page.title}</h2>
+              <h2 className="route-title">{voiceLookup(`help.${lockedTab.current}`, getLang()) ?? page.title}</h2>
               <span className="muted help-how">{t("help_how")}</span>
             </div>
           </div>
@@ -158,6 +176,18 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
           {page.body.split("\n").map((line, i) =>
             line.trim() === "" ? <br key={i} /> : <p key={i}>{line}</p>,
           )}
+          {lockedTab.current === "settings" ? (
+            <>
+              <hr className="help-sep" />
+              <p className="help-idle">{ti("help")}</p>
+            </>
+          ) : null}
+          {skinHelp ? (
+            <>
+              <hr className="help-sep" />
+              <p className="help-skin">{skinHelp}</p>
+            </>
+          ) : null}
           <hr className="help-sep" />
           {KEYBOARD_NAV.split("\n").map((line, i) =>
             line.trim() === "" ? <br key={`k${i}`} /> : <p key={`k${i}`}>{line}</p>,

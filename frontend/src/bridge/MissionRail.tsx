@@ -1,5 +1,6 @@
 /** Компактный список миссий (мостик) + тип Drill для API. */
-import { t } from "../i18n";
+import { t, getLang } from "../i18n";
+import { missionTitle } from "../theme/voice";
 
 export type Drill = {
   id: string;
@@ -46,7 +47,7 @@ export default function MissionRail({ drills, activeId, lastStars, onStart, onRe
         {drills.map((d) => (
           <li key={d.id} className={`${d.unlocked ? "" : "locked"} ${activeId === d.id ? "on" : ""}`}>
             <button type="button" className="hud-btn" disabled={!d.unlocked} onClick={() => onStart(d.id)}>
-              {d.num}. {d.title}
+              {d.num}. {missionTitle(d.num, d.title, getLang())}
             </button>
             <span className="muted">
               {d.sector} · {d.goal} CPM · <Stars n={d.best_stars} />

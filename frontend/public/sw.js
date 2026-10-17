@@ -1,5 +1,5 @@
-/* PWA shell + offline vocab/locales */
-const CACHE = "st-shell-v38";
+/* PWA: оболочка offline; JS/CSS всегда с сети — иначе после docker-пересборки чёрный экран */
+const CACHE = "st-shell-v60";
 const SHELL = [
   "/",
   "/index.html",
@@ -26,6 +26,16 @@ self.addEventListener("activate", (event) => {
       .then(() => self.clients.claim()),
   );
 });
+
+function isAssetPath(pathname) {
+  return (
+    pathname.startsWith("/assets/") ||
+    pathname.endsWith(".js") ||
+    pathname.endsWith(".css") ||
+    pathname.endsWith(".map") ||
+    pathname.endsWith(".wasm")
+  );
+}
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
@@ -56,21 +66,34 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/api/")) return;
 
+  /* HTML навигация и бандлы — только сеть (иначе Chrome держит старый index/чанки) */
+  if (event.request.mode === "navigate" || isAssetPath(url.pathname) || url.pathname === "/sw.js") {
+    event.respondWith(
+      fetch(event.request)
+        .then((net) => net)
+        .catch(async () => {
+          if (event.request.mode === "navigate") {
+            const shell = (await caches.match("/index.html")) || (await caches.match("/"));
+            if (shell) return shell;
+          }
+          throw new Error("offline");
+        }),
+    );
+    return;
+  }
+
+  /* остальное (иконки, звуки, скины) — cache-first */
   event.respondWith(
     caches.match(event.request).then(async (hit) => {
       if (hit) return hit;
       try {
         const net = await fetch(event.request);
-        if (net.ok && (url.origin === self.location.origin)) {
+        if (net.ok && url.origin === self.location.origin) {
           const cache = await caches.open(CACHE);
           cache.put(event.request, net.clone());
         }
         return net;
       } catch {
-        if (event.request.mode === "navigate") {
-          const shell = await caches.match("/index.html");
-          if (shell) return shell;
-        }
         return caches.match("/");
       }
     }),

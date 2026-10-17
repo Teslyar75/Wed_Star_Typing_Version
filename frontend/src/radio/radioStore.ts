@@ -32,6 +32,11 @@ type RadioState = {
   playing: boolean;
   volume: number;
   duck: boolean;
+  /** кто держит приглушение (набор / гид) — снятие одного не срывает другое */
+  duckHolders: string[];
+  /** полная тишина (вызов Ориона / микрофон) — приоритетнее duck */
+  muteHolders: string[];
+  muted: boolean;
   duckOnType: boolean;
   autoLast: boolean;
   favs: Station[];
@@ -46,6 +51,12 @@ type RadioState = {
   toggle: () => void;
   setVolume: (v: number) => void;
   setDuck: (v: boolean) => void;
+  /** приглушить радио (reason: type | guide | …) */
+  holdDuck: (reason: string) => void;
+  releaseDuck: (reason: string) => void;
+  /** полностью заглушить (вызов Ориона — чтобы услышать пилота) */
+  holdMute: (reason: string) => void;
+  releaseMute: (reason: string) => void;
   setDuckOnType: (v: boolean) => void;
   setAutoLast: (v: boolean) => void;
   toggleFav: (s: Station) => void;
@@ -124,12 +135,24 @@ function favIndex(get: () => RadioState): number {
 }
 
 const hasLS = typeof localStorage !== "undefined";
+const DUCK_LEVEL = 0.15;
+
+function applyAudioVolume(get: () => RadioState) {
+  const a = get().audio;
+  if (!a) return;
+  if (get().muted || get().muteHolders.length) a.volume = 0;
+  else if (get().duck) a.volume = get().volume * DUCK_LEVEL;
+  else a.volume = get().volume;
+}
 
 export const useRadio = create<RadioState>((set, get) => ({
   station: hasLS ? loadLast() : null,
   playing: false,
   volume: hasLS ? Number(localStorage.getItem(VOL_KEY) || "0.7") : 0.7,
   duck: false,
+  duckHolders: [],
+  muteHolders: [],
+  muted: false,
   duckOnType: hasLS ? localStorage.getItem(DUCK_TYPE_KEY) === "1" : false,
   autoLast: hasLS ? localStorage.getItem(AUTO_KEY) !== "0" : true,
   favs: hasLS ? loadFavs() : [],
@@ -140,15 +163,15 @@ export const useRadio = create<RadioState>((set, get) => ({
   setAudio: (el) => {
     /* не затираем живой элемент null-ом при смене вкладок */
     if (!el && get().audio) return;
-    if (el) el.volume = get().duck ? get().volume * 0.15 : get().volume;
     set({ audio: el });
+    if (el) applyAudioVolume(get);
   },
 
   play: (s) => {
     const a = get().audio;
     if (!a) return;
     a.src = s.url_resolved;
-    a.volume = get().duck ? get().volume * 0.15 : get().volume;
+    applyAudioVolume(get);
     void a.play().then(() => {
       localStorage.setItem(LAST_KEY, JSON.stringify(s));
       set({ station: s, playing: true, nowPlaying: null });
@@ -159,6 +182,8 @@ export const useRadio = create<RadioState>((set, get) => ({
         prev: () => get().prevFav(),
       });
       startIcyPoll(get);
+    }).catch(() => {
+      /* прервано pause()/stop() или автоплей запрещён */
     });
   },
 
@@ -205,15 +230,48 @@ export const useRadio = create<RadioState>((set, get) => ({
   setVolume: (v) => {
     const vol = Math.max(0, Math.min(1, v));
     localStorage.setItem(VOL_KEY, String(vol));
-    const a = get().audio;
-    if (a) a.volume = get().duck ? vol * 0.15 : vol;
     set({ volume: vol });
+    applyAudioVolume(get);
   },
 
   setDuck: (duck) => {
-    const a = get().audio;
-    if (a) a.volume = duck ? get().volume * 0.15 : get().volume;
-    set({ duck });
+    /* совместимость: набор / старый API → reason "type" */
+    if (duck) get().holdDuck("type");
+    else get().releaseDuck("type");
+  },
+
+  holdDuck: (reason) => {
+    const holders = get().duckHolders;
+    if (holders.includes(reason)) {
+      applyAudioVolume(get);
+      return;
+    }
+    const next = [...holders, reason];
+    set({ duckHolders: next, duck: true });
+    applyAudioVolume(get);
+  },
+
+  releaseDuck: (reason) => {
+    const next = get().duckHolders.filter((r) => r !== reason);
+    set({ duckHolders: next, duck: next.length > 0 });
+    applyAudioVolume(get);
+  },
+
+  holdMute: (reason) => {
+    const holders = get().muteHolders;
+    if (holders.includes(reason)) {
+      applyAudioVolume(get);
+      return;
+    }
+    const next = [...holders, reason];
+    set({ muteHolders: next, muted: true });
+    applyAudioVolume(get);
+  },
+
+  releaseMute: (reason) => {
+    const next = get().muteHolders.filter((r) => r !== reason);
+    set({ muteHolders: next, muted: next.length > 0 });
+    applyAudioVolume(get);
   },
 
   setDuckOnType: (v) => {

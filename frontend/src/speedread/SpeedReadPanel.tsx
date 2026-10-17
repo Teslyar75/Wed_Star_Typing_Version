@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import { makeQuiz, type QuizItem } from "./quiz";
 import { useReadingPos } from "../reading/positionStore";
 import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
+import ZoneSettingsShell from "../shell/ZoneSettingsShell";
 import SpeedOverview, { type SrBook, type SrSession, type SrTrainer } from "./SpeedOverview";
 import HyperdriveView from "./HyperdriveView";
 import BookReaderView from "./BookReaderView";
@@ -662,8 +663,12 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
       )}
 
       {page === "settings" && (
-        <div className="sr-settings" data-nav-group="sr-settings">
-          <p className="muted sr-settings-hint">{t("sr_settings_hint")}</p>
+        <ZoneSettingsShell
+          className="sr-settings"
+          navGroup="sr-settings"
+          hint={t("sr_settings_hint")}
+          ariaLabel={t("settings")}
+        >
           <div className="sr-settings-grid">
             <section className="panel-inset sr-set-panel">
               <h3 className="route-title">{t("sr_speed_ramp")}</h3>
@@ -832,7 +837,7 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
               </div>
             </section>
           </div>
-        </div>
+        </ZoneSettingsShell>
       )}
     </div>
   );

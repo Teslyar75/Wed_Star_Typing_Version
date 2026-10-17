@@ -1,3 +1,4 @@
+import { speakText } from "../english/speak";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { t } from "../i18n";
@@ -64,10 +65,7 @@ export default function BilingualReader() {
   }, [textId, offset]);
 
   const speak = (text: string) => {
-    if (!window.speechSynthesis) return;
-    const u = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    speakText(text);
   };
 
   const selectSentence = (id: number, text: string) => {

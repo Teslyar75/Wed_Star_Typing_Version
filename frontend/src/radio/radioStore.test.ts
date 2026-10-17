@@ -44,4 +44,27 @@ describe("radio favs navigation", () => {
     expect(useRadio.getState().duckOnType).toBe(true);
     expect(storeMem.get("st_radio_duck_type")).toBe("1");
   });
+
+  it("holdDuck/releaseDuck: гид и набор не срывают друг друга", () => {
+    useRadio.setState({ duck: false, duckHolders: [], muteHolders: [], muted: false, volume: 1, audio: null });
+    useRadio.getState().holdDuck("guide");
+    useRadio.getState().holdDuck("type");
+    expect(useRadio.getState().duck).toBe(true);
+    expect(useRadio.getState().duckHolders).toEqual(["guide", "type"]);
+    useRadio.getState().releaseDuck("type");
+    expect(useRadio.getState().duck).toBe(true);
+    expect(useRadio.getState().duckHolders).toEqual(["guide"]);
+    useRadio.getState().releaseDuck("guide");
+    expect(useRadio.getState().duck).toBe(false);
+    expect(useRadio.getState().duckHolders).toEqual([]);
+  });
+
+  it("holdMute: полная тишина для вызова Ориона", () => {
+    useRadio.setState({ duck: true, duckHolders: ["guide"], muteHolders: [], muted: false, volume: 1, audio: null });
+    useRadio.getState().holdMute("orion_call");
+    expect(useRadio.getState().muted).toBe(true);
+    useRadio.getState().releaseMute("orion_call");
+    expect(useRadio.getState().muted).toBe(false);
+    expect(useRadio.getState().duck).toBe(true);
+  });
 });

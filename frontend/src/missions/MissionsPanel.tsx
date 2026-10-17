@@ -1,7 +1,8 @@
 /** Звёздная карта миссий — паритет stamina/screens.MissionsScreen. */
 import { useCallback, useEffect, useState } from "react";
 import { type Drill, missionAccent, missionKeycaps } from "../bridge/MissionRail";
-import { t } from "../i18n";
+import { t, getLang } from "../i18n";
+import { missionTitle } from "../theme/voice";
 
 type Props = {
   onOpenBridge?: () => void;
@@ -159,7 +160,7 @@ export default function MissionsPanel({ onOpenBridge, onOpenCargo }: Props) {
                 </span>
                 <span className="mc-sector">{d.sector}</span>
               </div>
-              <div className="mc-title">{d.title}</div>
+              <div className="mc-title">{missionTitle(d.num, d.title, getLang())}</div>
               <div className="mc-new muted">
                 {d.new ? t("new_keys") : t("all_letters")}
               </div>

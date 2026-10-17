@@ -12,15 +12,18 @@ from app.api_catalog import router as catalog_router
 from app.api_english import router as english_router
 from app.api_library import router as library_router
 from app.api_migrate import router as migrate_router
+from app.api_import import router as import_router
 from app.api_missions import router as missions_router
 from app.api_pilots import router as pilots_router
 from app.api_lounge import router as lounge_router
 from app.api_radio import router as radio_router
+from app.api_slideshow import router as slideshow_router
 from app.api_reader import router as reader_router
 from app.api_sessions import router as sessions_router
 from app.api_speedread import router as speedread_router
 from app.api_texts import router as texts_router
-from app.config import settings
+from app.api_tts import router as tts_router
+from app.config import check_secret, settings
 from app.db import init_db
 
 _repo = settings.repo_root()
@@ -30,6 +33,7 @@ if str(_repo) not in sys.path:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    check_secret()
     init_db()
     from app.translate_jobs import ensure_worker
 
@@ -62,8 +66,11 @@ app.include_router(english_router)
 app.include_router(speedread_router)
 app.include_router(missions_router)
 app.include_router(migrate_router)
+app.include_router(import_router)
 app.include_router(radio_router)
+app.include_router(slideshow_router)
 app.include_router(lounge_router)
+app.include_router(tts_router)
 
 
 @app.get("/api/health")

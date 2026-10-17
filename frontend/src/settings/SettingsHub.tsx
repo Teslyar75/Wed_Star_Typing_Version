@@ -1,3 +1,5 @@
+import IdleSettings from "../idle/IdleSettings";
+import GuideSettings from "../guide/GuideSettings";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { t, getLang } from "../i18n";
 import type { SpaceProfile } from "../fx/livingSpace";
@@ -10,26 +12,35 @@ import {
   playClick,
   playError,
 } from "../fx/sounds";
-import { useCabin, type FontSize, type GlowLevel, type UiScale, type UplinkTarget } from "./cabinStore";
+import {
+  useCabin,
+  type GlowLevel,
+  type UiScale,
+  type UplinkTarget,
+} from "./cabinStore";
 import { ALL_SKINS, useSkin } from "../theme/skinStore";
 import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
 
 const SkinPicker = lazy(() => import("../theme/SkinPicker"));
-const AuthPanel = lazy(() => import("../auth/AuthPanel"));
+const CockpitEntry = lazy(() => import("../auth/CockpitEntry"));
+import { applyImportClient } from "../auth/applyImportClient";
 
-type Sub = "cabin" | "cabinMore" | "skins" | "crew";
+type Sub = "cabin" | "cabinMore" | "guide" | "skins" | "crew";
 
 type Props = {
   spaceProfile: SpaceProfile;
   onSpaceProfile: (p: SpaceProfile) => void;
   lang: string;
   onLang: (code: string) => void;
+  /** «Повторить знакомство» — перейти на мостик и показать first_launch */
+  onGuideReplay?: () => void;
 };
 
 function Block({ when, children }: { when: boolean; children: ReactNode }) {
   if (!when) return null;
   return <Suspense fallback={<p className="muted">…</p>}>{children}</Suspense>;
 }
+
 
 function Row({ title, desc, children }: { title: string; desc: string; children: ReactNode }) {
   return (
@@ -63,6 +74,7 @@ export default function SettingsHub({
   onSpaceProfile,
   lang,
   onLang,
+  onGuideReplay,
 }: Props) {
   const [sub, setSub] = useState<Sub>("cabin");
   const cabin = useCabin();
@@ -82,6 +94,7 @@ export default function SettingsHub({
   const subs: { id: Sub; label: string }[] = [
     { id: "cabin", label: t("set_systems") },
     { id: "cabinMore", label: t("set_more") },
+    { id: "guide", label: "Гид" },
     { id: "skins", label: t("skins") },
     { id: "crew", label: t("crew") },
   ];
@@ -95,7 +108,7 @@ export default function SettingsHub({
   useEffect(() => {
     registerGoHandler((slugs) => {
       const id = slugs[0] as Sub | undefined;
-      if (id && ["cabin", "cabinMore", "skins", "crew"].includes(id)) {
+      if (id && ["cabin", "cabinMore", "guide", "skins", "crew"].includes(id)) {
         setSub(id as Sub);
       }
     });
@@ -121,14 +134,6 @@ export default function SettingsHub({
     { key: "frost", name: t("set_living_off") },
     { key: "light", name: t("set_living_light") },
     { key: "full", name: t("set_living_full") },
-  ];
-
-  const fonts: { key: FontSize; name: string }[] = [
-    { key: "S", name: t("set_font_s") },
-    { key: "M", name: t("set_font_m") },
-    { key: "L", name: t("set_font_l") },
-    { key: "XL", name: t("set_font_xl") },
-    { key: "XXL", name: t("set_font_xxl") },
   ];
 
   const scales: { key: UiScale; name: string }[] = [
@@ -287,26 +292,7 @@ export default function SettingsHub({
             ))}
           </Row>
 
-          <Row title={t("set_keyboard")} desc={t("set_keyboard_desc")}>
-            <Toggle on={cabin.keyboard} onClick={() => cabin.toggle("keyboard")} />
-          </Row>
-
-          <Row title={t("set_zones")} desc={t("set_zones_desc")}>
-            <Toggle on={cabin.zones} onClick={() => cabin.toggle("zones")} />
-          </Row>
-
-          <Row title={t("set_font")} desc={t("set_font_desc")}>
-            {fonts.map((b) => (
-              <button
-                key={b.key}
-                type="button"
-                className={`hud-btn ${cabin.font === b.key ? "amber" : ""}`}
-                onClick={() => cabin.set("font", b.key)}
-              >
-                {b.name}
-              </button>
-            ))}
-          </Row>
+          <IdleSettings Row={Row} />
 
           <Row title={t("set_ui")} desc={t("set_ui_desc")}>
             {scales.map((b) => (
@@ -361,11 +347,25 @@ export default function SettingsHub({
         </div>
       )}
 
+      {sub === "guide" && (
+        <div className="settings-cabin inst-panel settings-guide">
+          <div className="lab">Гид</div>
+          <GuideSettings Row={Row} onReplay={onGuideReplay} />
+        </div>
+      )}
+
       <Block when={sub === "skins"}>
         <SkinPicker />
       </Block>
       <Block when={sub === "crew"}>
-        <AuthPanel />
+        <CockpitEntry
+          mode="settings"
+          onEntered={(p) => {
+            if (p.skin) useSkin.getState().setSkin(p.skin);
+            window.location.reload();
+          }}
+          onImportedClient={applyImportClient}
+        />
       </Block>
     </section>
   );

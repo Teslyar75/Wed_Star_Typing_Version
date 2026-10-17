@@ -1,6 +1,8 @@
 /** Обзор АНГЛИЙСКИЙ — паритет stamina/english/pages_main.OverviewPage. */
+import { speakText } from "./speak";
 import { useEffect, useMemo, useState } from "react";
-import { t } from "../i18n";
+import { getLang, t } from "../i18n";
+import { enRank } from "../theme/voice";
 
 export type EnProgress = {
   xp: number;
@@ -125,10 +127,7 @@ export default function EnglishOverview({
   }, [prog.learned]);
 
   const speak = (word: string) => {
-    if (!window.speechSynthesis || !word) return;
-    const u = new SpeechSynthesisUtterance(word);
-    u.lang = "en-US";
-    window.speechSynthesis.speak(u);
+    if (word) speakText(word, "en-US");
   };
 
   return (
@@ -249,7 +248,7 @@ export default function EnglishOverview({
               <div className="en-lvl-bar">
                 <div style={{ width: `${Math.max(0, Math.min(100, levelFrac * 100))}%` }} />
               </div>
-              <span className="en-rank">★ {prog.rank}</span>
+              <span className="en-rank">★ {enRank(prog.rank, getLang())}</span>
             </div>
           </div>
           <div className="en-streak-block">
