@@ -1,4 +1,4 @@
-import { speakUtterance } from "../english/speak";
+import { speakUtterance, stopSpeaking } from "../english/speak";
 import { useRadio } from "../radio/radioStore";
 import { guideById } from "./guides";
 
@@ -27,7 +27,7 @@ export function speakGuide(guideId: string, text: string, volume = 3): () => voi
   };
 }
 
-/** Промис до конца фразы (для цепочки: приветствие → микрофон). */
+/** Промис до конца фразы; по завершении TTS полностью гасится (чтобы микрофон слышал пилота). */
 export function speakGuideAsync(guideId: string, text: string, volume = 3): Promise<void> {
   return new Promise((resolve) => {
     const g = guideById(guideId);
@@ -39,14 +39,17 @@ export function speakGuideAsync(guideId: string, text: string, volume = 3): Prom
     radio.holdDuck(DUCK_REASON);
     const unduck = () => useRadio.getState().releaseDuck(DUCK_REASON);
     let settled = false;
+    let stop: (() => void) | null = null;
     const finish = () => {
       if (settled) return;
       settled = true;
+      stop?.();
+      stopSpeaking();
       unduck();
       resolve();
     };
     const clean = text.replace(/\[[^\]]*\]/g, "");
-    speakUtterance({
+    stop = speakUtterance({
       text: clean,
       lang: "ru",
       engine: "hd",
@@ -56,6 +59,6 @@ export function speakGuideAsync(guideId: string, text: string, volume = 3): Prom
       onEnd: finish,
       onError: finish,
     });
-    window.setTimeout(finish, Math.min(14_000, Math.max(2500, clean.length * 85)));
+    window.setTimeout(finish, Math.min(14_000, Math.max(2800, clean.length * 90)));
   });
 }

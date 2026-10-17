@@ -34,6 +34,11 @@ function stopAll() {
   }
 }
 
+/** Остановить любой TTS (нужно перед микрофоном Ориона). */
+export function stopSpeaking(): void {
+  stopAll();
+}
+
 export async function hasEnglishVoice(): Promise<boolean> {
   if (!hdDown && loadPrefs().engine === "hd") return true;
   const voices = await loadBrowserVoices();

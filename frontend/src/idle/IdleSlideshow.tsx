@@ -8,6 +8,8 @@ import { createPortal } from "react-dom";
 import { useSkin } from "../theme/skinStore";
 import { useRadio } from "../radio/radioStore";
 import { searchStations, type Station } from "../radio/api";
+import { useCabin, type UiScale } from "../settings/cabinStore";
+import { holdStageFit, pauseStageFit } from "../shell/stageFit";
 import { useIdle } from "./idleStore";
 import { ti } from "./idleI18n";
 import { dedupeStations, fadeVolume, isIdle, orderStations, stationGenre } from "./idleLogic";
@@ -75,11 +77,38 @@ export default function IdleSlideshow() {
   const mutedRef = useRef(false);
   const volTargetRef = useRef(RADIO_TARGET);
   const radioFull = useRef(0.7);
+  /** Сохраняем масштаб UI/fit до слайдшоу — после выхода восстанавливаем. */
+  const savedUi = useRef<{ fitScale: string; cabinScale: UiScale } | null>(null);
 
   stationsRef.current = stations;
   stIRef.current = stI;
   mutedRef.current = muted;
   volTargetRef.current = volTarget;
+
+  const snapshotUi = () => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    const fit =
+      stage?.style.getPropertyValue("--st-fit-scale") ||
+      (stage && getComputedStyle(stage).getPropertyValue("--st-fit-scale")) ||
+      "1";
+    savedUi.current = {
+      cabinScale: useCabin.getState().uiScale,
+      fitScale: fit.trim() || "1",
+    };
+  };
+
+  const restoreUi = () => {
+    const snap = savedUi.current;
+    savedUi.current = null;
+    /* pause ещё активен с openShow — hydrate не должен форс-remeasure */
+    const cabin = useCabin.getState();
+    cabin.hydrate();
+    if (snap?.cabinScale && useCabin.getState().uiScale !== snap.cabinScale) {
+      useCabin.getState().set("uiScale", snap.cabinScale);
+    }
+    /* фиксируем прежний fit — иначе после портала measure сжимает до MIN */
+    holdStageFit(snap?.fitScale || "1");
+  };
 
   const stopFade = () => {
     if (fadeTimer.current) window.clearInterval(fadeTimer.current);
@@ -152,6 +181,8 @@ export default function IdleSlideshow() {
   }, [skin, radio, playStation]);
 
   const openShow = useCallback(async () => {
+    snapshotUi();
+    pauseStageFit();
     setOpen(true);
     setIdx(0);
     setStations([]);
@@ -179,6 +210,7 @@ export default function IdleSlideshow() {
       else if (r.audio) r.audio.volume = r.volume;
       startedRadio.current = false;
     }
+    restoreUi();
   }, [after]);
 
   const switchStation = useCallback(

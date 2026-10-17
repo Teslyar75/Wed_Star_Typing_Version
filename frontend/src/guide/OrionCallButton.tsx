@@ -1,32 +1,35 @@
-/** Кнопка вызова Ориона — рядом со СЛАЙДЫ / ЭКРАН. Клавиша «=». */
+/** Кнопка вызова Ориона — рядом со СЛАЙДЫ / ЭКРАН. Также «=», F8 и палитра команд. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getLang } from "../i18n";
 import { isTextEditTarget } from "../shell/keyboardNav";
 import { useGuide } from "./guideStore";
 import { runOrionCall, type OrionCallPhase } from "./orionCall";
 
-/** Горячая клавиша вызова / отмены Ориона. */
+/** Горячие клавиши: «=» и F8. */
 export const ORION_HOTKEY = "=";
+export const ORION_HOTKEY_F = "F8";
+/** Палитра / внешний вызов: window.dispatchEvent(new Event(ORION_CALL_EVENT)) */
+export const ORION_CALL_EVENT = "st-orion-call";
 
 const L: Record<string, { btn: string; tip: string; listen: string }> = {
   ru: {
     btn: "ОРИОН",
-    tip: "Вызвать Ориона («=») — скажите «шутка» или «смени волну»",
+    tip: "Вызвать Ориона: кнопка, «=» или F8 — «шутка» / «смени волну»",
     listen: "…",
   },
   uk: {
     btn: "ОРІОН",
-    tip: "Викликати Оріона («=») — «жарт» або «зміни хвилю»",
+    tip: "Виклик Оріона: кнопка, «=» або F8",
     listen: "…",
   },
   en: {
     btn: "ORION",
-    tip: "Call Orion («=») — say “joke” or “next station”",
+    tip: "Call Orion: button, «=» or F8",
     listen: "…",
   },
   de: {
     btn: "ORION",
-    tip: "Orion rufen («=») — „Witz“ oder „Sender wechseln“",
+    tip: "Orion: Schaltfläche, «=» oder F8",
     listen: "…",
   },
 };
@@ -36,6 +39,7 @@ function label() {
 }
 
 function isOrionHotkey(e: KeyboardEvent): boolean {
+  if (e.key === "F8") return true;
   return e.key === "=" || e.code === "Equal" || e.code === "NumpadEqual";
 }
 
@@ -43,6 +47,7 @@ export default function OrionCallButton() {
   const guideOn = useGuide((s) => s.st.id !== "none" && !!s.pilot);
   const [phase, setPhase] = useState<OrionCallPhase>("idle");
   const [heard, setHeard] = useState("");
+  const [status, setStatus] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const busy = phase !== "idle";
   const lab = label();
@@ -58,43 +63,52 @@ export default function OrionCallButton() {
       abortRef.current = null;
       setPhase("idle");
       setHeard("");
+      setStatus("");
       return;
     }
     const ac = new AbortController();
     abortRef.current = ac;
     setHeard("");
+    setStatus("");
     void runOrionCall({
       signal: ac.signal,
       onPhase: setPhase,
       onHeard: setHeard,
+      onStatus: setStatus,
     }).finally(() => {
       abortRef.current = null;
       setPhase("idle");
+      setStatus("");
     });
   }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!isOrionHotkey(e) || e.ctrlKey || e.altKey || e.metaKey) return;
-      if (isTextEditTarget(e.target)) return;
-      /* во время набора на мостике ghost-input — не вызываем */
+      if (e.key !== "F8" && isTextEditTarget(e.target)) return;
       if ((e.target as HTMLElement | null)?.classList?.contains("ghost-input")) return;
       e.preventDefault();
       e.stopPropagation();
       toggle();
     };
+    const onEvt = () => toggle();
     window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
+    window.addEventListener(ORION_CALL_EVENT, onEvt);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener(ORION_CALL_EVENT, onEvt);
+    };
   }, [toggle]);
 
   const title =
-    phase === "listening"
-      ? `Слушаю… ${heard || "говорите"}`
+    status ||
+    (phase === "listening"
+      ? `Слушаю… ${heard || "говорите по-русски"}`
       : phase === "greeting"
         ? "Орион отвечает…"
         : phase === "acting"
           ? "Выполняю…"
-          : lab.tip;
+          : lab.tip);
 
   return (
     <button
@@ -102,12 +116,12 @@ export default function OrionCallButton() {
       className={`hud-btn zone-fs-btn ${busy ? "amber" : "ok"}`}
       title={title}
       aria-label={title}
-      aria-keyshortcuts="Equal"
+      aria-keyshortcuts="Equal Equal F8"
       aria-pressed={busy}
       disabled={!guideOn}
       onClick={toggle}
     >
-      {phase === "listening" ? "◉" : phase === "greeting" || phase === "acting" ? `${lab.listen}` : `${lab.btn} =`}
+      {phase === "listening" ? "◉ МИК" : phase === "greeting" || phase === "acting" ? lab.listen : lab.btn}
     </button>
   );
 }

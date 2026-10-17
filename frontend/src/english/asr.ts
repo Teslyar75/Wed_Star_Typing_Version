@@ -86,10 +86,23 @@ function packAlts(
   error?: string,
   peakRms?: number,
 ): AsrResult {
-  const { score, marks, heard } = scoreBest(expected, alternatives, targetWord);
+  const clean = alternatives.map((a) => a.trim()).filter(Boolean);
+  /* свободная фраза (команды Ориона) — не сравниваем с эталоном */
+  if (!expected.trim()) {
+    return {
+      transcript: clean[0] || "",
+      alternatives: clean,
+      score: clean.length ? 1 : 0,
+      marks: [],
+      engine,
+      error,
+      peakRms,
+    };
+  }
+  const { score, marks, heard } = scoreBest(expected, clean, targetWord);
   return {
-    transcript: heard,
-    alternatives: alternatives.map((a) => a.trim()).filter(Boolean),
+    transcript: heard || clean[0] || "",
+    alternatives: clean,
     score,
     marks,
     engine,
@@ -487,7 +500,13 @@ async function listenWebSpeech(opts: ListenOpts): Promise<AsrResult> {
         return;
       }
       if (wantStop || settled) return;
-      if (err === "no-speech" || err === "aborted" || err === "network") return;
+      /* network = нет интернета у Chrome Speech; no-speech — ждём до maxMs / тишины */
+      if (err === "aborted") return;
+      if (err === "network") {
+        finish("network");
+        return;
+      }
+      if (err === "no-speech") return;
       finish(err);
     };
 
@@ -555,16 +574,36 @@ export async function listenOnce(opts: ListenOpts): Promise<AsrResult> {
   return emptyResult("none", "no-asr");
 }
 
-/** Фраза на любом языке: для ru предпочитаем Web Speech (Vosk-модель в проекте — EN). */
+/** Запрос доступа к микрофону (Chrome показывает диалог до SpeechRecognition). */
+export async function ensureMicPermission(): Promise<"ok" | "denied" | "none"> {
+  if (!navigator.mediaDevices?.getUserMedia) return "none";
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+    return "ok";
+  } catch (e) {
+    const name = e instanceof DOMException ? e.name : "";
+    if (name === "NotAllowedError" || name === "PermissionDeniedError") return "denied";
+    return "none";
+  }
+}
+
+export function webSpeechAvailable(): boolean {
+  return !!getSpeechRecognition();
+}
+
+/** Фраза на любом языке: для ru — только Web Speech (Vosk в проекте — EN). */
 export async function listenPhrase(opts: ListenOpts): Promise<AsrResult> {
   const patched: ListenOpts = {
     ...opts,
-    maxMs: opts.maxMs ?? 10_000,
-    waitStartMs: opts.waitStartMs ?? 800,
-    silenceMs: opts.silenceMs ?? 1000,
+    expected: opts.expected ?? "",
+    maxMs: opts.maxMs ?? 12_000,
+    waitStartMs: opts.waitStartMs ?? 500,
+    silenceMs: opts.silenceMs ?? 1200,
   };
   const lang = (opts.lang || "en-US").toLowerCase();
-  if (lang.startsWith("ru") && getSpeechRecognition()) {
+  if (lang.startsWith("ru")) {
+    if (!getSpeechRecognition()) return emptyResult("none", "no-webspeech");
     return listenWebSpeech({ ...patched, lang: opts.lang || "ru-RU" });
   }
   return listenOnce(patched);

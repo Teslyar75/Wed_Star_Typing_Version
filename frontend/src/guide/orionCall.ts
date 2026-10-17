@@ -1,5 +1,6 @@
-/** Вызов Ориона: приветствие → микрофон → команда (шутка / смена волны). */
-import { listenPhrase } from "../english/asr";
+/** Вызов Ориона: приветствие → микрофон (ru) → команда (шутка / смена волны). */
+import { ensureMicPermission, listenPhrase, webSpeechAvailable } from "../english/asr";
+import { stopSpeaking } from "../english/speak";
 import { useRadio } from "../radio/radioStore";
 import { parseOrionCommand } from "./orionCommands";
 import { useGuide } from "./guideStore";
@@ -13,10 +14,16 @@ const GREETING = (sir: string) => `Да, я тут, ${sir}. Что-то нужн
 export type OrionCallHandlers = {
   onPhase?: (p: OrionCallPhase) => void;
   onHeard?: (text: string) => void;
+  /** статус для кнопки: «говорите», ошибка микрофона и т.п. */
+  onStatus?: (msg: string) => void;
   signal?: AbortSignal;
 };
 
 const MUTE_REASON = "orion_call";
+
+function delay(ms: number) {
+  return new Promise<void>((r) => window.setTimeout(r, ms));
+}
 
 /** Ждём, пока окно гида закроется (анекдот дочитан / Esc) — радио до этого молчит. */
 function waitGuidePopupDone(signal?: AbortSignal): Promise<void> {
@@ -50,31 +57,69 @@ export async function runOrionCall(handlers: OrionCallHandlers = {}): Promise<vo
   const sir = addressOf();
   const aborted = () => handlers.signal?.aborted;
   const say = (text: string) => speakGuideAsync(id, text, volume);
+  const status = (msg: string) => handlers.onStatus?.(msg);
 
-  /* тишина с первого клика до полного конца сеанса (не только на время микрофона) */
   useRadio.getState().holdMute(MUTE_REASON);
   try {
     handlers.onPhase?.("greeting");
+    status("Орион говорит…");
     await say(GREETING(sir));
     if (aborted()) return;
 
+    /* обязательно погасить TTS — иначе Chrome ASR не слышит пилота */
+    stopSpeaking();
+    await delay(450);
+    if (aborted()) return;
+
+    if (!webSpeechAvailable()) {
+      await say(
+        `Нужен Chrome или Edge с распознаванием речи, ${sir}. Без него я вас не услышу.`,
+      );
+      return;
+    }
+
+    status("Разрешите микрофон…");
+    const mic = await ensureMicPermission();
+    if (aborted()) return;
+    if (mic === "denied") {
+      await say(
+        `Микрофон запрещён, ${sir}. Разрешите доступ в адресной строке браузера и вызовите меня снова.`,
+      );
+      return;
+    }
+
     handlers.onPhase?.("listening");
+    status("Слушаю по-русски — говорите…");
     const result = await listenPhrase({
       expected: "",
       lang: "ru-RU",
-      maxMs: 10_000,
-      waitStartMs: 600,
-      silenceMs: 1100,
-      onInterim: (t) => handlers.onHeard?.(t),
+      maxMs: 12_000,
+      waitStartMs: 400,
+      silenceMs: 1300,
+      onInterim: (t) => {
+        handlers.onHeard?.(t);
+        if (t) status(`Слышу: ${t}`);
+      },
+      onStarted: () => status("Микрофон включён — говорите…"),
+      onSounding: (on) => {
+        if (on) status("Слышу речь…");
+      },
       onReadyStop: (stop) => {
         handlers.signal?.addEventListener("abort", () => stop(), { once: true });
       },
-    }).catch(() => ({ transcript: "", alternatives: [] as string[], error: "asr-fail" as string | undefined }));
+    }).catch(() => ({
+      transcript: "",
+      alternatives: [] as string[],
+      error: "asr-fail" as string | undefined,
+    }));
 
     if (aborted()) return;
 
     const heard = (result.transcript || result.alternatives[0] || "").trim();
-    if (heard) handlers.onHeard?.(heard);
+    if (heard) {
+      handlers.onHeard?.(heard);
+      status(`Распознано: ${heard}`);
+    }
 
     handlers.onPhase?.("acting");
     const cmd = parseOrionCommand(heard);
@@ -85,7 +130,7 @@ export async function runOrionCall(handlers: OrionCallHandlers = {}): Promise<vo
         await say(`Простите, ${sir}, анекдотов в буфере нет.`);
         return;
       }
-      /* радио молчит, пока пилот слушает/листает анекдот */
+      status("Рассказываю…");
       await waitGuidePopupDone(handlers.signal);
       return;
     }
@@ -103,14 +148,24 @@ export async function runOrionCall(handlers: OrionCallHandlers = {}): Promise<vo
       return;
     }
 
+    if (result.error === "not-allowed") {
+      await say(`Микрофон запрещён, ${sir}. Разрешите доступ и повторите.`);
+      return;
+    }
+    if (result.error === "network" || result.error === "no-webspeech") {
+      await say(
+        `Нет связи с распознаванием речи, ${sir}. Нужен интернет и Chrome или Edge.`,
+      );
+      return;
+    }
     if (!heard || result.error) {
-      await say(`Не расслышал, ${sir}. Скажите «дай шутку» или «смени волну».`);
+      await say(`Не расслышал, ${sir}. Скажите по-русски: «дай шутку» или «смени волну».`);
     } else {
-      await say(`Пока умею шутку и смену волны, ${sir}. Повторите, пожалуйста.`);
+      await say(`Пока умею шутку и смену волны, ${sir}. Вы сказали: ${heard}.`);
     }
   } finally {
-    /* эфир только здесь — после ответа, задания и закрытия окна гида */
     useRadio.getState().releaseMute(MUTE_REASON);
     handlers.onPhase?.("idle");
+    status("");
   }
 }
