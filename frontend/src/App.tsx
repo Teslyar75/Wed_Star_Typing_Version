@@ -26,6 +26,7 @@ import RadioMinibar from "./radio/RadioMinibar";
 import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
 import { installStageFit } from "./shell/stageFit";
+import TabErrorBoundary from "./shell/TabErrorBoundary";
 
 const CockpitEntry = lazy(() => import("./auth/CockpitEntry"));
 import { applyImportClient } from "./auth/applyImportClient";
@@ -47,9 +48,13 @@ function TabFallback() {
   return <p className="muted">…</p>;
 }
 
-function LazyTab({ when, children }: { when: boolean; children: ReactNode }) {
+function LazyTab({ when, children, label }: { when: boolean; children: ReactNode; label?: string }) {
   if (!when) return null;
-  return <Suspense fallback={<TabFallback />}>{children}</Suspense>;
+  return (
+    <TabErrorBoundary label={label}>
+      <Suspense fallback={<TabFallback />}>{children}</Suspense>
+    </TabErrorBoundary>
+  );
 }
 
 type PilotChip = { callsign: string; rank?: string; xp?: number; xp_next?: number };

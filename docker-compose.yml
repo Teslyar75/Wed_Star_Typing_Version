@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: star
       POSTGRES_PASSWORD: star
@@ -12,11 +13,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://star:star@postgres:5432/star_typing
       # локально: явный ключ (>=32). В проде задайте SECRET_KEY в .env
@@ -32,18 +35,43 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    restart: unless-stopped
     volumes:
       - frontend_dist:/out
     # чистим volume, иначе старые hashed CSS/JS копятся и путают кэш
-    entrypoint: ["/bin/sh", "-c", "rm -rf /out/* /out/.[!.]* 2>/dev/null; cp -a /srv/frontend/. /out/ && sleep infinity"]
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "rm -rf /out/* /out/.[!.]* 2>/dev/null; cp -a /srv/frontend/. /out/ && sleep infinity",
+      ]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /out/index.html"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
 
   caddy:
     image: caddy:2-alpine
+    restart: unless-stopped
     environment:
       # :80 — HTTP без TLS (IDE Simple Browser не ест self-signed)
       DOMAIN: ${DOMAIN:-:80}
@@ -57,8 +85,16 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
 volumes:
   backend_secrets:

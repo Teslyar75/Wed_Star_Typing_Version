@@ -17,7 +17,12 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      void navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          void reg.update();
+        })
+        .catch(() => undefined);
     });
   }
 

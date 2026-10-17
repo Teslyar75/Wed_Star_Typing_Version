@@ -7,13 +7,22 @@
 
 **Репозиторий:** [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)
 
-Откройте в Chrome или Edge — без установки Python и ярлыков на рабочий стол.
+Откройте в Chrome или Edge — без установки Python.
 
 ---
 
 ## Быстрый старт
 
-### Docker (рекомендуется)
+### Ярлык на рабочий стол (Windows + Docker)
+
+1. **Docker Desktop** установлен и может быть уже запущен (зелёный статус).
+2. Ярлык **Star Typing Web** на рабочем столе → двойной клик → контейнеры + браузер на http://localhost.  
+   Создать ярлык заново: `install-desktop-shortcut.bat`
+3. Скрипт: `start-star-typing-web.bat` (без полной пересборки при каждом старте). Пересборка: `start-star-typing-web.bat /rebuild`.
+
+Нужно: Docker Desktop; порт **80** свободен.
+
+### Docker вручную
 
 ```bash
 git clone https://github.com/Teslyar75/Wed_Star_Typing_Version.git
