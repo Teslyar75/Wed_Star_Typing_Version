@@ -1,5 +1,6 @@
 import IdleSettings from "../idle/IdleSettings";
 import GuideSettings from "../guide/GuideSettings";
+import UpdateSettingsBlock from "../update/UpdateSettingsBlock";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { t, getLang } from "../i18n";
 import type { SpaceProfile } from "../fx/livingSpace";
@@ -310,6 +311,8 @@ export default function SettingsHub({
           <Row title={t("set_data")} desc={t("set_data_desc")}>
             <span className="muted settings-data-path">localStorage · IndexedDB</span>
           </Row>
+
+          <UpdateSettingsBlock Row={Row} />
 
           <div className="settings-sys-row">
             <div className="settings-sys-left">

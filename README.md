@@ -22,6 +22,17 @@
 
 Нужно: Docker Desktop; порт **80** свободен.
 
+### Обновления (GitHub Releases)
+
+В приложении: баннер при новой версии и блок **Настройки → Ещё → Обновления** (changelog + ссылка на Release).  
+Образ Docker **не** тянется сам — обновите через ярлык или:
+
+```bat
+start-star-typing-web.bat /rebuild
+```
+
+Релиз разработчику: bump `frontend/package.json` + `CHANGELOG.md`, затем `git tag v0.2.0 && git push origin v0.2.0` (Actions создаст Release).
+
 ### Docker вручную
 
 ```bash
