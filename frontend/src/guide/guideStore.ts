@@ -68,6 +68,8 @@ type S = {
   onEntry: (rank: string | undefined, vars: Pending["vars"], skin: string) => void;
   /** Орион сам вклинивается: тишина или радио → предложение анекдота */
   maybeOfferJoke: () => void;
+  /** Сразу рассказать анекдот (голосовая команда / кнопка) */
+  tellJokeNow: () => boolean;
 };
 
 export const useGuide = create<S>((set, get) => {
@@ -168,6 +170,18 @@ export const useGuide = create<S>((set, get) => {
           set({ popup: { trigger: key, lines, idx: 0 } });
         },
       });
+    },
+    tellJokeNow: () => {
+      const { st, pilot } = get();
+      if (!pilot || st.id === "none") return false;
+      const skin = useSkin.getState().skin.id;
+      const own = linesOf(st.id);
+      const key = pickJokeKey(own);
+      if (!key) return false;
+      const lines = pickLines(key, skin, own).map((l) => fill(l, { pilot: get().pilot, sir: addressOf() }));
+      if (!lines.length) return false;
+      set({ popup: { trigger: key, lines, idx: 0 } });
+      return true;
     },
   };
 });

@@ -554,3 +554,18 @@ export async function listenOnce(opts: ListenOpts): Promise<AsrResult> {
   }
   return emptyResult("none", "no-asr");
 }
+
+/** Фраза на любом языке: для ru предпочитаем Web Speech (Vosk-модель в проекте — EN). */
+export async function listenPhrase(opts: ListenOpts): Promise<AsrResult> {
+  const patched: ListenOpts = {
+    ...opts,
+    maxMs: opts.maxMs ?? 10_000,
+    waitStartMs: opts.waitStartMs ?? 800,
+    silenceMs: opts.silenceMs ?? 1000,
+  };
+  const lang = (opts.lang || "en-US").toLowerCase();
+  if (lang.startsWith("ru") && getSpeechRecognition()) {
+    return listenWebSpeech({ ...patched, lang: opts.lang || "ru-RU" });
+  }
+  return listenOnce(patched);
+}

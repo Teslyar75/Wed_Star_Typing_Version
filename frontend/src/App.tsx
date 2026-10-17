@@ -19,6 +19,7 @@ import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from ".
 import PathCrumbs from "./shell/PathCrumbs";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
+import OrionCallButton from "./guide/OrionCallButton";
 import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
 import RadioMinibar from "./radio/RadioMinibar";
@@ -387,6 +388,7 @@ export default function App() {
         <div className="chrome-under-bar">
           <PathCrumbs tab={tab} onJump={setTab} />
           <div className="chrome-under-actions">
+            <OrionCallButton />
             <SlideshowButton />
             <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
           </div>
@@ -425,6 +427,7 @@ export default function App() {
           <div className="chrome-under-bar stage-fs-bar">
             <PathCrumbs tab={tab} onJump={setTab} />
             <div className="chrome-under-actions">
+              <OrionCallButton />
               <SlideshowButton />
               <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
             </div>

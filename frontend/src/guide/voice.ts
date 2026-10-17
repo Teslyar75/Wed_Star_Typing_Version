@@ -26,3 +26,36 @@ export function speakGuide(guideId: string, text: string, volume = 3): () => voi
     unduck();
   };
 }
+
+/** Промис до конца фразы (для цепочки: приветствие → микрофон). */
+export function speakGuideAsync(guideId: string, text: string, volume = 3): Promise<void> {
+  return new Promise((resolve) => {
+    const g = guideById(guideId);
+    if (!g) {
+      resolve();
+      return;
+    }
+    const radio = useRadio.getState();
+    radio.holdDuck(DUCK_REASON);
+    const unduck = () => useRadio.getState().releaseDuck(DUCK_REASON);
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      unduck();
+      resolve();
+    };
+    const clean = text.replace(/\[[^\]]*\]/g, "");
+    speakUtterance({
+      text: clean,
+      lang: "ru",
+      engine: "hd",
+      voice: g.voice,
+      rate: g.rate,
+      volume: volume / 4,
+      onEnd: finish,
+      onError: finish,
+    });
+    window.setTimeout(finish, Math.min(14_000, Math.max(2500, clean.length * 85)));
+  });
+}
