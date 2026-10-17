@@ -18,7 +18,28 @@ export type OrionCallHandlers = {
 
 const MUTE_REASON = "orion_call";
 
-/** Один сеанс: радио молчит → поздороваться → слушать → выполнить → эфир обратно. */
+/** Ждём, пока окно гида закроется (анекдот дочитан / Esc) — радио до этого молчит. */
+function waitGuidePopupDone(signal?: AbortSignal): Promise<void> {
+  if (!useGuide.getState().popup) return Promise.resolve();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      unsub();
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    };
+    const onAbort = () => finish();
+    const unsub = useGuide.subscribe((s) => {
+      if (!s.popup) finish();
+    });
+    signal?.addEventListener("abort", onAbort);
+    if (!useGuide.getState().popup) finish();
+  });
+}
+
+/** Один сеанс: радио молчит до конца всего диалога и задания, потом эфир снова. */
 export async function runOrionCall(handlers: OrionCallHandlers = {}): Promise<void> {
   const g = useGuide.getState();
   if (g.st.id === "none" || !g.pilot) {
@@ -30,7 +51,7 @@ export async function runOrionCall(handlers: OrionCallHandlers = {}): Promise<vo
   const aborted = () => handlers.signal?.aborted;
   const say = (text: string) => speakGuideAsync(id, text, volume);
 
-  /* сразу тишина в эфире — иначе ASR не разбирает речь пилота */
+  /* тишина с первого клика до полного конца сеанса (не только на время микрофона) */
   useRadio.getState().holdMute(MUTE_REASON);
   try {
     handlers.onPhase?.("greeting");
@@ -60,7 +81,12 @@ export async function runOrionCall(handlers: OrionCallHandlers = {}): Promise<vo
 
     if (cmd === "joke") {
       const ok = useGuide.getState().tellJokeNow();
-      if (!ok) await say(`Простите, ${sir}, анекдотов в буфере нет.`);
+      if (!ok) {
+        await say(`Простите, ${sir}, анекдотов в буфере нет.`);
+        return;
+      }
+      /* радио молчит, пока пилот слушает/листает анекдот */
+      await waitGuidePopupDone(handlers.signal);
       return;
     }
 
@@ -83,6 +109,7 @@ export async function runOrionCall(handlers: OrionCallHandlers = {}): Promise<vo
       await say(`Пока умею шутку и смену волны, ${sir}. Повторите, пожалуйста.`);
     }
   } finally {
+    /* эфир только здесь — после ответа, задания и закрытия окна гида */
     useRadio.getState().releaseMute(MUTE_REASON);
     handlers.onPhase?.("idle");
   }
