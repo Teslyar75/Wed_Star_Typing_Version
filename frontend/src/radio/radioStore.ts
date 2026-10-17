@@ -34,6 +34,9 @@ type RadioState = {
   duck: boolean;
   /** кто держит приглушение (набор / гид) — снятие одного не срывает другое */
   duckHolders: string[];
+  /** полная тишина (вызов Ориона / микрофон) — приоритетнее duck */
+  muteHolders: string[];
+  muted: boolean;
   duckOnType: boolean;
   autoLast: boolean;
   favs: Station[];
@@ -51,6 +54,9 @@ type RadioState = {
   /** приглушить радио (reason: type | guide | …) */
   holdDuck: (reason: string) => void;
   releaseDuck: (reason: string) => void;
+  /** полностью заглушить (вызов Ориона — чтобы услышать пилота) */
+  holdMute: (reason: string) => void;
+  releaseMute: (reason: string) => void;
   setDuckOnType: (v: boolean) => void;
   setAutoLast: (v: boolean) => void;
   toggleFav: (s: Station) => void;
@@ -134,7 +140,9 @@ const DUCK_LEVEL = 0.15;
 function applyAudioVolume(get: () => RadioState) {
   const a = get().audio;
   if (!a) return;
-  a.volume = get().duck ? get().volume * DUCK_LEVEL : get().volume;
+  if (get().muted || get().muteHolders.length) a.volume = 0;
+  else if (get().duck) a.volume = get().volume * DUCK_LEVEL;
+  else a.volume = get().volume;
 }
 
 export const useRadio = create<RadioState>((set, get) => ({
@@ -143,6 +151,8 @@ export const useRadio = create<RadioState>((set, get) => ({
   volume: hasLS ? Number(localStorage.getItem(VOL_KEY) || "0.7") : 0.7,
   duck: false,
   duckHolders: [],
+  muteHolders: [],
+  muted: false,
   duckOnType: hasLS ? localStorage.getItem(DUCK_TYPE_KEY) === "1" : false,
   autoLast: hasLS ? localStorage.getItem(AUTO_KEY) !== "0" : true,
   favs: hasLS ? loadFavs() : [],
@@ -244,6 +254,23 @@ export const useRadio = create<RadioState>((set, get) => ({
   releaseDuck: (reason) => {
     const next = get().duckHolders.filter((r) => r !== reason);
     set({ duckHolders: next, duck: next.length > 0 });
+    applyAudioVolume(get);
+  },
+
+  holdMute: (reason) => {
+    const holders = get().muteHolders;
+    if (holders.includes(reason)) {
+      applyAudioVolume(get);
+      return;
+    }
+    const next = [...holders, reason];
+    set({ muteHolders: next, muted: true });
+    applyAudioVolume(get);
+  },
+
+  releaseMute: (reason) => {
+    const next = get().muteHolders.filter((r) => r !== reason);
+    set({ muteHolders: next, muted: next.length > 0 });
     applyAudioVolume(get);
   },
 
