@@ -14,7 +14,14 @@ import { detectSpaceProfile } from "./fx/canvasBudget";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import { setSoundsMuted, soundsMuted } from "./fx/sounds";
 import type { Tab } from "./shell/tabs";
-import { cycleNavZone, handleArrowNav, isTextEditTarget } from "./shell/keyboardNav";
+import {
+  cycleNavZone,
+  focusNav,
+  handleArrowNav,
+  handleEscNav,
+  handleTabNav,
+  isTextEditTarget,
+} from "./shell/keyboardNav";
 import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
 import FullscreenButton from "./shell/FullscreenButton";
@@ -238,7 +245,8 @@ export default function App() {
           e.preventDefault();
           setZone(next);
           window.requestAnimationFrame(() => {
-            document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`)?.focus();
+            const tab = document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`);
+            if (tab) focusNav(tab);
           });
         }
         return;
@@ -250,11 +258,15 @@ export default function App() {
         cycleNavZone();
         return;
       }
+      /* Tab / Shift+Tab — как десктоп keynav (меню зон ↔ кнопки) */
+      if (handleTabNav(e)) return;
       if (handleArrowNav(e)) return;
       if (e.key === "Escape") {
+        const onHud = handleEscNav(e);
         setHelpOpen(false);
         setCmdOpen(false);
         if (crewRef.current) setCrewOpen(false);
+        if (onHud) return;
       }
       if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (helpRef.current || cmdRef.current || crewRef.current) return;
@@ -343,6 +355,7 @@ export default function App() {
                   role="tab"
                   data-zone={x.id}
                   data-tab={x.id}
+                  data-nav-menu="1"
                   aria-selected={activeZone === x.id}
                   className={`nav-tab ${activeZone === x.id ? "on" : ""}`}
                   onClick={() => setZone(x.id)}
@@ -399,7 +412,7 @@ export default function App() {
       {!fullscreen ? (
         <div className="chrome-under-bar">
           <PathCrumbs tab={tab} onJump={setTab} />
-          <div className="chrome-under-actions">
+          <div className="chrome-under-actions" data-nav-group="chrome-actions">
             <OrionCallButton />
             <SlideshowButton />
             <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
@@ -438,7 +451,7 @@ export default function App() {
         {fullscreen ? (
           <div className="chrome-under-bar stage-fs-bar">
             <PathCrumbs tab={tab} onJump={setTab} />
-            <div className="chrome-under-actions">
+            <div className="chrome-under-actions" data-nav-group="chrome-actions">
               <OrionCallButton />
               <SlideshowButton />
               <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />

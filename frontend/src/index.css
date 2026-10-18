@@ -7544,6 +7544,13 @@ html {
   outline-offset: 2px;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--st-amber) 35%, transparent);
 }
+/* Tab/стрелки вызывают .focus() из JS — нужен :focus и .is-kbd-focus, не только :focus-visible */
+.nav-tab:focus,
+.hud-btn:focus,
+.pilot-chip:focus,
+.nav-tab.is-kbd-focus,
+.hud-btn.is-kbd-focus,
+.pilot-chip.is-kbd-focus,
 .nav-tab:focus-visible,
 .hud-btn:focus-visible,
 .pilot-chip:focus-visible,
@@ -7554,7 +7561,10 @@ html {
 .lounge-play-btn:focus-visible {
   outline: 2px solid var(--st-cyan);
   outline-offset: 2px;
-  z-index: 1;
+  z-index: 2;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--st-cyan) 45%, transparent),
+    0 0 12px color-mix(in srgb, var(--st-cyan) 35%, transparent);
 }
 .stage:focus-visible {
   outline: 1px dashed color-mix(in srgb, var(--st-cyan) 45%, transparent);

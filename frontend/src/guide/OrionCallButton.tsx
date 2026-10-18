@@ -1,36 +1,37 @@
-/** Кнопка вызова Ориона — рядом со СЛАЙДЫ / ЭКРАН. Также «=», F8 и палитра команд. */
+/** Кнопка вызова Ориона. Горячая клавиша: Home. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getLang } from "../i18n";
-import { isTextEditTarget } from "../shell/keyboardNav";
+import { shouldBlockChromeHotkey } from "../shell/keyboardNav";
 import { useGuide } from "./guideStore";
 import { runOrionCall, type OrionCallPhase } from "./orionCall";
 
-/** Горячие клавиши: «=» и F8. */
-export const ORION_HOTKEY = "=";
-export const ORION_HOTKEY_F = "F8";
-/** Палитра / внешний вызов: window.dispatchEvent(new Event(ORION_CALL_EVENT)) */
+export const ORION_HOTKEY = "Home";
 export const ORION_CALL_EVENT = "st-orion-call";
 
-const L: Record<string, { btn: string; tip: string; listen: string }> = {
+const L: Record<string, { btn: string; tip: string; listen: string; off: string }> = {
   ru: {
     btn: "ОРИОН",
-    tip: "Вызвать Ориона: кнопка, «=» или F8 — «шутка» / «смени волну»",
+    tip: "Орион: кнопка или Home",
     listen: "…",
+    off: "Орион выключен — включите гида в настройках",
   },
   uk: {
     btn: "ОРІОН",
-    tip: "Виклик Оріона: кнопка, «=» або F8",
+    tip: "Оріон: кнопка або Home",
     listen: "…",
+    off: "Оріон вимкнено — увімкніть гіда в налаштуваннях",
   },
   en: {
     btn: "ORION",
-    tip: "Call Orion: button, «=» or F8",
+    tip: "Orion: button or Home",
     listen: "…",
+    off: "Orion is off — enable the guide in settings",
   },
   de: {
     btn: "ORION",
-    tip: "Orion: Schaltfläche, «=» oder F8",
+    tip: "Orion: Schaltfläche oder Home",
     listen: "…",
+    off: "Orion aus — Guide in den Einstellungen aktivieren",
   },
 };
 
@@ -38,9 +39,9 @@ function label() {
   return L[getLang()] || L.ru!;
 }
 
-function isOrionHotkey(e: KeyboardEvent): boolean {
-  if (e.key === "F8") return true;
-  return e.key === "=" || e.code === "Equal" || e.code === "NumpadEqual";
+export function isOrionHotkey(e: KeyboardEvent): boolean {
+  if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return false;
+  return e.key === "Home";
 }
 
 export default function OrionCallButton() {
@@ -57,7 +58,11 @@ export default function OrionCallButton() {
   busyRef.current = busy;
 
   const toggle = useCallback(() => {
-    if (!guideOnRef.current) return;
+    if (!guideOnRef.current) {
+      setStatus(label().off);
+      window.setTimeout(() => setStatus(""), 2500);
+      return;
+    }
     if (busyRef.current) {
       abortRef.current?.abort();
       abortRef.current = null;
@@ -84,9 +89,8 @@ export default function OrionCallButton() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!isOrionHotkey(e) || e.ctrlKey || e.altKey || e.metaKey) return;
-      if (e.key !== "F8" && isTextEditTarget(e.target)) return;
-      if ((e.target as HTMLElement | null)?.classList?.contains("ghost-input")) return;
+      if (!isOrionHotkey(e)) return;
+      if (shouldBlockChromeHotkey(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
       toggle();
@@ -116,9 +120,8 @@ export default function OrionCallButton() {
       className={`hud-btn zone-fs-btn ${busy ? "amber" : "ok"}`}
       title={title}
       aria-label={title}
-      aria-keyshortcuts="Equal Equal F8"
+      aria-keyshortcuts="Home"
       aria-pressed={busy}
-      disabled={!guideOn}
       onClick={toggle}
     >
       {phase === "listening" ? "◉ МИК" : phase === "greeting" || phase === "acting" ? lab.listen : lab.btn}

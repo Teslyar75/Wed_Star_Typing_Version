@@ -174,6 +174,44 @@ export default function BridgeScreen() {
     inputRef.current?.focus();
   }, [engine]);
 
+  /**
+   * Esc/Пробел для паузы должны работать даже если фокус ушёл на кнопку HUD
+   * (клик «ПАУЗА» → blur input → Esc больше не доходит до ghost-input).
+   * Capture на window, чтобы сработало в Chrome до активации кнопки.
+   */
+  useEffect(() => {
+    const onWinKey = (e: KeyboardEvent) => {
+      if (debrief) return;
+      const target = e.target as HTMLElement | null;
+      const inGhost = target?.classList?.contains("ghost-input");
+      /* Esc / Del: toggle паузы; если событие уже на ghost-input — там свой onKey */
+      if (e.key === "Escape" || e.key === "Delete") {
+        if (inGhost) return;
+        if (engine.finished) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (engine.paused) {
+          leavePause();
+          inputRef.current?.focus();
+        } else {
+          enterPause();
+          inputRef.current?.focus();
+        }
+        return;
+      }
+      if (!engine.paused) return;
+      if (e.key !== " " && e.key !== "Enter") return;
+      if (inGhost) return;
+      /* Пробел на <button> иначе «нажмёт» кнопку повторно */
+      e.preventDefault();
+      e.stopPropagation();
+      leavePause();
+      inputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onWinKey, true);
+    return () => window.removeEventListener("keydown", onWinKey, true);
+  }, [engine, engine.paused, engine.finished, enterPause, leavePause, debrief]);
+
   /* Живые приборы: время и стрелка скорости обновляются между нажатиями */
   useEffect(() => {
     if (engine.paused || engine.finished) return;
@@ -456,7 +494,7 @@ export default function BridgeScreen() {
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
+    if (e.key === "Escape" || e.key === "Delete") {
       e.preventDefault();
       if (engine.paused) leavePause();
       else enterPause();
@@ -852,17 +890,22 @@ export default function BridgeScreen() {
             <button
               type="button"
               className={`hud-btn ${engine.paused ? "amber" : ""}`}
+              onMouseDown={(e) => {
+                /* не забирать фокус у ghost-input — иначе blur ставит паузу, а click её сразу снимает */
+                e.preventDefault();
+              }}
               onClick={() => {
                 if (engine.paused) leavePause();
                 else enterPause();
                 inputRef.current?.focus();
               }}
             >
-              {engine.paused ? t("pause_resume") : t("pause")} Esc
+              {engine.paused ? t("pause_resume") : t("pause")} Esc/Del
             </button>
             <button
               type="button"
               className="hud-btn amber"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 reloadEngine(draft.includes("… (+") ? engine.text : draft);
                 inputRef.current?.focus();
@@ -870,7 +913,12 @@ export default function BridgeScreen() {
             >
               {t("again")} F5
             </button>
-            <button type="button" className={`hud-btn ${showHeat ? "amber" : ""}`} onClick={() => setShowHeat((v) => !v)}>
+            <button
+              type="button"
+              className={`hud-btn ${showHeat ? "amber" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setShowHeat((v) => !v)}
+            >
               {t("heatmap")}
             </button>
           </div>

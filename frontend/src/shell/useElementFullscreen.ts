@@ -1,8 +1,14 @@
-/** Fullscreen API + CSS-фолбэк .is-fs (как в BookReaderView). */
+/** Fullscreen API + CSS-фолбэк .is-fs. Горячая: Page Down. */
 import { useCallback, useEffect, useState, type RefObject } from "react";
+import { shouldBlockChromeHotkey } from "./keyboardNav";
 
 type FsEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
 type FsDoc = Document & { webkitExitFullscreen?: () => Promise<void> };
+
+export function isFullscreenHotkey(e: KeyboardEvent): boolean {
+  if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return false;
+  return e.key === "PageDown";
+}
 
 export function useElementFullscreen(rootRef: RefObject<HTMLElement | null>) {
   const [fullscreen, setFullscreen] = useState(false);
@@ -53,16 +59,20 @@ export function useElementFullscreen(rootRef: RefObject<HTMLElement | null>) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "F11") {
+      if (isFullscreenHotkey(e)) {
+        if (shouldBlockChromeHotkey(e.target)) return;
         e.preventDefault();
+        e.stopPropagation();
         toggleFullscreen();
-      } else if (e.key === "Escape" && fullscreen) {
+        return;
+      }
+      if (e.key === "Escape" && fullscreen) {
         e.preventDefault();
         void exitFullscreen();
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [fullscreen, toggleFullscreen, exitFullscreen]);
 
   useEffect(() => {

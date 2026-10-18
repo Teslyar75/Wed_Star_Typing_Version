@@ -112,7 +112,7 @@ cd frontend && npm run lighthouse:pwa   # цель ≥ 90
 
 - **Гид ОРИОН** — бортовой разум: диалоги на старте и в зонах, звание / рекорд / перерыв / ошибки; вкладка «Гид» в Настройках.
 - **Шутки Ориона** — иногда сам прерывает тишину или приглушает радио (~раз в 10 мин); **Enter** — слушать, **Esc** — не сейчас.
-- **Вызов Ориона** — кнопка **ОРИОН**, **`=`**, **F8** или палитра: слушает RU («дай шутку» / «смени волну»); радио молчит до конца диалога.
+- **Вызов Ориона** — кнопка **ОРИОН**, **Home** или палитра: слушает RU («дай шутку» / «смени волну»); радио молчит до конца диалога.
 - **СЛАЙДЫ** — кнопка рядом с **ЭКРАН**: ← → волна, ↑ ↓ громкость, M — mute; после выхода масштаб UI сохраняется.
 - **Скин «Старая Англия»** — туман, слайдшоу, радио, своя лексика (Звездолёт по умолчанию).
 - **Интерфейс на українській и Deutsch.**
@@ -121,7 +121,7 @@ cd frontend && npm run lighthouse:pwa   # цель ≥ 90
 | --- | --- |
 | ![Гид](docs/showcase/new/11_orion_dialog.jpg) | ![Старая Англия](docs/showcase/new/20_oe_fleet_street.jpg) |
 
-Подробно: [docs/FEATURES_2026-10.md](docs/FEATURES_2026-10.md) · видение гида: [docs/ORION_VISION.md](docs/ORION_VISION.md) · скриншоты: [docs/showcase/new/](docs/showcase/new/)
+Подробно: [docs/FEATURES_2026-10.md](docs/FEATURES_2026-10.md) · видение гида: [docs/ORION_VISION.md](docs/ORION_VISION.md) · онлайн-хостинг (Pages + API): [docs/HOSTING_GITHUB_PAGES.md](docs/HOSTING_GITHUB_PAGES.md) · стоимость (UA): [docs/HOSTING_COST_UA.md](docs/HOSTING_COST_UA.md) · скриншоты: [docs/showcase/new/](docs/showcase/new/)
 
 ---
 
@@ -172,6 +172,8 @@ Caddyfile
 | --- | --- |
 | [docs/ORION_VISION.md](docs/ORION_VISION.md) | Орион: сделано, цель, подписка на ИИ-агента |
 | [docs/FEATURES_2026-10.md](docs/FEATURES_2026-10.md) | Новое за октябрь 2026 |
+| [docs/HOSTING_GITHUB_PAGES.md](docs/HOSTING_GITHUB_PAGES.md) | Онлайн: GitHub Pages + отдельный API |
+| [docs/HOSTING_COST_UA.md](docs/HOSTING_COST_UA.md) | Стоимость хостинга для Украины (год) |
 | [docs/CHANGELOG_2026-10-14.md](docs/CHANGELOG_2026-10-14.md) | Недавние изменения UI и навигации |
 | [docs/showcase/](docs/showcase/) | Гифка и скрины |
 
