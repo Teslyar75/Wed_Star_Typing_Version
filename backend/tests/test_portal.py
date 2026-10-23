@@ -54,7 +54,7 @@ def test_api_results_and_sync(monkeypatch):
         return 200, {"data": _profile()}
 
     monkeypatch.setattr(api_portal, "FETCH", fake)
-    r = client.post("/api/pilots/register", json={"callsign": "ZenPilot", "pin": "1234"})
+    r = client.post("/api/pilots/register", json={"callsign": f"Zen{int(time.time()*1000)%10**8}", "pin": "1234"})
     client.cookies.set("st_token", r.cookies["st_token"])
     s = client.post("/api/portal/mt-sync").json()
     assert s["sync"]["status"] == "no_username"
@@ -64,6 +64,8 @@ def test_api_results_and_sync(monkeypatch):
     assert calls and calls[0].endswith("/users/Teslyar75/profile")
     s = client.post("/api/portal/mt-sync").json()
     assert s["sync"]["status"] == "cached" and len(calls) == 1
+    s = client.post("/api/portal/mt-sync?force=true").json()
+    assert s["sync"]["status"] == "ok" and len(calls) == 2  # ручной ↻ обходит 5 минут
     s = client.post("/api/portal/results", json={"mode": "words", "mode2": 10, "wpm": 120, "acc": 98,
                                                  "time": 5, "raw": 125, "consistency": 80}).json()
     p = {(x["mode"], x["mode2"]): x for x in s["merged"]["pbs"]}
@@ -73,11 +75,12 @@ def test_api_results_and_sync(monkeypatch):
 
 def test_rate_limit_backoff(monkeypatch):
     monkeypatch.setattr(api_portal, "FETCH", lambda u, h: (429, {}))
-    r = client.post("/api/pilots/register", json={"callsign": "ZenLimit", "pin": "1234"})
+    r = client.post("/api/pilots/register", json={"callsign": f"Zl{int(time.time()*1000)%10**8}", "pin": "1234"})
     client.cookies.set("st_token", r.cookies["st_token"])
     client.put("/api/portal/mt-user", json={"username": "x"})
     s = client.post("/api/portal/mt-sync").json()
     assert s["sync"]["error"] == "rate_limit"
     s = client.post("/api/portal/mt-sync").json()
     assert s["sync"]["status"] == "backoff"
-    assert time.time() > 0
+    s = client.post("/api/portal/mt-sync?force=true").json()
+    assert s["sync"]["status"] == "backoff" and s["sync"]["retry_at"] > time.time()  # 429 не обходится

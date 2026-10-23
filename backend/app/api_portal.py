@@ -149,15 +149,16 @@ def set_user(body: UserIn, db: Session = Depends(get_db), pilot: Pilot | None = 
 
 
 @router.post("/mt-sync")
-def sync(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> dict:
-    """Тихая синхронизация: не чаще раза в 5 минут, после лимита — пауза 15 минут."""
+def sync(force: bool = False, db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> dict:
+    """Тихая синхронизация: не чаще раза в 5 минут (force=1 — ручной ↻ обходит интервал),
+    после настоящего 429 — пауза 15 минут, которую не обходит и ручной запрос."""
     st = _state(db, _pid(pilot))
     now = time.time()
     if not st.mt_username:
         return _stats(db, pilot, {"status": "no_username"})
     if now < (st.backoff_until or 0):
-        return _stats(db, pilot, {"status": "backoff"})
-    if now - max(st.fetched_at or 0, st.last_attempt or 0) < portal.SYNC_MIN_INTERVAL:
+        return _stats(db, pilot, {"status": "backoff", "retry_at": st.backoff_until})
+    if not force and now - max(st.fetched_at or 0, st.last_attempt or 0) < portal.SYNC_MIN_INTERVAL:
         return _stats(db, pilot, {"status": "cached"})
     st.last_attempt = now
     db.commit()

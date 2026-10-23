@@ -23,7 +23,7 @@ async function call(url: string, init?: RequestInit): Promise<PortalStats | null
 }
 
 export const getStats = () => call("/api/portal/stats");
-export const mtSync = () => call("/api/portal/mt-sync", { method: "POST" });
+export const mtSync = (force = false) => call(`/api/portal/mt-sync${force ? "?force=true" : ""}`, { method: "POST" });
 export const setMtUser = (username: string) =>
   call("/api/portal/mt-user", { method: "PUT", body: JSON.stringify({ username }) });
 export const markStarted = () => void fetch("/api/portal/started", { ...J, method: "POST" }).catch(() => {});

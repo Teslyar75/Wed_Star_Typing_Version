@@ -4,6 +4,10 @@ import Heatmap, { type KeyRate } from "../bridge/Heatmap";
 import { colorFor } from "../bridge/heatmapColor";
 import { t, getLang } from "../i18n";
 import { skinRank } from "../theme/voice";
+import AccountView from "../zen/AccountView";
+import { useMt } from "../zen/mtStore";
+import { zt } from "../zen/zenI18n";
+import "../zen/zen.css";
 
 type Summary = {
   flights: number;
@@ -105,6 +109,11 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
     else setKeys([]);
   }, []);
 
+  /* Monkeytype: тихое автообновление при открытии журнала (общий троттлинг 5 мин) */
+  useEffect(() => {
+    void useMt.getState().sync();
+  }, []);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -195,7 +204,7 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
   };
 
   return (
-    <section className="flog">
+    <section className="flog flog-scroll">
       <header className="flog-head">
         <h2 className="route-title">{t("flog_title")}</h2>
         <button type="button" className="hud-btn amber" onClick={() => onOpenHonor?.()}>
@@ -288,6 +297,11 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
           </button>
         </aside>
       </div>
+
+      <section className="zen-embed flog-mt" data-testid="flog-mt">
+        <h3 className="zen-embed-title">{zt("journal_table")}</h3>
+        <AccountView />
+      </section>
     </section>
   );
 }

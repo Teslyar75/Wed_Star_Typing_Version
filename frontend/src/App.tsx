@@ -1,3 +1,4 @@
+import { useMt } from "./zen/mtStore";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import GuideDialog from "./guide/GuideDialog";
 import GuideEvents, { bridgeName } from "./guide/GuideEvents";
@@ -138,6 +139,11 @@ export default function App() {
     if (!prev || prev === tabRef.current) return;
     setTab(prev);
   }, [setTab]);
+
+  /* Monkeytype read-only: автосинхронизация при старте (троттлинг 5 мин, 429 — пауза сервера) */
+  useEffect(() => {
+    void useMt.getState().sync();
+  }, []);
 
   useEffect(() => {
     return installStageFit(() => stageRef.current);

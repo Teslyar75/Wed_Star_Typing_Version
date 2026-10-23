@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import "./zen.css";
 import AccountView from "./AccountView";
-import { getStats, markStarted, mtSync, postResult, setMtUser, type PortalStats } from "./portalApi";
+import { markStarted, postResult } from "./portalApi";
+import { useMt } from "./mtStore";
 import { COUNTS, PortalTest, prepareWords, quoteLen, type SrcWord, type ZenMode, type ZenResult } from "./zenEngine";
 import { zt } from "./zenI18n";
 
@@ -68,7 +69,7 @@ export default function ZenPortal({ text, index, onAdvance, onExit }: Props) {
   const [{ test, src }, setRun] = useState(() => buildTest(cfg, text, index));
   const [, bump] = useState(0);
   const [result, setResult] = useState<ZenResult | null>(null);
-  const [stats, setStats] = useState<PortalStats | null>(null);
+  const stats = useMt((m) => m.stats);
   const [account, setAccount] = useState(false);
   const [tabArmed, setTabArmed] = useState(false);
   const lastEsc = useRef(0);
@@ -82,24 +83,19 @@ export default function ZenPortal({ text, index, onAdvance, onExit }: Props) {
 
   useEffect(() => localStorage.setItem(CFG_KEY, JSON.stringify(cfg)), [cfg]);
 
-  /* Тихая read-only синхронизация с Monkeytype: при входе, ник спрашиваем один раз. */
+  /* Тихая read-only синхронизация с Monkeytype при входе (общий троттлинг 5 мин), ник спрашиваем один раз. */
   useEffect(() => {
-    let alive = true;
     void (async () => {
-      let s = await getStats();
-      if (!alive || !s) return;
-      setStats(s);
-      if (!s.mt_username && !localStorage.getItem(ASKED_KEY)) {
+      const m = useMt.getState();
+      if (!m.stats) await m.load();
+      const s = useMt.getState().stats;
+      if (s && !s.mt_username && !localStorage.getItem(ASKED_KEY)) {
         localStorage.setItem(ASKED_KEY, "1");
         const name = (window.prompt(zt("mt_prompt")) || "").trim();
-        if (name) s = (await setMtUser(name)) || s;
+        if (name) { await useMt.getState().setUser(name); return; }
       }
-      if (s.mt_username) {
-        const r = await mtSync();
-        if (alive && r) setStats(r);
-      }
+      await useMt.getState().sync();
     })();
-    return () => { alive = false; };
   }, []);
 
   /** Вернуть верно набранное на мостик (один раз за тест). */
@@ -131,9 +127,8 @@ export default function ZenPortal({ text, index, onAdvance, onExit }: Props) {
     setResult(r);
     advance(test);
     void postResult(r).then(async (s) => {
-      if (s) setStats(s);
-      const m = await mtSync();
-      if (m) setStats(m);
+      useMt.getState().put(s);
+      await useMt.getState().sync();
     });
   }, [test, advance]);
 
@@ -241,12 +236,7 @@ export default function ZenPortal({ text, index, onAdvance, onExit }: Props) {
     else setC({ mode: cfg.mode === "words" ? "words" : "custom", words: n, custom: n });
   };
 
-  const changeUser = async () => {
-    const name = (window.prompt(zt("mt_prompt"), stats?.mt_username || "") || "").trim();
-    const s = await setMtUser(name);
-    if (s) setStats(s);
-    if (name) { const m = await mtSync(); if (m) setStats(m); }
-  };
+
 
   return createPortal(
     <div className={`zen-root${typing ? " typing" : ""}`} role="application" aria-label="portal">
@@ -271,7 +261,7 @@ export default function ZenPortal({ text, index, onAdvance, onExit }: Props) {
         </header>
 
         {account ? (
-          <AccountView stats={stats} onClose={() => setAccount(false)} onChangeUser={() => void changeUser()} />
+          <AccountView onClose={() => setAccount(false)} />
         ) : result ? (
           <main className="zen-result">
             <div className="zen-res-top">
