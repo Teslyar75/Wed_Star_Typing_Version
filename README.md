@@ -179,6 +179,11 @@ Caddyfile
 
 Статус продукта (фазы 0–8, Excellence W0–P8): ✅ в проде.
 
+## Промо-материалы
+
+- 📘 [Брошюра (PDF, 27 стр.)](docs/promo/StarTyping_brochure.pdf)
+- 📄 [Краткое промо (PDF, 8 стр.)](docs/promo/StarTyping_promo_short.pdf)
+
 ## Вдохновение
 
 - **Слепая печать.** На создание тренажёра вдохновили программы вроде «Стамины» (Stamina) —
