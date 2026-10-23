@@ -139,3 +139,49 @@
 - `shell/altWallpaper.ts`: скин → профиль (spaceship→starship, steampunk), зона → файл (speed→speedread); прочие скины — свой фон (как `generic` десктопа). Затемнение 0.35 (`alt_wallpaper_dim`). Слайд-шоу `_N` не портировано.
 - Слой `.alt-wallpaper` в App (fixed, z 0, pointer-events none); SW `st-shell-v65`.
 - Тесты: vitest altWallpaper; e2e `alt-wallpaper.spec.ts` 2 скина × 1366/1920 — 4/4, без прокрутки.
+
+## Орион в вебе — архитектура (план до кода, 2026-10-23)
+
+Отдельная зона `orion` (вкладка «ОРИОН»), экраны через ОБЗОР: **Чат · Задачи · Архив · Настройки**. Всё постранично, без прокрутки (1366×768, 1920×1080).
+
+### Единый интерфейс и режимы
+Фронт говорит только с `/api/orion/*`; провайдер скрыт за адаптером `OrionProvider.reply(messages, images) -> text`.
+Ответ чата: `{reply, mode_used, fallback, capabilities}`. Режим выбирается на пилота (`orion_prefs.mode`, гость — localStorage).
+
+| Режим | Ключ | Доступ | Возможности |
+|---|---|---|---|
+| 1 `guide` — Бортовой гид (по умолчанию) | нет | всем, офлайн | text; подсказки по отсекам из скрипта |
+| 2 `byo` — Свой ИИ-агент | ключ пилота | всем пилотам | text (+images, если пилот отметил vision) |
+| 3 `hosted` — ИИ-агент сервиса | серверный env | флаг `supporter` + `ORION_HOSTED_ENABLED` | text, images по `ORION_LLM_VISION` |
+| 4 `contributor` — Участник разработки | нет секретов у агента | роль `contributor` (выдаёт админ) + kill switch | только предложения (proposals), каркас |
+
+**Фолбэк:** любая ошибка провайдера (сеть, 4xx/5xx, таймаут, нет конфигурации, нет доступа) → ответ режима 1 с `fallback: true` и причиной без деталей ключа.
+
+**Адаптеры:** `openai` (OpenAI-совместимый `/chat/completions`: OpenAI, OpenRouter, Groq, LM Studio, Ollama `/v1`), `anthropic` (`/v1/messages`). Новый провайдер = новый класс адаптера.
+
+### Ключ BYO — решение
+**Только у клиента**: ключ хранится в localStorage браузера на пилота (`st_orion_byo:<pilot>`), в UI маской `sk-…abcd`, кнопка «Удалить». В каждом запросе чата передаётся заголовком `X-Orion-Key` на сервер-прокси (нужен из-за CORS провайдеров), который **не логирует, не сохраняет и не отправляет в аналитику** ключ (в модели запроса его нет, исключения очищаются). Почему не сервер: в бэке нет `cryptography`/KMS; хранение без шифрования недопустимо. Минус — ключ не переезжает между устройствами (осознанно).
+
+### Донат-гейт (режим 3)
+Таблица `orion_roles(pilot_id, role)`; роль `supporter` выдаётся админом (`POST /api/orion/admin/role`) — например после доната вручную. **Никаких платежей.** Без роли — дружелюбный экран «Режим поддерживающих пилотов» с объяснением.
+
+### Участник разработки (режим 4) — дизайн безопасности
+- Каждый запрос → отдельная песочница/ветка `orion/proposal-<id>`; никогда master/прод.
+- Результат — **proposal**: diff + описание + список прогнанных тестов → ветка/PR; merge только человек-мейнтейнер.
+- Агенту не передаются секреты (env песочницы пуст, токен репо только у оркестратора).
+- Audit log `orion_audit` (кто, что, когда), rate limit (`ORION_CONTRIB_RATE_PER_HOUR`), kill switch `ORION_CONTRIB_ENABLED` + админ-тумблер в `orion_settings`.
+- Прогресс предложения ведётся задачей в модели task_progress (план/шаги/веса).
+- **Сейчас строится только:** роль, тумблер, модель/API `orion_proposals` (статус `queued`, ничего не исполняется), заблокированный/поясняющий UI.
+- **Для реальной интеграции нужно:** GitHub App (contents:write, pull_requests:write только на ветки `orion/*`) или fine-grained токен в `ORION_GITHUB_*`, раннер-песочница (контейнер без сети к секретам), CI на PR, защита ветки master.
+
+### Задачи (порт stamina/task_progress.py)
+`orion_tasks`: plan(steps[{title, weight}]) → step(idx, done/failed) → finish(state). Состояния planning/working/done/failed/stopped; процент = вес выполненных / общий вес; `color_for` — непрерывная смесь STOPS (0 D96A5F, 25 E39355, 50 E6C45C, 75 AEC95E, 100 6FBF73); не более 8 активных; «зависшая» без обновлений 120 с, готовые держатся 900 с.
+
+### Архив
+`orion_messages` на пилота; поиск `GET /api/orion/archive?q=` → сниппеты с контекстом (±40 символов, подсветка).
+
+### Чат-UX
+Копирование текста ответа, вложение картинок (до 3, ≤2 МБ, data URL), полноразмерный просмотрщик; страницы сообщений вместо прокрутки.
+
+### Конфиг (env, в коде ключей нет)
+`ORION_LLM_BASE_URL`, `ORION_LLM_MODEL`, `ORION_LLM_API_KEY`, `ORION_LLM_PROVIDER` (openai|anthropic), `ORION_LLM_VISION` (0/1), `ORION_HOSTED_ENABLED`, `ORION_ADMIN_TOKEN` (заголовок `X-Orion-Admin`), `ORION_CONTRIB_ENABLED`, `ORION_CONTRIB_RATE_PER_HOUR`, `ORION_CHAT_RATE_PER_MIN`; на будущее `ORION_GITHUB_APP_ID`, `ORION_GITHUB_PRIVATE_KEY_FILE`, `ORION_GITHUB_REPO`.
