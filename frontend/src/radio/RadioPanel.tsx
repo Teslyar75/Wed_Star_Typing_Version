@@ -13,7 +13,7 @@ import {
 } from "./api";
 import { useRadio } from "./radioStore";
 import { cacheStations, loadCachedStations } from "./stationCache";
-import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
+import { registerGoHandler, setDeepRoute, setZoneScreens } from "../shell/routeStore";
 
 type Tab = "air" | "rx";
 /** Источник списка частот — отдельные вкладки вместо длинной прокрутки. */
@@ -197,6 +197,10 @@ export default function RadioPanel() {
       });
     }
     setDeepRoute(segs);
+    setZoneScreens("radio", [
+      { slug: "air", label: t("radio_air") },
+      { slug: "rx", label: t("radio_rx") },
+    ]);
   }, [tab, freqMode]);
 
   useEffect(() => {
