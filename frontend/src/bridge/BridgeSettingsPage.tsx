@@ -1,5 +1,6 @@
 /** Настройки Мостика — сетка панелей как EN / SR settings. */
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { glueFixBoard } from "../cargo/processText";
 import { t } from "../i18n";
 import ZoneSettingsShell from "../shell/ZoneSettingsShell";
 import {
@@ -34,6 +35,50 @@ function ChipRow({
     <div className="bridge-set-row">
       <span className="bridge-set-lab">{label}</span>
       <div className="bridge-set-chips">{children}</div>
+    </div>
+  );
+}
+
+/** «✦ Проверить ИИ»: склейки в подготовленном тексте мостика чинятся и сохраняются поверх. */
+function GlueCheckPanel() {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [ex, setEx] = useState<string[]>([]);
+  const run = async () => {
+    setBusy(true);
+    setMsg(t("glue_checking"));
+    setEx([]);
+    try {
+      const r = await glueFixBoard();
+      if (!r) setMsg(t("glue_no_text"));
+      else if (r.count === 0) setMsg(t("glue_none"));
+      else {
+        setMsg(t("glue_fixed_n").replace("{0}", String(r.count)) + " · " + t("glue_saved"));
+        setEx(r.examples);
+      }
+    } catch (e) {
+      setMsg(t("glue_error") + (e instanceof Error && e.message ? `: ${e.message.slice(0, 120)}` : ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="inst-panel" data-testid="glue-panel">
+      <div className="lab">{t("glue_lab")}</div>
+      <ChipRow label={t("opt_glue")}>
+        <button type="button" className="hud-btn amber" disabled={busy} onClick={() => void run()} data-testid="glue-check">
+          {t("glue_btn")}
+        </button>
+        <span className="muted bridge-set-note">{t("glue_desc")}</span>
+      </ChipRow>
+      {msg ? <div className="bridge-set-note" data-testid="glue-msg">{msg}</div> : null}
+      {ex.length ? (
+        <ul className="muted bridge-set-note">
+          {ex.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -243,6 +288,8 @@ export default function BridgeSettingsPage() {
               <span className="muted bridge-set-note">{t("set_sight_on_color_desc")}</span>
             </ChipRow>
           </div>
+
+          <GlueCheckPanel />
         </div>
     </ZoneSettingsShell>
   );

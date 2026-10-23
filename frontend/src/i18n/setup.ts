@@ -4,6 +4,17 @@ import { initReactI18next } from "react-i18next";
 /** UI-ключи + stamina JSON (ключ = русская фраза). */
 const UI: Record<string, Record<string, string>> = {
   ru: {
+    opt_glue: "Не оставлять сросшиеся слова",
+    opt_glue_desc: "Разделять склейки по словарю: «fortyfive» → «forty five», «1984was» → «1984 was»",
+    glue_lab: "ПРОВЕРКА ТЕКСТА",
+    glue_btn: "✦ ПРОВЕРИТЬ ИИ",
+    glue_desc: "Найти сросшиеся слова в тексте на борту и разделить по смыслу (офлайн, словари EN/RU). Исправленная версия сохраняется поверх подготовленной книги.",
+    glue_checking: "Проверяю…",
+    glue_no_text: "На борту нет текста — загрузите книгу или свой текст",
+    glue_none: "Склеек не найдено",
+    glue_fixed_n: "Исправлено склеек: {0}",
+    glue_saved: "сохранено, мостик загрузит исправленный текст",
+    glue_error: "Не удалось проверить",
     // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
     en_rank_0: "Кадет EN",
     en_rank_1: "Слушатель",
@@ -1032,6 +1043,17 @@ const UI: Record<string, Record<string, string>> = {
       "Горячие клавиши: F1 — справка (в т.ч. навигация Tab/стрелки) · F5 — заново · Esc — пауза · F9 — звук · Ctrl+K — команды · Ctrl+1…9 — разделы · F6 — шапка/контент",
   },
   en: {
+    opt_glue: "Don't leave glued words",
+    opt_glue_desc: "Split glued words by dictionary: «fortyfive» → «forty five», «1984was» → «1984 was»",
+    glue_lab: "TEXT CHECK",
+    glue_btn: "✦ AI CHECK",
+    glue_desc: "Find glued words in the text on board and split them by meaning (offline, EN/RU dictionaries). The fixed version is saved over the prepared book.",
+    glue_checking: "Checking…",
+    glue_no_text: "No text on board — load a book or your own text",
+    glue_none: "No glued words found",
+    glue_fixed_n: "Glued words fixed: {0}",
+    glue_saved: "saved, the bridge will load the fixed text",
+    glue_error: "Check failed",
     // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
     en_rank_0: "Cadet EN",
     en_rank_1: "Listener",
@@ -2059,6 +2081,17 @@ const UI: Record<string, Record<string, string>> = {
       "Hotkeys: F1 help (incl. Tab/arrow nav) · F5 again · Esc pause · F9 sound · Ctrl+K commands · Ctrl+1…9 tabs · F6 chrome/stage",
   },
   uk: {
+    opt_glue: "Не залишати злиплі слова",
+    opt_glue_desc: "Розділяти злиплі слова за словником: «fortyfive» → «forty five», «1984was» → «1984 was»",
+    glue_lab: "ПЕРЕВІРКА ТЕКСТУ",
+    glue_btn: "✦ ПЕРЕВІРИТИ ШІ",
+    glue_desc: "Знайти злиплі слова в тексті на борту й розділити за змістом (офлайн, словники EN/RU). Виправлена версія зберігається поверх підготовленої книги.",
+    glue_checking: "Перевіряю…",
+    glue_no_text: "На борту немає тексту — завантажте книгу або свій текст",
+    glue_none: "Злиплих слів не знайдено",
+    glue_fixed_n: "Виправлено злиплих слів: {0}",
+    glue_saved: "збережено, місток завантажить виправлений текст",
+    glue_error: "Не вдалося перевірити",
     // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
     en_rank_0: "Кадет EN",
     en_rank_1: "Слухач",
@@ -3077,6 +3110,17 @@ const UI: Record<string, Record<string, string>> = {
       "Гарячі клавіші: F1 — довідка (Tab/стрілки) · F5 — знову · Esc — пауза · F9 — звук · Ctrl+K — команди · Ctrl+1…9 — розділи · F6 — шапка/контент",
   },
   de: {
+    opt_glue: "Keine zusammengeklebten Wörter",
+    opt_glue_desc: "Verklebte Wörter per Wörterbuch trennen: «fortyfive» → «forty five», «1984was» → «1984 was»",
+    glue_lab: "TEXTPRÜFUNG",
+    glue_btn: "✦ KI-PRÜFUNG",
+    glue_desc: "Verklebte Wörter im Text an Bord finden und sinngemäß trennen (offline, Wörterbücher EN/RU). Die korrigierte Fassung ersetzt das vorbereitete Buch.",
+    glue_checking: "Prüfe…",
+    glue_no_text: "Kein Text an Bord — Buch oder eigenen Text laden",
+    glue_none: "Keine verklebten Wörter gefunden",
+    glue_fixed_n: "Korrigierte Verklebungen: {0}",
+    glue_saved: "gespeichert, die Brücke lädt den korrigierten Text",
+    glue_error: "Prüfung fehlgeschlagen",
     // звания раздела «Английский» (backend ENGLISH_RANKS, по порядку)
     en_rank_0: "Kadett EN",
     en_rank_1: "Zuhörer",

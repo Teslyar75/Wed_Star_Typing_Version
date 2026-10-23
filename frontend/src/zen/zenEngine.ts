@@ -33,11 +33,18 @@ export function prepareWords(
   let m: RegExpExecArray | null;
   const limit = opts.limit ?? 1000;
   while ((m = re.exec(text)) && out.length < limit) {
-    const w = cleanWord(m[0], !!opts.punctuation, !!opts.numbers);
-    if (!w) continue;
     let end = m.index + m[0].length;
     while (end < text.length && /\s/.test(text[end]!)) end++;
-    out.push({ word: w, end });
+    // знак между буквами — граница слова: «hello—world» → два слова, а не «helloworld»
+    const parts = opts.punctuation ? [m[0]] : m[0].split(/[^\p{L}\p{N}_'’-]+|-{2,}/u).filter(Boolean);
+    let off = m.index;
+    parts.forEach((part, k) => {
+      const at = text.indexOf(part, off);
+      off = at + part.length;
+      const w = cleanWord(part, !!opts.punctuation, !!opts.numbers);
+      if (!w || out.length >= limit) return;
+      out.push({ word: w, end: k === parts.length - 1 ? end : off });
+    });
   }
   return out;
 }
