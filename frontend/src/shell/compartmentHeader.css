@@ -1,0 +1,30 @@
+/* Шапка отсека alt. Скошенные углы ОБЗОР — как OverviewButton (2bf86a3) на десктопе. */
+.cmp-header { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.cmp-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.cmp-title {
+  margin: 0; font-size: 1.15rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent, var(--cyan, #7fe0ff)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cmp-overview-box { position: relative; flex: 0 0 auto; }
+.cmp-overview {
+  --cut: 8px;
+  padding: 4px 16px; border: 0; cursor: pointer; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--bg, #08101c);
+  background: var(--accent, var(--cyan, #7fe0ff));
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+}
+.cmp-overview:hover, .cmp-overview:focus-visible { filter: brightness(1.15); outline: none; }
+.cmp-menu {
+  position: fixed; z-index: 1000; min-width: 220px; margin: 0; padding: 4px;
+  list-style: none; background: var(--panel, rgba(8, 16, 28, 0.96));
+  border: 1px solid var(--accent, var(--cyan, #7fe0ff)); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+.cmp-menu button {
+  display: flex; gap: 8px; width: 100%; padding: 6px 10px; border: 0; background: transparent;
+  color: var(--text, #e6f2ff); text-align: left; cursor: pointer;
+}
+.cmp-menu button:hover, .cmp-menu button:focus-visible { background: rgba(127, 224, 255, 0.15); outline: none; }
+.cmp-menu button.on { color: var(--accent, var(--cyan, #7fe0ff)); font-weight: 700; }
+.cmp-check { width: 1em; display: inline-block; }
+.ui-variant-row { display: flex; gap: 8px; align-items: center; margin: 8px 0 12px; flex-wrap: wrap; }

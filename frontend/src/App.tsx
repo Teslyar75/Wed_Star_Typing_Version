@@ -24,6 +24,8 @@ import {
 } from "./shell/keyboardNav";
 import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
+import CompartmentHeader from "./shell/CompartmentHeader";
+import { useUiVariant } from "./shell/uiVariant";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
 import OrionCallButton from "./guide/OrionCallButton";
@@ -82,6 +84,8 @@ export default function App() {
   const [crewOpen, setCrewOpen] = useState(false);
   const [, bump] = useState(0);
   const skin = useSkin((s) => s.skin);
+  const uiVariant = useUiVariant((s) => s.variant);
+  const alt = uiVariant === "alt";
   const skinGen = useSkin((s) => s.gen);
   const starsOn = useCabin((s) => s.stars);
   /** Окно, которое было открыто до текущего — Backspace возвращает сюда. */
@@ -410,8 +414,8 @@ export default function App() {
         </div>
       </header>
       {!fullscreen ? (
-        <div className="chrome-under-bar">
-          <PathCrumbs tab={tab} onJump={setTab} />
+        <div className={`chrome-under-bar ${alt ? "alt" : ""}`}>
+          {alt ? <CompartmentHeader tab={tab} onJump={setTab} /> : <PathCrumbs tab={tab} onJump={setTab} />}
           <div className="chrome-under-actions" data-nav-group="chrome-actions">
             <OrionCallButton />
             <SlideshowButton />
@@ -421,7 +425,7 @@ export default function App() {
       ) : null}
       <RadioAudioHost />
 
-      {isBridgeZone(tab) ? (
+      {isBridgeZone(tab) && !alt ? (
         <nav
           className="zone-subnav bridge-subnav"
           data-nav-group="bridge-sub"
@@ -450,7 +454,7 @@ export default function App() {
       >
         {fullscreen ? (
           <div className="chrome-under-bar stage-fs-bar">
-            <PathCrumbs tab={tab} onJump={setTab} />
+            {alt ? <CompartmentHeader tab={tab} onJump={setTab} /> : <PathCrumbs tab={tab} onJump={setTab} />}
             <div className="chrome-under-actions" data-nav-group="chrome-actions">
               <OrionCallButton />
               <SlideshowButton />
