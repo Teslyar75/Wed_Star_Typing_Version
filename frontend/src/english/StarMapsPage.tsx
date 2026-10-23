@@ -404,6 +404,20 @@ export default function StarMapsPage({
           >
             ▶
           </button>
+          <button
+            type="button"
+            className="en-sm-chip"
+            disabled={page + 1 >= pages}
+            onClick={() => setPage((p) => p + 1)}
+            data-testid="sm-more"
+          >
+            Ещё {pageSize}
+          </button>
+          <span className="mono en-sm-shown" data-testid="sm-shown">
+            {total > 0
+              ? `Показано ${page * pageSize + 1}–${Math.min(total, page * pageSize + items.length)} из ${total}`
+              : "Показано 0 из 0"}
+          </span>
         </div>
         <p className="en-sm-tip">{t("en_board_tip")}</p>
         <div className="en-sm-cta">

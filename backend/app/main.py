@@ -39,6 +39,9 @@ async def lifespan(_app: FastAPI):
     from app.translate_jobs import ensure_worker
 
     ensure_worker()
+    from app.api_english import start_seed_worker
+
+    start_seed_worker()
     yield
 
 

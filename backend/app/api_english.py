@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import threading
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -358,6 +359,13 @@ def _iter_seed_rows(limit: int) -> list[dict]:
 
 
 def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, int | bool]:
+    """Потокобезопасная обёртка: одновременно досевает только один запрос."""
+    with _SEED_LOCK:
+        db.expire_all()
+        return _seed_vocab_unlocked(db, limit, batch)
+
+
+def _seed_vocab_unlocked(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, int | bool]:
     """Досеять словарь порцией + починить rank/slug у уже вставленных слов.
 
     Ранний сид мог вставить top-слова с rank=0; повторный insert их пропускал —
@@ -444,6 +452,60 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
         "target": target,
         "zero_rank": zero_left,
     }
+
+
+_SEED_LOCK = threading.RLock()
+
+
+def _ensure_seeded_for(db: Session, need_rank: int, max_rounds: int = 40, *, need_dev: bool = False) -> None:
+    """Досеять словарь, пока набор с лимитом need_rank не заполнен целиком.
+
+    Раньше сид шёл одной порцией (500) только при пустой БД, и на свежей базе
+    набор S-3000 навсегда оставался с ~650 словами.
+    """
+    def _full() -> bool:
+        have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
+        dev_ok = not need_dev or db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() > 0
+        return have >= need_rank and dev_ok
+
+    if _full():
+        return
+    # один досев за раз: параллельные запросы ждут, а не дерутся за запись в SQLite
+    with _SEED_LOCK:
+        db.expire_all()
+        _ensure_seeded_locked(db, need_rank, max_rounds, need_dev)
+
+
+def _ensure_seeded_locked(db: Session, need_rank: int, max_rounds: int, need_dev: bool) -> None:
+    for _ in range(max_rounds):
+        have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
+        dev_ok = not need_dev or db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() > 0
+        if have >= need_rank and dev_ok:
+            return
+        res = _seed_vocab(db, 20000, 2000)
+        if res.get("done") or not (res.get("added") or res.get("updated")):
+            return
+
+
+def start_seed_worker() -> None:
+    """Фоновый досев полного словаря при старте сервера (свежая БД сразу полная)."""
+    import sys
+
+    if "pytest" in sys.modules:
+        return
+
+    def _run() -> None:
+        from app.db import SessionLocal
+
+        db = SessionLocal()
+        try:
+            _ensure_seeded_for(db, 20000, need_dev=True)
+        except Exception:  # noqa: BLE001 — досев догонят запросы /set и /sets
+            db.rollback()
+        finally:
+            db.close()
+
+    threading.Thread(target=_run, name="vocab-seed", daemon=True).start()
 
 
 @router.post("/seed")
@@ -866,6 +928,7 @@ def _settings(db: Session, pid: int) -> dict:
 def list_sets(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> list[dict]:
     from app.english_vocab import SET_LIMIT, THEMATIC_SETS, in_set, sets_catalog
 
+    _ensure_seeded_for(db, max(SET_LIMIT.values()), need_dev=True)
     pid = pilot.id if pilot else 0
     cards = {c.word_id: c for c in db.query(CardProgress).filter_by(pilot_id=pid).all()}
     known_ids = {wid for wid, c in cards.items() if c.known or c.bin == "learned" or c.interval >= 21}
@@ -1030,8 +1093,13 @@ def words_in_set(
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
     """Фильтры как desktop vocab.filtered — до пагинации, страница в SQL."""
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db, 2000, 500)
+    from app.english_vocab import SET_LIMIT, THEMATIC_SETS
+
+    if set_id in THEMATIC_SETS:
+        if db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() == 0:
+            _ensure_seeded_for(db, 20000, need_dev=True)
+    else:
+        _ensure_seeded_for(db, SET_LIMIT.get(set_id, 3000))
     limit = max(1, min(limit, 120))
     offset = max(0, offset)
     status_n = (status or "all").lower()
