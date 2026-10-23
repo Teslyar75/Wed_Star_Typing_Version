@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useRadio } from "../radio/radioStore";
 import { useReadingPos } from "../reading/positionStore";
-import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
+import { registerGoHandler, setDeepRoute, setZoneScreens } from "../shell/routeStore";
 import EnglishOverview from "./EnglishOverview";
 import FromBookPage from "./FromBookPage";
 import ListsPage from "./ListsPage";
@@ -229,6 +229,7 @@ export default function EnglishPanel() {
   useEffect(() => {
     const meta = PAGES.find((p) => p.id === page);
     setDeepRoute([{ slug: page, label: meta ? t(meta.labelKey) : page }]);
+    setZoneScreens("english", PAGES.map((p) => ({ slug: p.id, label: t(p.labelKey) })));
   }, [page]);
 
   const rememberScan = (word: string) => {
