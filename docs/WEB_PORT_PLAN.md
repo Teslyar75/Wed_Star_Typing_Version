@@ -1,0 +1,86 @@
+# WEB_PORT_PLAN — подтягивание веба до текущего десктопа
+
+Статус: фаза 1 (только чтение + план). Веб-код не менялся.
+Шаблон и эталон — десктоп `stamina/` (alt UI, `docs/ALT_UI.md`, `docs/skins/ALT_SKIN_GUIDE.md`, `ALT_UI_AGENT_PROMPT.md`).
+Направление только одно: десктоп → веб. На десктоп ничего не переносим.
+Возможности, которые есть только в вебе, сохраняем как есть:
+- PWA и SW;
+- Caddy и Docker;
+- ContinueHub;
+- Ctrl+K и палитра;
+- ASR на сервере;
+- updates-баннер;
+- lounge-score API;
+- guest/dossier.
+
+## Исходное состояние веба (ветка `web_star_typing_version` @ 9c6b4b1)
+
+**Стек:** React 19, Vite 6, TS 5.7, Zustand, i18next (ru/uk/en/de), FastAPI, Playwright 1.64.
+
+**Скрипты:**
+- `npm run build` — `tsc --noEmit` + vite;
+- `npm test` — vitest;
+- `npm run lint`;
+- `npm run test:e2e`.
+
+**Оболочка:**
+- `shell/` — tabs и zones, `routes.ts` (slug-пути), `PathCrumbs`, `noWheelScroll`, `stageFit`, `keyboardNav`, `CommandPalette`, `HelpDrawer`;
+- lazy-вкладки.
+
+**Скины:** 7 штук — spaceship, steampunk, old_england, scriptorium, bathyscaphe, neon_city, zen_garden. Файлы: `theme/skinStore.ts`, `applyTheme.ts`, `shapes.css`, `fx/skinScene.ts`.
+
+**Документы:**
+- `docs/web/STATUS.md` — эпики W0–P8, E1, L1, S1, A1, R1, P1p, G1, H1, S7, W-fast;
+- `PARITY_PLAN.md`, `WEB_PLAN.md`;
+- ссылка на `UI_DESKTOP_PARITY.md`;
+- `docs/skins/SKINS.md`.
+
+## Карта разрывов по отсекам
+
+| Отсек | Что есть в вебе | Что есть на десктопе (эталон) | Чего не хватает вебу |
+|---|---|---|---|
+| Оболочка alt UI | Вкладки и зоны; `PathCrumbs`; `stageFit`; fullscreen | «Пульт-кабина»: шапка отсека и кнопка ОБЗОР (скошенные углы); единые хлебные крошки; навигационные правила ALT_UI; единое правило выпадающих списков | Режима alt нет (0 упоминаний). Нужен компонент `CompartmentHeader` (заголовок, крошки, ОБЗОР), переключатель classic/alt и правила навигации из ALT_UI.md |
+| Скины и варианты | 7 скинов, per-skin FX, `st_skin` | Варианты скина в alt (spaceship и steampunk); обои по отсекам; вариант на экране входа; ALT_SKIN_GUIDE | Варианты есть только частично (`variant`, 2 файла). Нужны: модель skin×variant, обои по отсекам, выбор на `CockpitEntry`. 7 веб-скинов сохраняем |
+| Мостик | `BridgeScreen`, MissionRail, Heatmap, Debrief, SpeedGauge, ContinueHub | Шаблон отсека (эталон); доводка скорости показа и потерянных кликов | Шапка и ОБЗОР по шаблону; аудит времени первого кадра и кликов; ContinueHub сохранить |
+| Английский | Overview, Scanner, Review, Warehouse, Book, Lists, Log, Settings, StarMaps, ASR (Vosk и сервер) | `pages_main` и др.; звёздные карты адаптивной сеткой (`cols_for`, reflow); режимы learn/warehouse/book | Сверить список режимов с `pages_*.py`. Звёздные карты: сделать CSS grid auto-fill (аналог `cols_for`) и проверить. Шапка и ОБЗОР |
+| Скорочтение | Overview, Hyperdrive/RSVP, Flash, Pyramid, Table, Горбов, Book reader, журнал, prefs | Итог «Скорочтение» в ALT_UI; КНИГА-стопор (454881a) | КНИГА-стопор (остановка на конце книги и главы); шапка и ОБЗОР; сверка настроек |
+| Радио | `RadioPanel` (air/rx), minibar, favs, IndexedDB, shortwave | Отсек Radio по шаблону (454881a) | Привести к шаблону отсека. Фильтры, favs и minibar сохранить |
+| Орион | `guide/*`: OrionCallButton, команды, F8 и «=», voice, guideLogic | Отсек ОРИОН: чат уровня ИИ-чата (задачи 1–3); панель задач по планам с градиентом (`task_progress` v2 + legacy); аудит длинного текста | Отсека-чата нет. Нужны: чат-лента с длинными сообщениями, панель задач и API `task_progress` на бэкенде (порт формата v2) |
+| Настройки | SettingsHub (cabin, cabinMore, skins, crew), Zone/Guide/Idle settings | Отсек НАСТРОЙКИ по шаблону; длинный текст; выпадающие списки | Шапка, крошки и правило dropdown; длинный текст без обрезки |
+| Колесо мыши | `noWheelScroll.ts` (глушит колесо на инпутах) | `wheel_router`: глобальный роутер, прокрутка везде, без перехвата ScrollFrame | В браузере прокрутка нативная. Нужен аудит: колесо прокручивает любой отсек, в том числе вложенные списки и overflow:hidden-стейджи от `stageFit`; не крутит select/number случайно |
+| Производительность | W-fast: lazy, auto-frost, `canvasBudget` | Доводка мостика по скорости показа; living_space-профили | Бюджеты: LCP и переход между вкладками < 300 мс; canvas FX под frost; замер Playwright trace |
+| Lounge, Comm | Tetris, Snake, Breakout | Lounge и Comm (в alt пропущены) | Последний приоритет. Lounge сохранить |
+
+## Ограничения веба
+
+- Браузер: нет глобальных хоткеев ОС и нет доступа к `%APPDATA%`. Данные хранятся в API/SQLite и localStorage/IndexedDB. Аудио только после жеста пользователя.
+- Логика десктопа переносится импортом из `stamina/` на бэкенде (как vocab и missions). Tk-UI не переносится, а переписывается на React.
+- i18n: каждая новая строка сразу во всех 4 локалях (`localeKeys.test.ts`).
+- Адаптивность: окна от 360 px до 4K, тач. Сетки на CSS вместо `cols_for`.
+- SW-кэш: при изменении оболочки поднимать версию `st-shell-vNN`.
+- Docker и Caddy не ломать. `stamina/` не трогать.
+
+## Порядок работ
+
+Один отсек за итерацию, один шаблон, одна ветка `agent/grok/web-port`, коммит на каждый отсек.
+
+0. **Каркас:** переключатель alt/classic, `CompartmentHeader` (крошки и ОБЗОР со скошенными углами через clip-path), правила навигации, правило dropdown, модель skin×variant.
+1. **Мостик** — эталон шаблона, с замером производительности.
+2. **Английский**, вместе со звёздными картами сеткой.
+3. **Скорочтение**, с КНИГА-стопором.
+4. **Радио.**
+5. **Орион:** чат и панель задач. Нужен API `task_progress`.
+6. **Настройки.**
+7. **Колесо и производительность** — сквозной проход.
+8. **Обои и варианты** для остальных веб-скинов.
+9. **Lounge** — при необходимости.
+
+На каждый отсек: план, код, тесты, скриншоты skin×variant, запись итога в журнал (по образцу ALT_UI.md).
+
+## Подход к тестам
+
+- `npm run build` — tsc без ошибок, плюс `npm run lint` и `npm test` (vitest). Бэкенд: `pytest -q`.
+- Playwright (`npm run test:e2e`): на каждый отсек сценарий «открыть, проверить шапку, крошки и ОБЗОР, прокрутить колесом, вернуться». Скриншоты spaceship и steampunk × варианты.
+- Реальный браузер: проверка вручную или через Playwright headed на 1366×768 и 1920×1080, плюс мобильная ширина.
+- Производительность: Playwright trace или Lighthouse на мостике и при переключении вкладок.
+- Регрессия: существующие e2e (crew-session, english-hub, mission-drill) должны остаться зелёными.
