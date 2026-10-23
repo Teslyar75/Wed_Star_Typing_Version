@@ -185,3 +185,8 @@
 
 ### Конфиг (env, в коде ключей нет)
 `ORION_LLM_BASE_URL`, `ORION_LLM_MODEL`, `ORION_LLM_API_KEY`, `ORION_LLM_PROVIDER` (openai|anthropic), `ORION_LLM_VISION` (0/1), `ORION_HOSTED_ENABLED`, `ORION_ADMIN_TOKEN` (заголовок `X-Orion-Admin`), `ORION_CONTRIB_ENABLED`, `ORION_CONTRIB_RATE_PER_HOUR`, `ORION_CHAT_RATE_PER_MIN`; на будущее `ORION_GITHUB_APP_ID`, `ORION_GITHUB_PRIVATE_KEY_FILE`, `ORION_GITHUB_REPO`.
+
+﻿### Орион — фронтенд (зона)
+- `frontend/src/orion/`: orionApi (клиент, BYO в localStorage, маска, colorFor), orionI18n (ru/en/uk/de), OrionPanel (Чат/Задачи/Архив/Настройки, пагинация без скролла), orion.css.
+- Проводка: tabs/zones/routes (`ORION_PAGES`), App (lazy-вкладка), i18n `orion_zone`.
+- Тесты: vitest orionApi 4/4; e2e `alt-orion.spec.ts` 4/4 (2 скина × 1366/1920, нет переполнения, замки hosted/contributor).

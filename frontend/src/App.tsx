@@ -26,6 +26,7 @@ import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from ".
 import PathCrumbs from "./shell/PathCrumbs";
 import CompartmentHeader from "./shell/CompartmentHeader";
 import { useUiVariant } from "./shell/uiVariant";
+import { ot } from "./orion/orionI18n";
 import { WALLPAPER_DIM, wallpaperUrl } from "./shell/altWallpaper";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
@@ -54,6 +55,7 @@ const FlightLogPanel = lazy(() => import("./flightlog/FlightLogPanel"));
 const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
+const OrionPanel = lazy(() => import("./orion/OrionPanel"));
 
 function TabFallback() {
   return <p className="muted">…</p>;
@@ -304,6 +306,7 @@ export default function App() {
     { id: "speed", label: t("speed") },
     { id: "lounge", label: t("lounge") },
     { id: "radio", label: t("radio") },
+    { id: "orion", label: ot("zone") },
     { id: "settings", label: t("settings") },
   ];
 
@@ -500,6 +503,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "radio"}>
           <RadioPanel />
+        </LazyTab>
+        <LazyTab when={tab === "orion"}>
+          <OrionPanel />
         </LazyTab>
         <LazyTab when={tab === "settings"}>
           <SettingsHub
