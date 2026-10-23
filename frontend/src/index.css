@@ -8894,3 +8894,19 @@ html[data-ui-variant="alt"] .en-sm-grid-fit .en-sm-tile {
   background-position: center;
   transition: background-image 0.25s ease;
 }
+
+/* ручка перетаскивания плашки радио; плавающая плашка — поверх отсеков */
+.radio-mini-grip {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  color: var(--st-muted);
+  font-size: 0.8rem;
+  padding: 0 0.15rem;
+}
+.radio-mini-grip:active {
+  cursor: grabbing;
+}
+.radio-minibar--floating {
+  box-shadow: 0 0.3rem 1rem rgb(0 0 0 / 45%);
+}
