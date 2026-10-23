@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { t, getLang } from "../i18n";
 import { voiceLookup } from "../theme/voice";
 import { ti } from "../idle/idleI18n";
+import { zt } from "../zen/zenI18n";
 
 type Tab = string;
 
@@ -176,6 +177,12 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
           {page.body.split("\n").map((line, i) =>
             line.trim() === "" ? <br key={i} /> : <p key={i}>{line}</p>,
           )}
+          {lockedTab.current === "bridge" ? (
+            <>
+              <hr className="help-sep" />
+              <p className="help-zen">{zt("help")}</p>
+            </>
+          ) : null}
           {lockedTab.current === "settings" ? (
             <>
               <hr className="help-sep" />

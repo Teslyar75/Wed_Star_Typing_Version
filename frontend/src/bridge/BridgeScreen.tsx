@@ -23,6 +23,8 @@ import MissionMiniPlaque, { type MissionBrief } from "./MissionMiniPlaque";
 import DebriefModal, { type DebriefData } from "./DebriefModal";
 import { useCabin } from "../settings/cabinStore";
 import { setModalStack } from "../shell/routeStore";
+import ZenPortal from "../zen/ZenPortal";
+import { zt } from "../zen/zenI18n";
 
 function WordSight({ word, cursor }: { word: string; cursor: number }) {
   if (!word) return <span className="sight-word-empty">—</span>;
@@ -90,6 +92,7 @@ export default function BridgeScreen() {
   const [showHeat, setShowHeat] = useState(false);
   const [debrief, setDebrief] = useState<DebriefData | null>(null);
   const [, bumpLang] = useState(0);
+  const [zen, setZen] = useState(false);
 
   useEffect(() => {
     if (debrief) setModalStack([{ slug: "debrief", label: t("debrief_title") }]);
@@ -181,7 +184,7 @@ export default function BridgeScreen() {
    */
   useEffect(() => {
     const onWinKey = (e: KeyboardEvent) => {
-      if (debrief) return;
+      if (debrief || zen) return;
       const target = e.target as HTMLElement | null;
       const inGhost = target?.classList?.contains("ghost-input");
       /* Esc / Del: toggle паузы; если событие уже на ghost-input — там свой onKey */
@@ -210,7 +213,7 @@ export default function BridgeScreen() {
     };
     window.addEventListener("keydown", onWinKey, true);
     return () => window.removeEventListener("keydown", onWinKey, true);
-  }, [engine, engine.paused, engine.finished, enterPause, leavePause, debrief]);
+  }, [engine, engine.paused, engine.finished, enterPause, leavePause, debrief, zen]);
 
   /* Живые приборы: время и стрелка скорости обновляются между нажатиями */
   useEffect(() => {
@@ -493,6 +496,41 @@ export default function BridgeScreen() {
     setStatus(t("flight_done"));
   };
 
+  /* Портал: Ctrl+M — мгновенный вход (без шлюза); выход ловит сам портал */
+  useEffect(() => {
+    if (zen || debrief) return;
+    const onM = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.code === "KeyM" || e.key === "m" || e.key === "M")) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!engine.paused && engine.started) enterPause();
+        setZen(true);
+      }
+    };
+    window.addEventListener("keydown", onM, true);
+    return () => window.removeEventListener("keydown", onM, true);
+  }, [zen, debrief, engine, enterPause]);
+
+  /** Верно набранное в портале продвигает мостик (localStorage-груз + позиция книги на сервере). */
+  const onZenAdvance = useCallback(
+    (newIndex: number) => {
+      const eng = engineRef.current;
+      const idx = Math.max(eng.index, Math.min(newIndex, eng.text.length));
+      if (idx === eng.index) return;
+      const ne = new TypingEngine(eng.text, {
+        index: idx,
+        typed: eng.typed + (idx - eng.index),
+        errors: eng.errors,
+        elapsed: eng.elapsed(now()),
+      });
+      setEngine(ne);
+      setSentence(sentenceAt(idx));
+      setTick((x) => x + 1);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [setSentence, segStarts],
+  );
+
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape" || e.key === "Delete") {
       e.preventDefault();
@@ -743,6 +781,17 @@ export default function BridgeScreen() {
 
   return (
     <section className="bridge bridge-cockpit">
+      {zen ? (
+        <ZenPortal
+          text={engine.text}
+          index={engine.index}
+          onAdvance={onZenAdvance}
+          onExit={() => {
+            setZen(false);
+            setTimeout(() => inputRef.current?.focus(), 0);
+          }}
+        />
+      ) : null}
       {debrief ? (
         <DebriefModal
           data={debrief}
@@ -887,6 +936,18 @@ export default function BridgeScreen() {
             </div>
           )}
           <div className="bridge-actions inst-actions">
+            <button
+              type="button"
+              className="hud-btn zen-enter"
+              title={zt("enter_title")}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (!engine.paused && engine.started) enterPause();
+                setZen(true);
+              }}
+            >
+              {zt("enter")} Ctrl+M
+            </button>
             <button
               type="button"
               className={`hud-btn ${engine.paused ? "amber" : ""}`}
