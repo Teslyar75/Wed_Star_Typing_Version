@@ -15,7 +15,8 @@ for (const skin of ["spaceship", "steampunk"]) {
     if (skin !== "spaceship") {
       /* гость стартует на базовом скине — переключаем через Настройки → Скины */
       await page.locator('.nav-tab[data-zone="settings"]').click();
-      await page.getByRole("button", { name: /^(скины|skins)$/i }).first().click();
+      await page.getByTestId("cmp-overview").click();
+      await page.locator('.cmp-menu [data-screen="skins"]').click();
       await page.locator(".skin-card", { hasText: /стим|steam/i }).first().click();
       await page.locator('.nav-tab[data-zone="bridge"]').click();
     }

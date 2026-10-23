@@ -13,10 +13,11 @@ import { speakGuide } from "../guide/voice";
 import { linesOf } from "../guide/guides";
 import { addressOf, fill } from "../guide/guideLogic";
 import type { SkinTheme } from "../theme/applyTheme";
-import { getLang } from "../i18n";
+import { getLang, t } from "../i18n";
 import { te } from "./entryI18n";
 import { entryHelp, type EntryView } from "./entryHelp";
 import "./entry.css";
+import { storeVariantFor, variantFor, type UiVariant } from "../shell/uiVariant";
 
 export type RosterCard = {
   id: number;
@@ -288,6 +289,8 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
   const list = roster || [];
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const selected: RosterCard | undefined = list[sel];
+  const [varTick, setVarTick] = useState(0);
+  const pilotVariant: UiVariant = selected && varTick >= 0 ? variantFor(selected.callsign) : "classic";
   const shownSkin = previewSkin || selected?.skin || "spaceship";
 
   // Живой предпросмотр: весь экран входа сразу принимает выбранный скин (без сохранения).
@@ -1040,6 +1043,25 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
                         onClick={() => pickSkin(s.id)}
                       >
                         {SKIN_ICON[s.id] || "✦"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ce-varrow" role="radiogroup" aria-label={t("alt_variant")} data-testid="ce-variant">
+                    <span className="ce-lab">{t("alt_variant")}</span>
+                    {(["classic", "alt"] as UiVariant[]).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        role="radio"
+                        data-variant={v}
+                        aria-checked={pilotVariant === v}
+                        className={`ce-var ${pilotVariant === v ? "on" : ""}`}
+                        onClick={() => {
+                          storeVariantFor(selected.callsign, v);
+                          setVarTick((n) => n + 1);
+                        }}
+                      >
+                        {t(v === "alt" ? "alt_variant_alt" : "alt_variant_classic")}
                       </button>
                     ))}
                   </div>

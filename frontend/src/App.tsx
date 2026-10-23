@@ -162,6 +162,8 @@ export default function App() {
 
   // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
   const pilotName = pilot?.callsign;
+  const bindPilot = useUiVariant((s) => s.bindPilot);
+  useEffect(() => bindPilot(pilotName ?? null), [pilotName, bindPilot]);
   const pilotRankRef = useRef<string | undefined>(undefined);
   pilotRankRef.current = pilot?.rank;
   useEffect(() => {
