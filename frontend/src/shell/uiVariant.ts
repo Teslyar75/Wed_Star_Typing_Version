@@ -1,5 +1,6 @@
 /** Вариант интерфейса: «classic» (как было) или «alt» (Пульт-кабина, эталон — десктоп docs/ALT_UI.md).
- *  Хранится на пилота: st_ui_variant:<позывной>; без пилота — общий ключ st_ui_variant. */
+ *  Хранится на пилота: st_ui_variant:<позывной>; без пилота — общий ключ st_ui_variant.
+ *  Общий ключ меняет только явный выбор гостя (без пилота), а не последний вошедший пилот. */
 import { create } from "zustand";
 
 export type UiVariant = "classic" | "alt";
@@ -61,7 +62,6 @@ export const useUiVariant = create<S>((set, getS) => {
     setVariant: (next) => {
       const p = getS().pilot;
       put(variantKey(p), next);
-      if (p) put(KEY, next);
       apply(next);
       set({ variant: next });
     },

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { storeVariantFor, variantFor, variantKey } from "./uiVariant";
+import { storeVariantFor, useUiVariant, variantFor, variantKey } from "./uiVariant";
 
 const mem = new Map<string, string>();
 beforeEach(() => {
@@ -22,5 +22,16 @@ describe("variant per pilot", () => {
     storeVariantFor("bob", "classic");
     expect(variantFor("bob")).toBe("classic");
     expect(variantFor("eve")).toBe("alt");
+  });
+  it("pilot choice keeps global default", () => {
+    mem.set("st_ui_variant", "classic");
+    useUiVariant.getState().bindPilot("Ace");
+    useUiVariant.getState().setVariant("alt");
+    expect(mem.get("st_ui_variant:ace")).toBe("alt");
+    expect(mem.get("st_ui_variant")).toBe("classic");
+    useUiVariant.getState().bindPilot(null);
+    expect(useUiVariant.getState().variant).toBe("classic");
+    useUiVariant.getState().setVariant("alt");
+    expect(mem.get("st_ui_variant")).toBe("alt");
   });
 });
