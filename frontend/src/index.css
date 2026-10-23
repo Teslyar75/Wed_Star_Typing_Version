@@ -8873,3 +8873,13 @@ html {
 }
 .settings-upd-hint { margin: 0 0 0.75rem; font-size: 0.8rem; }
 .upd-status-new { color: var(--amber, #f5b942); }
+
+/* Звёздные карты в alt: сетка по окну (порт 5897486), без прокрутки — страница = cols×rows. */
+html[data-ui-variant="alt"] .en-sm-grid.en-sm-grid-fit {
+  overflow: hidden;
+  gap: 6px;
+}
+html[data-ui-variant="alt"] .en-sm-grid-fit .en-sm-tile {
+  min-height: 0;
+  min-width: 0;
+}
