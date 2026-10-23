@@ -18,6 +18,20 @@ class Settings(BaseSettings):
     # Слайдшоу (E2): ключи только из окружения/.env (в git не попадают).
     unsplash_access_key: str = ""
     pexels_api_key: str = ""
+    # Орион (docs/WEB_PORT_PLAN.md «Орион в вебе»): только env/.env, в коде ключей нет.
+    orion_llm_provider: str = "openai"  # openai | anthropic
+    orion_llm_base_url: str = ""
+    orion_llm_model: str = ""
+    orion_llm_api_key: str = ""
+    orion_llm_vision: bool = False
+    orion_llm_timeout: float = 30.0
+    orion_hosted_enabled: bool = False
+    orion_admin_token: str = ""
+    orion_contrib_enabled: bool = False
+    orion_contrib_rate_per_hour: int = 5
+    orion_chat_rate_per_min: int = 20
+    orion_byo_allow_http: bool = False
+    orion_byo_allow_private: bool = False
 
     def repo_root(self) -> Path:
         """Корень с пакетом stamina (соседний клон My_Stamina) или этот репозиторий."""

@@ -44,7 +44,8 @@ def make_prepared(original: str, opts: dict | None = None) -> tuple[str, str]:
 
 def ensure_prepared(db: Session, doc: TextDoc, *, opts: dict | None = None) -> str:
     """Лениво сгенерировать prepared, если пусто (старые тексты)."""
-    if (doc.prepared or "").strip() and not opts:
+    stale = '"glue"' not in (doc.prep_opts or "")  # подготовлено старым фильтром (склейки)
+    if (doc.prepared or "").strip() and not opts and not stale:
         return doc.prepared
     original = rebuild_original_body(db, doc.id)
     if not original.strip():

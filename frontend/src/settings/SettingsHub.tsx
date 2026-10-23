@@ -20,7 +20,7 @@ import {
   type UplinkTarget,
 } from "./cabinStore";
 import { ALL_SKINS, useSkin } from "../theme/skinStore";
-import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
+import { registerGoHandler, setDeepRoute, setZoneScreens } from "../shell/routeStore";
 
 const SkinPicker = lazy(() => import("../theme/SkinPicker"));
 const CockpitEntry = lazy(() => import("../auth/CockpitEntry"));
@@ -103,6 +103,7 @@ export default function SettingsHub({
   useEffect(() => {
     const meta = subs.find((s) => s.id === sub);
     setDeepRoute([{ slug: sub, label: meta?.label || sub }]);
+    setZoneScreens("settings", subs.map((s) => ({ slug: s.id, label: s.label })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sub]);
 

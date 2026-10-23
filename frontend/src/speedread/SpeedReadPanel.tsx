@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { t } from "../i18n";
 import { makeQuiz, type QuizItem } from "./quiz";
 import { useReadingPos } from "../reading/positionStore";
-import { registerGoHandler, setDeepRoute } from "../shell/routeStore";
+import { registerGoHandler, setDeepRoute, setZoneScreens } from "../shell/routeStore";
 import ZoneSettingsShell from "../shell/ZoneSettingsShell";
 import SpeedOverview, { type SrBook, type SrSession, type SrTrainer } from "./SpeedOverview";
 import HyperdriveView from "./HyperdriveView";
@@ -122,6 +122,7 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
   useEffect(() => {
     const meta = pages.find((p) => p.id === page);
     setDeepRoute([{ slug: page, label: meta?.label || page }]);
+    setZoneScreens("speed", pages.map((p) => ({ slug: p.id, label: p.label })));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- labels from t() at render
   }, [page]);
 

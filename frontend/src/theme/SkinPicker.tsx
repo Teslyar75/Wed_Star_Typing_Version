@@ -1,14 +1,41 @@
 import { ALL_SKINS, useSkin } from "./skinStore";
 import { t } from "../i18n";
+import { useUiVariant } from "../shell/uiVariant";
+import "../shell/compartmentHeader.css";
 import { playClick, setSoundsMuted, soundsMuted } from "../fx/sounds";
 
 export default function SkinPicker() {
   const skin = useSkin((s) => s.skin);
   const setSkin = useSkin((s) => s.setSkin);
   const muted = soundsMuted();
+  const variant = useUiVariant((s) => s.variant);
+  const setVariant = useUiVariant((s) => s.setVariant);
 
   return (
     <div className="skins">
+      <div className="ui-variant-row" role="radiogroup" aria-label={t("alt_variant")}>
+        <strong>{t("alt_variant")}:</strong>
+        {(["classic", "alt"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={variant === v}
+            data-variant={v}
+            className={`hud-btn ${variant === v ? "amber" : ""}`}
+            onClick={() => {
+              setVariant(v);
+              playClick();
+            }}
+          >
+            {t(v === "alt" ? "alt_variant_alt" : "alt_variant_classic")}
+          </button>
+        ))}
+        <span className="muted">
+          {t("alt_skin_variant")}: {(skin.name as Record<string, string>)?.ru || skin.id} +{" "}
+          {t(variant === "alt" ? "alt_variant_alt" : "alt_variant_classic")}
+        </span>
+      </div>
       <p className="muted">
         Эталон — «Звездолёт» (звёздное небо). При смене — полный сброс артефактов. Другие скины: пока только палитра.
       </p>

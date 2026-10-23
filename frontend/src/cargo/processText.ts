@@ -49,6 +49,8 @@ export type CargoOpts = {
   spaces: boolean;
   yo: boolean;
   translit: boolean;
+  /** Не оставлять сросшиеся слова («fortyfive», «1984was») — словарная проверка на сервере. */
+  glue: boolean;
 };
 
 export const DEFAULT_CARGO_OPTS: CargoOpts = {
@@ -57,6 +59,7 @@ export const DEFAULT_CARGO_OPTS: CargoOpts = {
   spaces: true,
   yo: false,
   translit: false,
+  glue: true,
 };
 
 const UK_APOS = /(?<=[А-Яа-яЁёІіЇїЄєҐґ])['’ʼ](?=[А-Яа-яЁёІіЇїЄєҐґ])/g;
@@ -65,11 +68,46 @@ export function normalizeSpaces(text: string): string {
   return text.split(/\s+/).filter(Boolean).join(" ");
 }
 
+const INNER_KEEP = new Set(["'", "\u2019", "\u02bc", "\u2010", "\u2011", "-"]);
+const NUMBER_SEP = new Set([".", ",", "-", "/", ":", "\u2013", "\u2014"]);
+const WORDISH = /[\p{L}\p{N}]/u;
+const DIGIT = /\p{Nd}/u;
+const DASH_RUN = /[-\u2010\u2011\u2012\u2013\u2014\u2015\u2212]{2,}/g;
+const LINE_HYPHEN = /(\p{L}+)[ \t]?[-\u00ad\u2010]\s*\r?\n\s*(\p{L}+)/gu;
+
+/** Перенос на краю строки «сло-⏎во» → «слово» (сервер уточняет по словарю: «forty-five»). */
+export function dehyphenate(text: string): string {
+  if (!text.includes("\n")) return text;
+  return text.replace(LINE_HYPHEN, "$1$2");
+}
+
+/**
+ * Знак между буквами/цифрами → пробел (иначе слова срастаются: «distaste--this» → «distastethis»).
+ * Дефис/апостроф внутри слова и разделитель в числе сохраняются.
+ */
 export function removePunctuation(text: string): string {
-  const marked = text.replace(UK_APOS, "\x01");
+  const marked = dehyphenate(text).replace(UK_APOS, "\x01").replace(DASH_RUN, " ");
+  const chars = Array.from(marked);
   let out = "";
-  for (const ch of marked) {
-    out += PUNCT.has(ch) ? "" : ch;
+  let prev = "";
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i]!;
+    if (!PUNCT.has(ch)) {
+      out += ch;
+      prev = ch;
+      continue;
+    }
+    const nxt = chars[i + 1] ?? "";
+    const wp = prev === "\x01" || (prev !== "" && WORDISH.test(prev));
+    const wn = nxt !== "" && WORDISH.test(nxt);
+    let add = "";
+    if (INNER_KEEP.has(ch) && wp && wn) add = ch;
+    else if (NUMBER_SEP.has(ch) && DIGIT.test(prev) && DIGIT.test(nxt)) add = ch;
+    else if (wp && wn) add = " ";
+    if (add) {
+      out += add;
+      prev = add;
+    }
   }
   return out.replace(/\x01/g, "'");
 }
@@ -95,8 +133,9 @@ export function processText(text: string, opts: CargoOpts): string {
   let t = text;
   if (opts.yo) t = t.replace(/ё/g, "е").replace(/Ё/g, "Е");
   if (opts.translit) t = transliterate(t);
+  t = dehyphenate(t);
   if (opts.lower && opts.punct && opts.spaces) {
-    return normalizeSpaces(removePunctuation(normalizeTypography(t)).toLowerCase());
+    return normalizeSpaces(normalizeTypography(removePunctuation(t)).toLowerCase());
   }
   if (opts.punct) t = removePunctuation(t);
   t = normalizeTypography(t);
@@ -183,4 +222,51 @@ export function clearTypingSession() {
     return;
   }
   saveCargoBoard({ ...b, index: b.text.length, typed: b.typed ?? 0 });
+}
+
+export type GlueResult = { text: string; count: number; examples: string[]; saved?: boolean };
+
+/** Подготовка «своего текста» сервером (словарный разбор склеек). При ошибке — локальный результат. */
+export async function prepareOnServer(raw: string, opts: CargoOpts): Promise<GlueResult> {
+  try {
+    const r = await fetch("/api/texts/prepare-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ text: raw, opts }),
+    });
+    if (r.ok) return (await r.json()) as GlueResult;
+  } catch {
+    /* офлайн */
+  }
+  return { text: processText(raw, opts), count: 0, examples: [] };
+}
+
+/** «✦ Проверить ИИ»: разделить склейки в тексте на борту (и в книге с полки). */
+export async function glueFixBoard(): Promise<GlueResult | null> {
+  const board = loadCargoBoard();
+  if (!board?.text) return null;
+  const r = await fetch("/api/texts/glue-fix", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ text: board.text, text_id: board.textId ?? null }),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  const j = (await r.json()) as GlueResult & { fixes: [number, number, number][] };
+  if (j.count > 0) {
+    saveCargoBoard({ ...board, text: j.text, index: remapIndex(j.fixes, board.index ?? 0) });
+  }
+  return j;
+}
+
+/** Позиция курсора в старом тексте → в исправленном. */
+export function remapIndex(fixes: [number, number, number][], index: number): number {
+  let shift = 0;
+  for (const [start, end, len] of fixes) {
+    if (start >= index) break;
+    if (end <= index) shift += len - (end - start);
+    else return start + shift;
+  }
+  return index + shift;
 }

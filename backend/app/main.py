@@ -14,7 +14,9 @@ from app.api_library import router as library_router
 from app.api_migrate import router as migrate_router
 from app.api_import import router as import_router
 from app.api_missions import router as missions_router
+from app.api_orion import router as orion_router
 from app.api_pilots import router as pilots_router
+from app.api_portal import router as portal_router
 from app.api_lounge import router as lounge_router
 from app.api_radio import router as radio_router
 from app.api_slideshow import router as slideshow_router
@@ -38,6 +40,9 @@ async def lifespan(_app: FastAPI):
     from app.translate_jobs import ensure_worker
 
     ensure_worker()
+    from app.api_english import start_seed_worker
+
+    start_seed_worker()
     yield
 
 
@@ -71,6 +76,8 @@ app.include_router(radio_router)
 app.include_router(slideshow_router)
 app.include_router(lounge_router)
 app.include_router(tts_router)
+app.include_router(orion_router)
+app.include_router(portal_router)
 
 
 @app.get("/api/health")

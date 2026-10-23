@@ -102,3 +102,29 @@ export function goDeep(deepSlugs: string[]) {
   goHandler?.(deepSlugs);
   window.dispatchEvent(new CustomEvent("st-crumb-go", { detail: { slugs: deepSlugs } }));
 }
+
+/* ── Экраны отсека для меню ОБЗОР (alt): публикует активная панель ── */
+export type ZoneScreens = { tab: string; screens: DeepSeg[] };
+let zoneScreens: ZoneScreens = { tab: "", screens: [] };
+const zoneListeners = new Set<Listener>();
+
+export function setZoneScreens(tab: string, screens: DeepSeg[]) {
+  if (zoneScreens.tab === tab && same(zoneScreens.screens, screens)) return;
+  zoneScreens = { tab, screens };
+  zoneListeners.forEach((l) => l());
+}
+
+export function getZoneScreens(): ZoneScreens {
+  return zoneScreens;
+}
+
+export function useZoneScreens(): ZoneScreens {
+  return useSyncExternalStore(
+    (cb) => {
+      zoneListeners.add(cb);
+      return () => zoneListeners.delete(cb);
+    },
+    getZoneScreens,
+    getZoneScreens,
+  );
+}

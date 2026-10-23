@@ -274,6 +274,7 @@ class PreparedOptsIn(BaseModel):
     spaces: bool = True
     translit: bool = False
     yo: bool = False
+    glue: bool = True
 
 
 @router.get("/{text_id}/prepared")
@@ -339,3 +340,64 @@ def get_segments(
         .limit(limit)
         .all()
     )
+
+
+class GlueFixIn(BaseModel):
+    text: str = ""
+    text_id: int | None = None
+    lang: str | None = None
+
+
+@router.post("/glue-fix")
+def glue_fix(body: GlueFixIn, db: Session = Depends(get_db)) -> dict:
+    """«✦ Проверить ИИ»: найти и разделить сросшиеся слова (офлайн, частотные словари EN/RU).
+
+    Если передан ``text_id`` — исправленный текст сохраняется поверх prepared этой книги,
+    и мостик/«Печатать» дальше загружают уже чистую версию.
+    """
+    from app.glue_fix import examples, repair
+
+    base = body.text or ""
+    doc = None
+    if body.text_id is not None:
+        doc = db.get(TextDoc, body.text_id)
+        if doc is None:
+            raise HTTPException(404, "text not found")
+        if not base.strip():
+            base = ensure_prepared(db, doc)
+    lang = body.lang if body.lang in ("en", "ru") else None
+    new, fixes = repair(base, lang)
+    saved = False
+    if doc is not None and fixes and (doc.prepared or "") == base:
+        doc.prepared = new
+        db.commit()
+        saved = True
+    return {
+        "text": new,
+        "count": len(fixes),
+        "examples": examples(fixes, 8),
+        "fixes": [[f.start, f.end, len(f.split)] for f in fixes],
+        "saved": saved,
+    }
+
+
+class PrepareTextIn(BaseModel):
+    text: str = ""
+    opts: dict | None = None
+
+
+@router.post("/prepare-text")
+def prepare_text(body: PrepareTextIn) -> dict:
+    """«Свой текст» из трюма: та же подготовка, что у книг (без склеек), с отчётом о склейках."""
+    from app.glue_fix import examples, repair
+    from app.text_processing import process_text
+
+    o = norm_opts(body.opts)
+    glue = o.pop("glue", True)
+    plain = process_text(body.text or "", **o, glue=False)
+    fixes = []
+    if glue:
+        plain, fixes = repair(plain)
+        if o.get("spaces", True):
+            plain = " ".join(plain.split())
+    return {"text": plain, "count": len(fixes), "examples": examples(fixes, 8)}

@@ -1,3 +1,4 @@
+import { useMt } from "./zen/mtStore";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import GuideDialog from "./guide/GuideDialog";
 import GuideEvents, { bridgeName } from "./guide/GuideEvents";
@@ -14,9 +15,20 @@ import { detectSpaceProfile } from "./fx/canvasBudget";
 import { t, setLang, getLang, onLangChange } from "./i18n";
 import { setSoundsMuted, soundsMuted } from "./fx/sounds";
 import type { Tab } from "./shell/tabs";
-import { cycleNavZone, handleArrowNav, isTextEditTarget } from "./shell/keyboardNav";
+import {
+  cycleNavZone,
+  focusNav,
+  handleArrowNav,
+  handleEscNav,
+  handleTabNav,
+  isTextEditTarget,
+} from "./shell/keyboardNav";
 import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
+import CompartmentHeader from "./shell/CompartmentHeader";
+import { useUiVariant } from "./shell/uiVariant";
+import { ot } from "./orion/orionI18n";
+import { WALLPAPER_DIM, wallpaperUrl } from "./shell/altWallpaper";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
 import OrionCallButton from "./guide/OrionCallButton";
@@ -44,6 +56,7 @@ const FlightLogPanel = lazy(() => import("./flightlog/FlightLogPanel"));
 const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
+const OrionPanel = lazy(() => import("./orion/OrionPanel"));
 
 function TabFallback() {
   return <p className="muted">…</p>;
@@ -75,6 +88,8 @@ export default function App() {
   const [crewOpen, setCrewOpen] = useState(false);
   const [, bump] = useState(0);
   const skin = useSkin((s) => s.skin);
+  const uiVariant = useUiVariant((s) => s.variant);
+  const alt = uiVariant === "alt";
   const skinGen = useSkin((s) => s.gen);
   const starsOn = useCabin((s) => s.stars);
   /** Окно, которое было открыто до текущего — Backspace возвращает сюда. */
@@ -125,6 +140,11 @@ export default function App() {
     setTab(prev);
   }, [setTab]);
 
+  /* Monkeytype read-only: автосинхронизация при старте (троттлинг 5 мин, 429 — пауза сервера) */
+  useEffect(() => {
+    void useMt.getState().sync();
+  }, []);
+
   useEffect(() => {
     return installStageFit(() => stageRef.current);
   }, []);
@@ -151,6 +171,8 @@ export default function App() {
 
   // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
   const pilotName = pilot?.callsign;
+  const bindPilot = useUiVariant((s) => s.bindPilot);
+  useEffect(() => bindPilot(pilotName ?? null), [pilotName, bindPilot]);
   const pilotRankRef = useRef<string | undefined>(undefined);
   pilotRankRef.current = pilot?.rank;
   useEffect(() => {
@@ -238,7 +260,8 @@ export default function App() {
           e.preventDefault();
           setZone(next);
           window.requestAnimationFrame(() => {
-            document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`)?.focus();
+            const tab = document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`);
+            if (tab) focusNav(tab);
           });
         }
         return;
@@ -250,11 +273,15 @@ export default function App() {
         cycleNavZone();
         return;
       }
+      /* Tab / Shift+Tab — как десктоп keynav (меню зон ↔ кнопки) */
+      if (handleTabNav(e)) return;
       if (handleArrowNav(e)) return;
       if (e.key === "Escape") {
+        const onHud = handleEscNav(e);
         setHelpOpen(false);
         setCmdOpen(false);
         if (crewRef.current) setCrewOpen(false);
+        if (onHud) return;
       }
       if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (helpRef.current || cmdRef.current || crewRef.current) return;
@@ -285,6 +312,7 @@ export default function App() {
     { id: "speed", label: t("speed") },
     { id: "lounge", label: t("lounge") },
     { id: "radio", label: t("radio") },
+    { id: "orion", label: ot("zone") },
     { id: "settings", label: t("settings") },
   ];
 
@@ -296,6 +324,7 @@ export default function App() {
   ];
 
   const activeZone = zoneOf(tab);
+  const wallUrl = alt ? wallpaperUrl(skin.id, activeZone) : null;
 
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
@@ -312,6 +341,16 @@ export default function App() {
           />
         </div>
       )}
+
+      {wallUrl ? (
+        <div
+          className="alt-wallpaper"
+          data-testid="alt-wallpaper"
+          data-zone={activeZone}
+          aria-hidden
+          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,${WALLPAPER_DIM}), rgba(0,0,0,${WALLPAPER_DIM})), url(${wallUrl})` }}
+        />
+      ) : null}
 
       <UpdateBanner
         onOpenSettings={() => {
@@ -343,6 +382,7 @@ export default function App() {
                   role="tab"
                   data-zone={x.id}
                   data-tab={x.id}
+                  data-nav-menu="1"
                   aria-selected={activeZone === x.id}
                   className={`nav-tab ${activeZone === x.id ? "on" : ""}`}
                   onClick={() => setZone(x.id)}
@@ -397,9 +437,9 @@ export default function App() {
         </div>
       </header>
       {!fullscreen ? (
-        <div className="chrome-under-bar">
-          <PathCrumbs tab={tab} onJump={setTab} />
-          <div className="chrome-under-actions">
+        <div className={`chrome-under-bar ${alt ? "alt" : ""}`}>
+          {alt ? <CompartmentHeader tab={tab} onJump={setTab} /> : <PathCrumbs tab={tab} onJump={setTab} />}
+          <div className="chrome-under-actions" data-nav-group="chrome-actions">
             <OrionCallButton />
             <SlideshowButton />
             <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
@@ -408,7 +448,7 @@ export default function App() {
       ) : null}
       <RadioAudioHost />
 
-      {isBridgeZone(tab) ? (
+      {isBridgeZone(tab) && !alt ? (
         <nav
           className="zone-subnav bridge-subnav"
           data-nav-group="bridge-sub"
@@ -437,8 +477,8 @@ export default function App() {
       >
         {fullscreen ? (
           <div className="chrome-under-bar stage-fs-bar">
-            <PathCrumbs tab={tab} onJump={setTab} />
-            <div className="chrome-under-actions">
+            {alt ? <CompartmentHeader tab={tab} onJump={setTab} /> : <PathCrumbs tab={tab} onJump={setTab} />}
+            <div className="chrome-under-actions" data-nav-group="chrome-actions">
               <OrionCallButton />
               <SlideshowButton />
               <FullscreenButton fullscreen={fullscreen} onToggle={toggleFullscreen} />
@@ -469,6 +509,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "radio"}>
           <RadioPanel />
+        </LazyTab>
+        <LazyTab when={tab === "orion"}>
+          <OrionPanel />
         </LazyTab>
         <LazyTab when={tab === "settings"}>
           <SettingsHub

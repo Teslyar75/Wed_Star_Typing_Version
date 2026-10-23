@@ -1,7 +1,9 @@
 /** ЗВЁЗДНЫЕ КАРТЫ — порт stamina/english/pages_main.SetsPage + ui.Tile (186×112, 6×4). */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import type { EnWord } from "./types";
+import { useUiVariant } from "../shell/uiVariant";
+import { fitStarGrid, remapPage, type StarGrid } from "./starGrid";
 
 type SetInfo = { id: string; code: string; name: string; sub: string; limit: number; total: number; known: number };
 
@@ -94,6 +96,39 @@ export default function StarMapsPage({
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
+  const alt = useUiVariant((s) => s.variant) === "alt";
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [grid, setGrid] = useState<StarGrid | null>(null);
+  const pageSize = alt && grid ? grid.size : PAGE_SIZE;
+  const sizeRef = useRef(pageSize);
+
+  /* alt: сетка по окну (5897486) — колонки 2..6, ряды по высоте, без прокрутки. */
+  useEffect(() => {
+    if (!alt) {
+      setGrid(null);
+      return;
+    }
+    const el = gridRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 10 || r.height < 10) return;
+      const g = fitStarGrid(r.width, r.height);
+      setGrid((old) => (old && old.cols === g.cols && old.rows === g.rows ? old : g));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [alt]);
+
+  useEffect(() => {
+    const old = sizeRef.current;
+    if (old !== pageSize) {
+      sizeRef.current = pageSize;
+      setPage((p) => remapPage(p, old, pageSize));
+    }
+  }, [pageSize]);
 
   useEffect(() => {
     setSetId(currentSet);
@@ -129,12 +164,14 @@ export default function StarMapsPage({
     setPage(0);
   };
 
+  const reqRef = useRef(0);
   const load = useCallback(async () => {
+    const my = ++reqRef.current;
     setBusy(true);
     try {
       const params = new URLSearchParams({
-        limit: String(PAGE_SIZE),
-        offset: String(page * PAGE_SIZE),
+        limit: String(pageSize),
+        offset: String(page * pageSize),
         status,
         length,
         sort,
@@ -146,12 +183,13 @@ export default function StarMapsPage({
       const r = await fetch(`/api/english/set/${encodeURIComponent(setId)}?${params}`, { credentials: "include" });
       if (!r.ok) return;
       const j = (await r.json()) as { items: EnWord[]; total: number };
+      if (my !== reqRef.current) return; // устаревший ответ (сменился размер страницы)
       setItems(j.items || []);
       setTotal(j.total || 0);
     } finally {
       setBusy(false);
     }
-  }, [setId, q, pos, status, length, diff, sort, seed, page]);
+  }, [setId, q, pos, status, length, diff, sort, seed, page, pageSize]);
 
   useEffect(() => {
     void load();
@@ -180,7 +218,7 @@ export default function StarMapsPage({
   };
 
   const cur = sets.find((s) => s.id === setId);
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(total / pageSize));
   const known = cur?.known ?? 0;
   const setTotalN = cur?.total ?? 0;
   const pct = Math.round((known / Math.max(1, setTotalN)) * 100);
@@ -285,7 +323,21 @@ export default function StarMapsPage({
       </div>
 
       {/* Сетка 6×4 — ui.Tile */}
-      <div className="en-sm-grid">
+      <div
+        ref={gridRef}
+        className={`en-sm-grid${alt ? " en-sm-grid-fit" : ""}`}
+        data-testid="en-sm-grid"
+        data-cols={alt && grid ? grid.cols : 6}
+        data-rows={alt && grid ? grid.rows : 4}
+        style={
+          alt && grid
+            ? {
+                gridTemplateColumns: `repeat(${grid.cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${grid.rows}, minmax(0, 1fr))`,
+              }
+            : undefined
+        }
+      >
         {items.map((w) => {
           const isFlip = !!flipped[w.id];
           const d = (w.difficulty || "medium").toLowerCase();
@@ -352,6 +404,20 @@ export default function StarMapsPage({
           >
             ▶
           </button>
+          <button
+            type="button"
+            className="en-sm-chip"
+            disabled={page + 1 >= pages}
+            onClick={() => setPage((p) => p + 1)}
+            data-testid="sm-more"
+          >
+            Ещё {pageSize}
+          </button>
+          <span className="mono en-sm-shown" data-testid="sm-shown">
+            {total > 0
+              ? `Показано ${page * pageSize + 1}–${Math.min(total, page * pageSize + items.length)} из ${total}`
+              : "Показано 0 из 0"}
+          </span>
         </div>
         <p className="en-sm-tip">{t("en_board_tip")}</p>
         <div className="en-sm-cta">

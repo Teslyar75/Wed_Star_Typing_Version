@@ -8,4 +8,5 @@ export type Tab =
   | "speed"
   | "lounge"
   | "radio"
+  | "orion"
   | "settings";

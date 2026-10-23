@@ -15,7 +15,7 @@ type Item =
   | { kind: "action"; id: "orion"; labelKey: string; search: string };
 
 const ITEMS: Item[] = [
-  { kind: "action", id: "orion", labelKey: "call_orion", search: "orion орион f8" },
+  { kind: "action", id: "orion", labelKey: "call_orion", search: "orion орион home" },
   { kind: "tab", id: "bridge", labelKey: "bridge", search: "bridge" },
   { kind: "tab", id: "missions", labelKey: "missions", search: "missions" },
   { kind: "tab", id: "cargo", labelKey: "own_text", search: "cargo" },
@@ -73,7 +73,7 @@ export default function CommandPalette({ open, onClose, onJump }: Props) {
             <li key={x.id}>
               <button type="button" className="hud-btn" onClick={() => runItem(x, onJump, onClose)}>
                 {t(x.labelKey)}
-                {x.kind === "action" ? "  ·  = / F8" : ""}
+                {x.kind === "action" ? "  ·  Home" : ""}
               </button>
             </li>
           ))}

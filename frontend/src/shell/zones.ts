@@ -1,7 +1,7 @@
 /** Зоны верхнего ряда и состав зоны «Мостик». См. docs/web/NAV_ZONES.md */
 import type { Tab } from "./tabs";
 
-export type ZoneId = "bridge" | "english" | "speed" | "lounge" | "radio" | "settings";
+export type ZoneId = "bridge" | "english" | "speed" | "lounge" | "radio" | "orion" | "settings";
 
 /** Порядок зон в шапке (Ctrl+1…6). */
 export const ZONE_ORDER: ZoneId[] = [
@@ -10,6 +10,7 @@ export const ZONE_ORDER: ZoneId[] = [
   "speed",
   "lounge",
   "radio",
+  "orion",
   "settings",
 ];
 

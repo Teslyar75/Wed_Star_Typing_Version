@@ -1,0 +1,49 @@
+/* Отсек «Орион»: всё в высоту окна, списки постранично (без прокрутки). */
+.orion-panel { height: calc(100vh - 150px); min-height: 360px; display: flex; flex-direction: column; overflow: hidden; padding: 6px 10px; box-sizing: border-box; }
+.orion-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.orion-list { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 6px; }
+.orion-empty { opacity: 0.75; padding: 12px; }
+.orion-msg { height: 68px; box-sizing: border-box; padding: 4px 8px; border: 1px solid rgba(127, 200, 255, 0.25); border-radius: 6px; background: rgba(0, 0, 0, 0.35); flex: none; }
+.orion-msg.orion { border-color: rgba(120, 220, 160, 0.35); }
+.orion-msg-head { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.orion-msg-tools { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+.orion-msg-text { font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; user-select: text; white-space: pre-wrap; }
+.orion-mini { padding: 1px 6px; font-size: 11px; }
+.orion-tag { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; opacity: 0.8; }
+.orion-tag.warn { color: #e39355; }
+.orion-thumb { height: 22px; width: 22px; object-fit: cover; border-radius: 3px; cursor: zoom-in; }
+.orion-compose-side .orion-thumb { height: 34px; width: 34px; }
+.orion-pager { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 12px; flex: none; }
+.orion-note { font-size: 12px; color: #e6c45c; flex: none; }
+.orion-compose { display: flex; gap: 8px; flex: none; }
+.orion-compose textarea { flex: 1; resize: none; font: inherit; }
+.orion-compose-side { display: flex; gap: 6px; align-items: center; }
+.orion-row-form { display: flex; gap: 8px; align-items: center; flex: none; flex-wrap: wrap; }
+.orion-row-form input { flex: 1; min-width: 140px; }
+.orion-task { height: 80px; box-sizing: border-box; padding: 4px 8px; border: 1px solid rgba(127, 200, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.35); flex: none; overflow: hidden; }
+.orion-task-head { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.orion-pct { margin-left: auto; font-variant-numeric: tabular-nums; }
+.orion-bar { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; margin: 5px 0; overflow: hidden; }
+.orion-bar-fill { height: 100%; transition: width 0.3s ease, background 0.3s ease; }
+.orion-steps { display: flex; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
+.orion-step { font-size: 11px; padding: 1px 6px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.25); background: transparent; color: inherit; cursor: pointer; white-space: nowrap; }
+.orion-step.done { border-color: #6fbf73; color: #6fbf73; }
+.orion-step.failed { border-color: #d96a5f; color: #d96a5f; }
+.orion-hit { height: 58px; box-sizing: border-box; padding: 4px 8px; border-left: 3px solid rgba(127, 200, 255, 0.5); background: rgba(0, 0, 0, 0.3); flex: none; overflow: hidden; font-size: 13px; }
+.orion-hit-at { font-size: 11px; opacity: 0.6; margin-left: 8px; }
+.orion-hit-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: text; }
+.orion-hit mark { background: #e6c45c; color: #111; padding: 0 2px; }
+.orion-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; flex: none; }
+.orion-mode { padding: 8px; border: 1px solid rgba(127, 200, 255, 0.25); border-radius: 8px; background: rgba(0, 0, 0, 0.35); font-size: 12px; }
+.orion-mode.on { border-color: #6fbf73; box-shadow: 0 0 0 1px #6fbf73 inset; }
+.orion-mode.locked { opacity: 0.85; }
+.orion-mode-head { display: flex; justify-content: space-between; gap: 6px; align-items: center; margin-bottom: 4px; }
+.orion-mode-lock { margin-top: 6px; color: #e6c45c; }
+.orion-byo { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid rgba(127, 200, 255, 0.2); border-radius: 8px; flex: none; }
+.orion-byo-grid { display: grid; grid-template-columns: 1fr 2fr 1fr 1.5fr; gap: 8px; }
+.orion-byo-grid label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.orion-check { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.orion-viewer { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; }
+.orion-viewer-box { max-width: 92vw; max-height: 90vh; display: flex; flex-direction: column; gap: 8px; align-items: center; background: rgba(10, 16, 24, 0.95); padding: 12px; border-radius: 8px; overflow: hidden; }
+.orion-viewer-img { max-width: 88vw; max-height: 78vh; object-fit: contain; }
+.orion-viewer-text { max-width: 80vw; max-height: 70vh; overflow: hidden; white-space: pre-wrap; user-select: text; font-size: 14px; line-height: 1.45; }
