@@ -26,6 +26,7 @@ import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from ".
 import PathCrumbs from "./shell/PathCrumbs";
 import CompartmentHeader from "./shell/CompartmentHeader";
 import { useUiVariant } from "./shell/uiVariant";
+import { WALLPAPER_DIM, wallpaperUrl } from "./shell/altWallpaper";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
 import OrionCallButton from "./guide/OrionCallButton";
@@ -314,6 +315,7 @@ export default function App() {
   ];
 
   const activeZone = zoneOf(tab);
+  const wallUrl = alt ? wallpaperUrl(skin.id, activeZone) : null;
 
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
@@ -330,6 +332,16 @@ export default function App() {
           />
         </div>
       )}
+
+      {wallUrl ? (
+        <div
+          className="alt-wallpaper"
+          data-testid="alt-wallpaper"
+          data-zone={activeZone}
+          aria-hidden
+          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,${WALLPAPER_DIM}), rgba(0,0,0,${WALLPAPER_DIM})), url(${wallUrl})` }}
+        />
+      ) : null}
 
       <UpdateBanner
         onOpenSettings={() => {

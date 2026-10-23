@@ -133,3 +133,9 @@
 - Общий вариант `st_ui_variant` больше не перезаписывается выбором вошедшего пилота: пишется только ключ пилота; общий меняет лишь гость (без пилота). Тест `uiVariantPilot.test.ts`.
 - Звёздные карты в alt (порт 5897486): сетка по окну, `english/starGrid.ts` — колонки `clamp(floor((w+6)/156), 2, 6)`, ряды по высоте, страница = cols×rows; при смене размера сохраняется первая карточка (`remapPage`), устаревшие ответы API отбрасываются. Classic — 6×4 как было. `wheel_router` не переносим (правило без прокрутки).
 - Замер (`e2e/alt-starmaps.spec.ts`): 1366×768 — 6×4 (24), 1920×1080 — 6×6 (36); прокрутки нет ни у сетки, ни у страницы; spaceship и steampunk.
+
+### Обои отсеков в alt (порт alt_wallpapers) — 2026-10-23
+- `public/alt_wallpapers/{starship,steampunk}/<zone>.jpg` (7 основных файлов на профиль, ~3.3 МБ) + `ATTRIBUTION.md` (CC BY / BY-SA — атрибуция обязательна).
+- `shell/altWallpaper.ts`: скин → профиль (spaceship→starship, steampunk), зона → файл (speed→speedread); прочие скины — свой фон (как `generic` десктопа). Затемнение 0.35 (`alt_wallpaper_dim`). Слайд-шоу `_N` не портировано.
+- Слой `.alt-wallpaper` в App (fixed, z 0, pointer-events none); SW `st-shell-v65`.
+- Тесты: vitest altWallpaper; e2e `alt-wallpaper.spec.ts` 2 скина × 1366/1920 — 4/4, без прокрутки.

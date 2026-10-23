@@ -8883,3 +8883,14 @@ html[data-ui-variant="alt"] .en-sm-grid-fit .en-sm-tile {
   min-height: 0;
   min-width: 0;
 }
+
+/* Обои отсека в alt (порт alt_wallpapers): фон под всей кабиной, затемнение 0.35. */
+.alt-wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  transition: background-image 0.25s ease;
+}
