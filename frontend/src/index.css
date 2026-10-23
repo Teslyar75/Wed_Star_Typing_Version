@@ -8873,3 +8873,24 @@ html {
 }
 .settings-upd-hint { margin: 0 0 0.75rem; font-size: 0.8rem; }
 .upd-status-new { color: var(--amber, #f5b942); }
+
+/* Звёздные карты в alt: сетка по окну (порт 5897486), без прокрутки — страница = cols×rows. */
+html[data-ui-variant="alt"] .en-sm-grid.en-sm-grid-fit {
+  overflow: hidden;
+  gap: 6px;
+}
+html[data-ui-variant="alt"] .en-sm-grid-fit .en-sm-tile {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Обои отсека в alt (порт alt_wallpapers): фон под всей кабиной, затемнение 0.35. */
+.alt-wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  transition: background-image 0.25s ease;
+}

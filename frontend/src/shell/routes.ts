@@ -15,6 +15,7 @@ const ZONE_SEG: Record<ZoneId, PathSeg> = {
   speed: { slug: "speed", labelKey: "speed", tab: "speed" },
   lounge: { slug: "lounge", labelKey: "lounge", tab: "lounge" },
   radio: { slug: "radio", labelKey: "radio", tab: "radio" },
+  orion: { slug: "orion", labelKey: "orion_zone", tab: "orion" },
   settings: { slug: "settings", labelKey: "settings", tab: "settings" },
 };
 
@@ -69,6 +70,8 @@ export const SR_MODALS = ["gutenberg", "bilingual", "pdf", "paste", "rename"] as
 export const LOUNGE_PAGES = ["lobby", "tetris", "snake", "breakout"] as const;
 
 export const RADIO_PAGES = ["air", "rx"] as const;
+
+export const ORION_PAGES = ["chat", "tasks", "archive", "settings"] as const;
 
 export const SETTINGS_PAGES = ["cabin", "cabinMore", "skins", "crew"] as const;
 

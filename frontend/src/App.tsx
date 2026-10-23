@@ -24,6 +24,10 @@ import {
 } from "./shell/keyboardNav";
 import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
+import CompartmentHeader from "./shell/CompartmentHeader";
+import { useUiVariant } from "./shell/uiVariant";
+import { ot } from "./orion/orionI18n";
+import { WALLPAPER_DIM, wallpaperUrl } from "./shell/altWallpaper";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
 import OrionCallButton from "./guide/OrionCallButton";
@@ -51,6 +55,7 @@ const FlightLogPanel = lazy(() => import("./flightlog/FlightLogPanel"));
 const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
+const OrionPanel = lazy(() => import("./orion/OrionPanel"));
 
 function TabFallback() {
   return <p className="muted">…</p>;
@@ -82,6 +87,8 @@ export default function App() {
   const [crewOpen, setCrewOpen] = useState(false);
   const [, bump] = useState(0);
   const skin = useSkin((s) => s.skin);
+  const uiVariant = useUiVariant((s) => s.variant);
+  const alt = uiVariant === "alt";
   const skinGen = useSkin((s) => s.gen);
   const starsOn = useCabin((s) => s.stars);
   /** Окно, которое было открыто до текущего — Backspace возвращает сюда. */
@@ -158,6 +165,8 @@ export default function App() {
 
   // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
   const pilotName = pilot?.callsign;
+  const bindPilot = useUiVariant((s) => s.bindPilot);
+  useEffect(() => bindPilot(pilotName ?? null), [pilotName, bindPilot]);
   const pilotRankRef = useRef<string | undefined>(undefined);
   pilotRankRef.current = pilot?.rank;
   useEffect(() => {
@@ -297,6 +306,7 @@ export default function App() {
     { id: "speed", label: t("speed") },
     { id: "lounge", label: t("lounge") },
     { id: "radio", label: t("radio") },
+    { id: "orion", label: ot("zone") },
     { id: "settings", label: t("settings") },
   ];
 
@@ -308,6 +318,7 @@ export default function App() {
   ];
 
   const activeZone = zoneOf(tab);
+  const wallUrl = alt ? wallpaperUrl(skin.id, activeZone) : null;
 
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
@@ -324,6 +335,16 @@ export default function App() {
           />
         </div>
       )}
+
+      {wallUrl ? (
+        <div
+          className="alt-wallpaper"
+          data-testid="alt-wallpaper"
+          data-zone={activeZone}
+          aria-hidden
+          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,${WALLPAPER_DIM}), rgba(0,0,0,${WALLPAPER_DIM})), url(${wallUrl})` }}
+        />
+      ) : null}
 
       <UpdateBanner
         onOpenSettings={() => {
@@ -410,8 +431,8 @@ export default function App() {
         </div>
       </header>
       {!fullscreen ? (
-        <div className="chrome-under-bar">
-          <PathCrumbs tab={tab} onJump={setTab} />
+        <div className={`chrome-under-bar ${alt ? "alt" : ""}`}>
+          {alt ? <CompartmentHeader tab={tab} onJump={setTab} /> : <PathCrumbs tab={tab} onJump={setTab} />}
           <div className="chrome-under-actions" data-nav-group="chrome-actions">
             <OrionCallButton />
             <SlideshowButton />
@@ -421,7 +442,7 @@ export default function App() {
       ) : null}
       <RadioAudioHost />
 
-      {isBridgeZone(tab) ? (
+      {isBridgeZone(tab) && !alt ? (
         <nav
           className="zone-subnav bridge-subnav"
           data-nav-group="bridge-sub"
@@ -450,7 +471,7 @@ export default function App() {
       >
         {fullscreen ? (
           <div className="chrome-under-bar stage-fs-bar">
-            <PathCrumbs tab={tab} onJump={setTab} />
+            {alt ? <CompartmentHeader tab={tab} onJump={setTab} /> : <PathCrumbs tab={tab} onJump={setTab} />}
             <div className="chrome-under-actions" data-nav-group="chrome-actions">
               <OrionCallButton />
               <SlideshowButton />
@@ -482,6 +503,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "radio"}>
           <RadioPanel />
+        </LazyTab>
+        <LazyTab when={tab === "orion"}>
+          <OrionPanel />
         </LazyTab>
         <LazyTab when={tab === "settings"}>
           <SettingsHub
