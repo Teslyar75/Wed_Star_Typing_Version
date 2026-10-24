@@ -7,6 +7,7 @@ import ZoneSettingsShell from "../shell/ZoneSettingsShell";
 import SpeedOverview, { type SrBook, type SrSession, type SrTrainer } from "./SpeedOverview";
 import HyperdriveView from "./HyperdriveView";
 import BookReaderView from "./BookReaderView";
+import { sendTextToBridge } from "../library/sendToBridge";
 import TableExView from "./TableExView";
 import PyramidExView from "./PyramidExView";
 import FlashExView from "./FlashExView";
@@ -514,6 +515,16 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
               onTheme={(th) => patchPrefs({ bookTheme: th })}
               onLibrary={() => setPage("library")}
               onHyperdrive={() => void openHyperdrive()}
+              onBridge={
+                textId == null
+                  ? undefined
+                  : () => {
+                      void sendTextToBridge({ textId, title: book.title, lang: book.lang }).then((err) => {
+                        if (err) window.alert(err);
+                        else onOpenBridge?.();
+                      });
+                    }
+              }
               onCards={
                 textId == null
                   ? undefined

@@ -36,6 +36,9 @@ export type EnWord = {
   wh_goal?: number;
   wh_stars?: number;
   wh_avg?: number;
+  sounds_like?: string[];
+  wh_current?: Record<string, number>;
+  wh_sel?: boolean[];
 };
 
 export type EnProgress = {

@@ -356,7 +356,7 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
         c = existing.get(wid)
         if c is None:
             c = CardProgress(pilot_id=pilot.id, word_id=wid, ease=2.5, interval=0, reps=0, due=date.today(),
-                             bin="inbox", english_xp=0, known=0, my_tr="", wh_state="", wh_runs=0, wh_goal=2,
+                             bin="inbox", english_xp=0, known=0, my_tr="", wh_state="", wh_runs=0, wh_goal=2, wh_run="",
                              wh_stars=0, wh_avg=0.0)
             db.add(c)
             existing[wid] = c

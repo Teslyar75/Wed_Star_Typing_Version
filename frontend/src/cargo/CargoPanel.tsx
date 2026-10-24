@@ -113,25 +113,15 @@ export default function CargoPanel({ onOpenBridge }: Props) {
 
   const onFile = async (file: File | null) => {
     if (!file) return;
-    const name = file.name.toLowerCase();
-    if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".text") || name.endsWith(".csv")) {
-      const text = await file.text();
-      setOriginal(text);
-      setRaw(text);
-      return;
-    }
+    /* txt/html/epub/fb2/pdf → бэкенд: кодировка utf-8/cp1251, шапка Gutenberg, html→текст, PDF-чистка */
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("title", file.name);
-    fd.append("lang", "en");
-    const r = await fetch("/api/texts/upload", { method: "POST", body: fd, credentials: "include" });
+    const r = await fetch("/api/texts/extract", { method: "POST", body: fd, credentials: "include" });
     if (!r.ok) {
       setStatus(await r.text());
       return;
     }
-    const doc = await r.json();
-    const segs: { original: string }[] = await (await fetch(`/api/texts/${doc.id}/segments?limit=5000`)).json();
-    const text = segs.map((s) => s.original).join(" ");
+    const { text } = (await r.json()) as { text: string };
     setOriginal(text);
     setRaw(text);
   };
@@ -197,7 +187,7 @@ export default function CargoPanel({ onOpenBridge }: Props) {
         <input
           ref={fileRef}
           type="file"
-          accept=".txt,.md,.text,.pdf,.epub,text/plain"
+          accept=".txt,.md,.text,.pdf,.epub,.fb2,.html,.htm,text/plain"
           hidden
           onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
         />
