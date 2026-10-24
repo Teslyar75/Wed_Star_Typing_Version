@@ -3,13 +3,17 @@
  *  — ПЕРЕДАЧА / СЛУШАЮ (+ СТОП) / РАСПОЗНАЮ;
  *  — LevelMeter 20 сегментов;
  *  — мин. 2 с, потом стоп по паузе или кнопкой СТОП;
- *  — распознавание: серверный Vosk (Python) → плашка %;
- *  — самооценка только если ASR недоступен.
+ *  — распознавание: серверный Vosk (Python) → если недоступен, Vosk/Web Speech в браузере;
+ *  — оценка только автоматическая (сравнение распознанного с текстом), без самооценки.
  */
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import MatchReadout from "./MatchReadout";
+import { asrAvailable, listenOnce } from "./asr";
 import { listenOnceServer, serverAsrAvailable } from "./serverAsr";
+import { scoreSentence, scoreWord } from "./textutil";
+
+type Engine = "server" | "browser" | "none" | "checking";
 
 export type MatchInfo = {
   score: number | null;
@@ -26,10 +30,13 @@ type Props = {
   expected: string;
   targetWord?: string;
   enabled?: boolean;
-  selfScoreFallback?: boolean;
+  /** "word" — оценка слова (score_word + sounds_like), "sentence" — score_sentence */
+  mode?: "sentence" | "word";
+  wordId?: number;
+  soundsLike?: string[];
   hideMatch?: boolean;
   onDuck?: (on: boolean) => void;
-  onResult?: (score: number, transcript: string) => void;
+  onResult?: (score: number, transcript: string, alternatives: string[]) => void;
   onMatch?: (info: MatchInfo) => void;
   onListening?: (on: boolean) => void;
 };
@@ -59,7 +66,9 @@ export default function MicTransmit({
   expected,
   targetWord,
   enabled = true,
-  selfScoreFallback = true,
+  mode = "sentence",
+  wordId,
+  soundsLike,
   hideMatch = false,
   onDuck,
   onResult,
@@ -78,14 +87,21 @@ export default function MicTransmit({
   const [counted, setCounted] = useState<number | undefined>();
   const [total, setTotal] = useState<number | undefined>();
   const [err, setErr] = useState("");
-  const [asrOk, setAsrOk] = useState(true);
+  const [engine, setEngine] = useState<Engine>("checking");
+  const asrOk = engine === "server" || engine === "browser";
   const stopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let dead = false;
     void (async () => {
       const a = await serverAsrAvailable();
-      if (!dead) setAsrOk(a.ok);
+      if (dead) return;
+      if (a.ok) {
+        setEngine("server");
+        return;
+      }
+      const b = await asrAvailable().catch(() => ({ ok: false }));
+      if (!dead) setEngine(b.ok ? "browser" : "none");
     })();
     return () => {
       dead = true;
@@ -128,13 +144,13 @@ export default function MicTransmit({
     onDuck?.(true);
 
     try {
-      const res = await listenOnceServer({
+      const opts = {
         expected,
         targetWord,
         maxMs: 15000,
         waitStartMs: 2000,
         silenceMs: 1200,
-        onReadyStop: (stop) => {
+        onReadyStop: (stop: () => void) => {
           stopRef.current = stop;
         },
         onStarted: () => {
@@ -149,7 +165,7 @@ export default function MicTransmit({
           setLiveHint(t("en_scoring"));
           stopRef.current = null;
         },
-        onInterim: (text) => {
+        onInterim: (text: string) => {
           setHeard(text);
           setLiveHint(`«${text}»`);
           setLedHot(true);
@@ -161,14 +177,32 @@ export default function MicTransmit({
             listening: true,
           });
         },
-        onLevel: (rms) => {
+        onLevel: (rms: number) => {
           setLevelFrac((prev) => Math.max(rmsToFrac(rms), prev * 0.55));
           if (rms >= 0.004) setLedHot(true);
         },
-        onSounding: (on) => {
+        onSounding: (on: boolean) => {
           if (on) setLedHot(true);
         },
-      });
+      };
+      let res: { transcript: string; alternatives: string[]; score: number; marks: [string, boolean][]; error?: string };
+      if (engine === "server") {
+        res = await listenOnceServer({ ...opts, mode, wordId });
+      } else {
+        // браузерный движок → та же автоматическая оценка, что на десктопе
+        const r = await listenOnce(opts);
+        const alts = (r.alternatives?.length ? r.alternatives : [r.transcript]).filter((a) => a && a.trim());
+        if (mode === "word") {
+          res = { ...r, alternatives: alts, score: alts.length ? scoreWord(expected, alts, soundsLike) : 0, marks: [] };
+        } else {
+          let best = { score: -1, marks: [] as [string, boolean][], heard: "" };
+          for (const a of alts) {
+            const sc = scoreSentence(expected, a, targetWord);
+            if (sc.score > best.score) best = { ...sc, heard: a };
+          }
+          res = { ...r, alternatives: alts, transcript: best.heard || r.transcript, score: Math.max(0, best.score), marks: best.marks };
+        }
+      }
 
       setListening(false);
       setLedHot(false);
@@ -184,7 +218,7 @@ export default function MicTransmit({
       }
 
       if (res.error === "no-asr") {
-        setAsrOk(false);
+        setEngine("none");
         setErr(t("en_mic_no_asr"));
         setLiveHint("");
         publish({ score: null, heard: "", selfScore: false, missed: [], error: "no-asr" });
@@ -211,7 +245,7 @@ export default function MicTransmit({
           listening: false,
           error: res.error || "empty",
         });
-        onResult?.(0, "");
+        onResult?.(0, "", []);
         return;
       }
 
@@ -227,7 +261,7 @@ export default function MicTransmit({
         total: marks.length,
         listening: false,
       });
-      onResult?.(res.score, res.transcript);
+      onResult?.(res.score, res.transcript, res.alternatives || []);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "asr-error");
       setLiveHint("");
@@ -243,15 +277,6 @@ export default function MicTransmit({
     }
   };
 
-  const selfRate = (s: number) => {
-    setErr("");
-    setLiveHint("");
-    publish({ score: s, heard: "", selfScore: true, missed: [] });
-    onResult?.(s, "");
-  };
-
-  const busy = listening || processing;
-  const showSelf = selfScoreFallback && !asrOk;
 
   return (
     <div className="en-mic-block">
@@ -286,23 +311,10 @@ export default function MicTransmit({
           <LevelMeter frac={listening ? Math.max(levelFrac, 0.08) : 0} live={listening} />
           {liveHint ? <p className="muted en-mic-live">{liveHint}</p> : null}
         </>
-      ) : showSelf ? (
-        <div className="en-mic-self">
-          <p className="muted en-mic-live">{t("en_self_prompt")}</p>
-          <div className="bridge-actions en-mic-self-btns">
-            <button type="button" className="hud-btn ok" disabled={busy} onClick={() => selfRate(90)}>
-              {t("en_self_good")}
-            </button>
-            <button type="button" className="hud-btn amber" disabled={busy} onClick={() => selfRate(60)}>
-              {t("en_self_mid")}
-            </button>
-            <button type="button" className="hud-btn danger" disabled={busy} onClick={() => selfRate(20)}>
-              {t("en_self_bad")}
-            </button>
-          </div>
-        </div>
       ) : (
-        <p className="muted en-mic-err">{t("en_mic_no_asr")}</p>
+        <p className="muted en-mic-err" data-testid="mic-no-asr">
+          {engine === "checking" ? t("en_scoring") : t("en_mic_no_asr")}
+        </p>
       )}
       {err && asrOk ? <p className="muted en-mic-err">{err}</p> : null}
       {!hideMatch && !listening && !processing && score != null && (

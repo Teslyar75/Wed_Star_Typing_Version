@@ -1,9 +1,35 @@
 /** СКЛАД КАРТОЧЕК — RU → EN вслух (WAREHOUSE_CARDS.md). */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import MicTransmit from "./MicTransmit";
 import SpeakButton from "./SpeakButton";
+import { verdict } from "./textutil";
 import type { EnWord } from "./types";
+
+/** Константы warehouse.py десктопа. */
+export const FLIP_OK = 80;
+export const PASS_QUALITY = 85;
+export const MAX_DIFF = 3;
+export const PASS_CHOICES = [1, 2, 3, 5] as const;
+export const WORD_KEY = -1;
+
+type Tone = "" | "green" | "amber" | "red" | "cyan";
+type AttemptOut = {
+  score: number;
+  ok: boolean;
+  need: number;
+  xp: number;
+  next_key: number;
+  scores: Record<string, number>;
+  runs: number;
+  goal: number;
+  result?: { status: string; avg?: number; stars?: number; done?: number; goal?: number };
+};
+
+const stars = (n: number) => {
+  const k = Math.max(0, Math.min(3, n));
+  return "★".repeat(k) + "☆".repeat(3 - k);
+};
 
 type State = "shelf" | "away" | "done";
 
@@ -18,12 +44,17 @@ export default function WarehousePage({ onDuck, ttsRate = 1, defaultGoal = 2, on
   const [state, setState] = useState<State>("shelf");
   const [cards, setCards] = useState<EnWord[]>([]);
   const [open, setOpen] = useState<EnWord | null>(null);
-  const [hint, setHint] = useState(false);
-  const [sel, setSel] = useState(0); // 0 = word, 1.. = sentence idx
-  const [checked, setChecked] = useState<boolean[]>([true]);
-  const [scores, setScores] = useState<number[]>([]);
+  /** удерживаемая подсказка: ключ строки или null (как self._holding на десктопе) */
+  const [holding, setHolding] = useState<number | null>(null);
+  const [active, setActive] = useState<number>(WORD_KEY);
+  const [sel, setSel] = useState<boolean[]>([]);
+  const [scores, setScores] = useState<Record<number, number>>({});
   const [goal, setGoal] = useState(defaultGoal);
   const [msg, setMsg] = useState("");
+  const [msgTone, setMsgTone] = useState<Tone>("");
+  const [fb, setFb] = useState<{ text: string; tone: Tone } | null>(null);
+  const holdingRef = useRef<number | null>(null);
+  holdingRef.current = holding;
 
   const reload = useCallback(async () => {
     const r = await fetch(`/api/english/warehouse/cards?state=${state}`, { credentials: "include" });
@@ -36,79 +67,127 @@ export default function WarehousePage({ onDuck, ttsRate = 1, defaultGoal = 2, on
     void reload();
   }, [reload]);
 
+  const sentsOf = (c: EnWord) => (c.sentences || []).slice(0, MAX_DIFF);
+
   const openCard = (c: EnWord) => {
-    const n = Math.max(1, (c.sentences || []).length);
-    setChecked(Array.from({ length: n }, (_, i) => i === 0 || true).map((_, i) => i < Math.min(n, 3)));
-    setScores([]);
-    setSel(0);
-    setHint(false);
+    const n = sentsOf(c).length;
+    const sv = c.wh_sel && c.wh_sel.length === n ? c.wh_sel : Array.from({ length: n }, () => true);
+    const cur: Record<number, number> = {};
+    for (const [k, v] of Object.entries(c.wh_current || {})) cur[Number(k)] = Number(v) || 0;
+    setSel(sv);
+    setScores(cur);
+    setActive(WORD_KEY);
+    setHolding(null);
+    setFb(null);
     setGoal(c.wh_goal || defaultGoal);
     setOpen(c);
   };
 
-  const move = async (wordId: number, st: State) => {
-    await fetch("/api/english/warehouse/move", {
+  const post = async (url: string, body: unknown) => {
+    const r = await fetch(url, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word_id: wordId, state: st }),
+      body: JSON.stringify(body),
     });
+    return r.json();
+  };
+
+  const move = async (wordId: number, st: State) => {
+    await post("/api/english/warehouse/move", { word_id: wordId, state: st });
     void reload();
   };
 
-  const expectedEn = (): string => {
+  const expectedFor = (key: number): string => {
     if (!open) return "";
-    if (sel === 0) return open.word;
-    const s = open.sentences?.[sel - 1];
-    return s?.en || open.word;
+    if (key === WORD_KEY) return open.word;
+    return sentsOf(open)[key]?.en || open.word;
   };
 
-  const displayRu = (): string => {
-    if (!open) return "";
-    if (hint) return expectedEn();
-    if (sel === 0) return open.translation || open.my_tr || "—";
-    const s = open.sentences?.[sel - 1];
-    return s?.ru || s?.en || "—";
-  };
-
-  const onScore = async (sc: number) => {
+  const toggleSel = async (idx: number, on: boolean) => {
     if (!open) return;
-    const next = [...scores];
-    next[sel] = sc;
-    setScores(next);
-    // если слово + отмеченные предложения закрыты ≥80%
-    const need = [0, ...checked.map((c, i) => (c ? i + 1 : -1)).filter((x) => x >= 0)];
-    const unique = [...new Set(need)];
-    const ready = unique.every((idx) => (next[idx] ?? 0) >= 80);
-    if (!ready) return;
-    const vals = unique.map((idx) => next[idx]!).filter((x) => x >= 80);
-    const avg = vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length);
-    const r = await fetch("/api/english/warehouse/run", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word_id: open.id, avg, goal }),
-    });
-    const j = (await r.json()) as { accepted?: boolean; done?: boolean; runs?: number; goal?: number; stars?: number };
-    if (!j.accepted) {
-      setMsg(t("en_wh_fail_avg"));
-      setScores([]);
+    const next = [...sel];
+    next[idx] = on;
+    if (!next.some(Boolean)) return; // хотя бы одно предложение остаётся отмеченным
+    setSel(next);
+    const j = (await post("/api/english/warehouse/select", { word_id: open.id, sel: next })) as { sel?: boolean[] };
+    if (j.sel) setSel(j.sel);
+  };
+
+  const changeGoal = async (n: number) => {
+    if (!open) return;
+    setGoal(n);
+    await post("/api/english/warehouse/goal", { word_id: open.id, goal: n });
+  };
+
+  /** Порт pages_warehouse.on_speech: балл считает программа, ≥80% — задание закрыто. */
+  const onSpeech = async (sc: number, alts: string[]) => {
+    if (!open || holdingRef.current !== null) return; // во время подсказки речь не засчитывается
+    if (!alts.length) return;
+    const key = active;
+    const j = (await post("/api/english/warehouse/attempt", { word_id: open.id, key, score: sc })) as AttemptOut;
+    const v = verdict(j.score);
+    setScores(Object.fromEntries(Object.entries(j.scores || {}).map(([k, x]) => [Number(k), Number(x)])));
+    if (!j.ok) {
+      setFb({ text: `Совпадение ${j.score}% · нужно ≥ ${j.need}%`, tone: v.tone });
       return;
     }
-    setMsg(
-      j.done
-        ? t("en_wh_done_auto").replace("{0}", "★".repeat(j.stars || 1))
-        : t("en_wh_run_ok").replace("{0}", String(j.runs)).replace("{1}", String(j.goal)),
-    );
-    if (j.done) void reload();
-    else {
-      setScores([]);
-      setOpen({ ...open, wh_runs: j.runs, wh_goal: j.goal, wh_stars: j.stars });
+    setFb(null);
+    const xp = j.xp ? `  +${j.xp} XP` : "";
+    const res = j.result || { status: "incomplete" };
+    setActive(j.next_key);
+    if (res.status === "weak") {
+      setMsg(`Прогон слабый (ср. ${res.avg}%) — нужно ≥ ${PASS_QUALITY}%. Повтори все задания.`);
+      setMsgTone("amber");
+    } else if (res.status === "pass") {
+      setMsg(`Прогон ${res.done}/${res.goal} засчитан · ${stars(res.stars || 0)} · ср. ${res.avg}%${xp}`);
+      setMsgTone("cyan");
+      setOpen({ ...open, wh_runs: j.runs, wh_goal: j.goal });
+    } else if (res.status === "cleared") {
+      setMsg(`Все прогоны готовы → ОТРАБОТАНО · ${stars(res.stars || 0)} · ср. ${res.avg}%${xp}`);
+      setMsgTone("green");
+      setState("done");
+      void reload();
+    } else {
+      setMsg(key === WORD_KEY ? `Слово: ${j.score}% · ${v.text}${xp}` : `Предложение ${key + 1}: ${j.score}% · ${v.text}${xp}`);
+      setMsgTone("green");
     }
   };
 
   if (open) {
-    const sents = open.sentences || [];
+    const sents = sentsOf(open);
+    const line = (key: number, ru: string, en: string) => {
+      const sc = scores[key];
+      const done = (sc ?? 0) >= FLIP_OK;
+      return (
+        <div className="en-wh-line-wrap">
+          <button
+            type="button"
+            className={`en-wh-line ${active === key ? "on" : ""}${done ? " ok" : ""}`}
+            onClick={() => setActive(key)}
+          >
+            <strong>{holding === key ? en : ru || "—"}</strong>
+            {sc != null && sc > 0 && (
+              <span className={`en-wh-score tone-${verdict(sc).tone}`}>
+                {done ? "✓ " : ""}
+                {sc}%
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            className="hud-btn en-wh-hint"
+            title={t("en_hint_hold")}
+            onPointerDown={() => setHolding(key)}
+            onPointerUp={() => setHolding(null)}
+            onPointerLeave={() => setHolding((h) => (h === key ? null : h))}
+            onPointerCancel={() => setHolding(null)}
+          >
+            {t("en_hint_hold")}
+          </button>
+        </div>
+      );
+    };
     return (
       <section className="en-wh-card">
         <div className="bridge-actions">
@@ -122,8 +201,8 @@ export default function WarehousePage({ onDuck, ttsRate = 1, defaultGoal = 2, on
           </span>
           <label>
             {t("en_wh_goal")}{" "}
-            <select value={goal} onChange={(e) => setGoal(Number(e.target.value))}>
-              {[1, 2, 3, 5].map((n) => (
+            <select value={goal} onChange={(e) => void changeGoal(Number(e.target.value))}>
+              {PASS_CHOICES.map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>
@@ -131,45 +210,38 @@ export default function WarehousePage({ onDuck, ttsRate = 1, defaultGoal = 2, on
             </select>
           </label>
         </div>
+        <p className="muted en-wh-rule">
+          Прогон: слово и отмеченные предложения ≥ {FLIP_OK}% · средняя ≥ {PASS_QUALITY}%
+        </p>
         <div className="inst-panel en-wh-face">
-          <button type="button" className={`en-wh-line ${sel === 0 ? "on" : ""}`} onClick={() => setSel(0)}>
-            <strong>{displayRu()}</strong>
-            {scores[0] != null && <span className="muted">{scores[0]}%</span>}
-          </button>
+          {line(WORD_KEY, open.translation || open.my_tr || "", open.word)}
           {sents.map((s, idx) => (
             <div key={idx} className="en-wh-sent-row">
               <input
                 type="checkbox"
-                checked={checked[idx] ?? false}
-                onChange={(e) => {
-                  const next = [...checked];
-                  next[idx] = e.target.checked;
-                  setChecked(next);
-                }}
+                checked={sel[idx] ?? false}
+                onChange={(e) => void toggleSel(idx, e.target.checked)}
               />
-              <button type="button" className={`en-wh-line ${sel === idx + 1 ? "on" : ""}`} onClick={() => setSel(idx + 1)}>
-                {hint && sel === idx + 1 ? s.en : s.ru || s.en}
-                {scores[idx + 1] != null && <span className="muted">{scores[idx + 1]}%</span>}
-              </button>
+              {line(idx, s.ru || s.en, s.en)}
             </div>
           ))}
         </div>
         <div className="bridge-actions">
-          <button
-            type="button"
-            className="hud-btn"
-            onMouseDown={() => setHint(true)}
-            onMouseUp={() => setHint(false)}
-            onMouseLeave={() => setHint(false)}
-            onTouchStart={() => setHint(true)}
-            onTouchEnd={() => setHint(false)}
-          >
-            {t("en_hint_hold")}
-          </button>
-          <SpeakButton text={expectedEn()} rate={ttsRate} onDuck={onDuck} label={t("en_speak_en")} />
+          <SpeakButton text={expectedFor(active)} rate={ttsRate} onDuck={onDuck} label={t("en_speak_en")} />
         </div>
-        <MicTransmit expected={expectedEn()} targetWord={open.word} onDuck={onDuck} onResult={(sc) => void onScore(sc)} />
-        {msg && <p className="muted">{msg}</p>}
+        <MicTransmit
+          key={`${open.id}:${active}`}
+          expected={expectedFor(active)}
+          targetWord={open.word}
+          mode={active === WORD_KEY ? "word" : "sentence"}
+          wordId={open.id}
+          soundsLike={open.sounds_like}
+          enabled={holding === null && (active === WORD_KEY || !!sel[active])}
+          onDuck={onDuck}
+          onResult={(sc, _tr, alts) => void onSpeech(sc, alts)}
+        />
+        {fb && <p className={`en-wh-fb tone-${fb.tone}`}>{fb.text}</p>}
+        {msg && <p className={`muted tone-${msgTone}`}>{msg}</p>}
       </section>
     );
   }

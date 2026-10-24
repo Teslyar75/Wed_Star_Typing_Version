@@ -8910,3 +8910,12 @@ html[data-ui-variant="alt"] .en-sm-grid-fit .en-sm-tile {
 .radio-minibar--floating {
   box-shadow: 0 0.3rem 1rem rgb(0 0 0 / 45%);
 }
+
+/* Склад: вердикт как textutil.verdict десктопа */
+.en-wh-score.tone-green, .en-wh-fb.tone-green, .muted.tone-green { color: #3ddc84; }
+.en-wh-score.tone-amber, .en-wh-fb.tone-amber, .muted.tone-amber { color: #ffb000; }
+.en-wh-score.tone-red, .en-wh-fb.tone-red, .muted.tone-red { color: #ff5c5c; }
+.muted.tone-cyan { color: #4fd1ff; }
+.en-wh-line-wrap { display: flex; gap: 0.4rem; align-items: center; flex: 1; }
+.en-wh-line.ok strong { opacity: 0.85; }
+.en-wh-score { margin-left: 0.5rem; font-variant-numeric: tabular-nums; }

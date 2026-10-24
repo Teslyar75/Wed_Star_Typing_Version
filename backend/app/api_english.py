@@ -62,6 +62,8 @@ class CardProgress(Base):
     wh_goal: Mapped[int] = mapped_column(Integer, default=2)
     wh_stars: Mapped[int] = mapped_column(Integer, default=0)
     wh_avg: Mapped[float] = mapped_column(Float, default=0.0)
+    # JSON прогона (порт warehouse.run_state десктопа): current/passes/sel/best/awards
+    wh_run: Mapped[str] = mapped_column(Text, default="")
 
 
 class EnglishList(Base):
@@ -175,6 +177,9 @@ class WordOut(BaseModel):
     wh_goal: int = 2
     wh_stars: int = 0
     wh_avg: float = 0.0
+    sounds_like: list[str] = []
+    wh_current: dict[str, int] = {}
+    wh_sel: list[bool] = []
 
     model_config = {"from_attributes": True}
 
@@ -187,6 +192,36 @@ def _parse_meta(raw: str | None) -> dict:
         return j if isinstance(j, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _wh_state(card: CardProgress | None) -> dict:
+    from app import english_warehouse as wh
+
+    return wh.load_state(card.wh_run if card is not None else "")
+
+
+def _wh_current(card: CardProgress | None) -> dict[int, int]:
+    from app import english_warehouse as wh
+
+    if card is None:
+        return {}
+    st = _wh_state(card)
+    cur = wh.current_scores(st)
+    if not cur and card.wh_state == "done" and isinstance(st.get("cleared"), dict):
+        # как load_scores: для отработанных — сохранённый результат
+        for k, v in (st["cleared"].get("scores") or {}).items():
+            try:
+                cur[int(k)] = int(v or 0)
+            except (TypeError, ValueError):
+                pass
+    return cur
+
+
+def _wh_sel(card: CardProgress | None) -> list[bool]:
+    if card is None:
+        return []
+    raw = _wh_state(card).get("sel")
+    return [bool(x) for x in raw] if isinstance(raw, list) else []
 
 
 def serialize_word(w: VocabWord, card: CardProgress | None = None) -> WordOut:
@@ -216,6 +251,9 @@ def serialize_word(w: VocabWord, card: CardProgress | None = None) -> WordOut:
         wh_goal=int(card.wh_goal if card else 2) or 2,
         wh_stars=int(card.wh_stars if card else 0),
         wh_avg=float(card.wh_avg if card else 0),
+        sounds_like=[str(x) for x in (m.get("sounds_like") or [])],
+        wh_current={str(k): v for k, v in _wh_current(card).items()},
+        wh_sel=_wh_sel(card),
     )
 
 
@@ -261,10 +299,20 @@ class WarehouseMoveIn(BaseModel):
     state: str = Field(pattern="^(shelf|away|done)$")
 
 
-class WarehouseRunIn(BaseModel):
+class WarehouseAttemptIn(BaseModel):
     word_id: int
-    avg: float = Field(ge=0, le=100)
-    goal: int | None = Field(default=None, ge=1, le=5)
+    key: int = Field(ge=-1, le=2)  # -1 = слово, 0..2 = предложение
+    score: int = Field(ge=0, le=100)
+
+
+class WarehouseSelectIn(BaseModel):
+    word_id: int
+    sel: list[bool]
+
+
+class WarehouseGoalIn(BaseModel):
+    word_id: int
+    goal: int
 
 
 class ListCreateIn(BaseModel):
@@ -870,6 +918,9 @@ async def english_asr(
     audio: UploadFile = File(...),
     expected: str = Form(...),
     target_word: str = Form(""),
+    mode: str = Form("sentence"),
+    word_id: int = Form(0),
+    db: Session = Depends(get_db),
 ) -> dict:
     """
     Браузер шлёт WAV 16-bit PCM; сервер гоняет Vosk + score_sentence (как десктоп).
@@ -892,7 +943,20 @@ async def english_asr(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=422, detail=f"recognize failed: {exc}") from exc
 
-    score, marks, heard = score_best(expected, alts, target_word.strip() or None)
+    if mode == "word":
+        # десктоп: проверка слова — score_word(word, alts, sounds_like), без разметки
+        from app.english_score import score_word
+
+        sounds: list[str] = []
+        if word_id:
+            vw = db.get(VocabWord, word_id)
+            if vw is not None:
+                sounds = [str(x) for x in (_parse_meta(vw.meta).get("sounds_like") or [])]
+        clean = [a for a in alts if a and a.strip()]
+        score = score_word(expected, clean, sounds) if clean else 0
+        marks, heard = [], (clean[0] if clean else "")
+    else:
+        score, marks, heard = score_best(expected, alts, target_word.strip() or None)
     return {
         "ok": True,
         "engine": "vosk-server",
@@ -1192,66 +1256,134 @@ def warehouse_move(
         raise HTTPException(404, "word not found")
     pid = pilot.id if pilot else 0
     card = _card(db, pid, body.word_id)
+    from app import english_warehouse as whm
+
     if body.state == "shelf":
+        # reopen_on_shelf: сброс прохождения
+        st = whm.load_state(card.wh_run)
+        whm.clear_run_progress(st)
+        card.wh_run = whm.dump_state(st)
         card.wh_state = "shelf"
         card.wh_runs = 0
         card.wh_stars = 0
         card.wh_avg = 0
         card.known = 1
     elif body.state == "away":
+        # return_to_work: снова «не знаю», к проверке сегодня
         card.wh_state = "away"
+        card.known = 0
+        card.due = date.today()
+        if not card.reps:
+            card.reps = 1
     else:
         card.wh_state = "done"
     db.commit()
     return {"ok": True, "state": card.wh_state}
 
 
-@router.post("/warehouse/run")
-def warehouse_run(
-    body: WarehouseRunIn,
+@router.post("/warehouse/attempt")
+def warehouse_attempt(
+    body: WarehouseAttemptIn,
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
-    """Засчитать прогон склада (ср. ≥ 85%). Авто → done при достижении goal."""
-    PASS_QUALITY = 85.0
+    """Попытка по слову (key=-1) или предложению (key=0..2) — порт pages_warehouse.on_speech.
+
+    Балл — автоматическая оценка распознанной речи (score_word / score_sentence).
+    Совпадение ≥ FLIP_OK (80%) — задание закрыто; прогон засчитывается сам (finish_pass).
+    """
+    from app import english_warehouse as whm
+    from app.english_score import verdict
+
     w = db.get(VocabWord, body.word_id)
     if w is None:
         raise HTTPException(404, "word not found")
     pid = pilot.id if pilot else 0
     card = _card(db, pid, body.word_id)
-    if body.goal:
-        card.wh_goal = body.goal
-    settings = _settings(db, pid)
-    goal = card.wh_goal or int(settings.get("warehouse_passes") or 2)
-    card.wh_goal = goal
-    if body.avg < PASS_QUALITY:
-        return {"ok": False, "accepted": False, "runs": card.wh_runs, "goal": goal, "avg": body.avg}
-    card.wh_runs = (card.wh_runs or 0) + 1
-    card.wh_avg = body.avg
-    # звёзды по точности
-    stars = 1 if body.avg >= 60 else 0
-    if body.avg >= 80:
-        stars = 2
-    if body.avg >= 95:
-        stars = 3
-    card.wh_stars = max(card.wh_stars or 0, stars)
-    card.english_xp = (card.english_xp or 0) + (5 if stars >= 2 else 2)
-    done = False
-    if card.wh_runs >= goal:
-        card.wh_state = "done"
-        done = True
-    elif not card.wh_state:
+    n = min(whm.MAX_DIFF, len(_parse_meta(w.meta).get("sentences") or []))
+    if body.key >= n:
+        raise HTTPException(400, "bad sentence index")
+    st = whm.load_state(card.wh_run)
+    sel = whm.selection(st, n)
+    if not card.wh_goal:
+        card.wh_goal = int(_settings(db, pid).get("warehouse_passes") or whm.DEFAULT_PASSES)
+    if card.wh_state in ("", "away") and card.known:
         card.wh_state = "shelf"
+    slug = (w.slug or w.word).lower()
+    scores = whm.current_scores(st)
+    score = int(body.score)
+    scores[body.key] = max(scores.get(body.key, 0), score)
+    ok = score >= whm.FLIP_OK
+    xp = 0
+    if True:  # десктоп пишет и слово (si=-1), и предложения
+        xp += whm.record_sentence(st, slug, body.key, score, ok=ok, today=date.today().isoformat())
+        db.add(SpeechAttempt(pilot_id=pid, word_id=body.word_id, mode="warehouse", score=score, ok=1 if ok else 0))
+    next_key = body.key
+    res: dict = {"status": "incomplete"}
+    if ok:
+        next_key = whm.next_active(scores, sel, body.key)
+        res = whm.finish_pass(card, st, slug, scores, sel, int(card.wh_goal or 2))
+        if res["status"] in ("weak", "pass", "cleared"):
+            scores = {}
+            if res["status"] != "cleared":
+                next_key = whm.WORD_KEY
+        xp += int(res.get("xp") or 0)
+    else:
+        whm.save_current(st, scores)
+    if xp:
+        card.english_xp = (card.english_xp or 0) + xp
+        if pilot is not None:
+            pilot.xp += xp
+    card.wh_run = whm.dump_state(st)
     db.commit()
+    label, color = verdict(score)
     return {
-        "ok": True,
-        "accepted": True,
-        "runs": card.wh_runs,
-        "goal": goal,
-        "stars": card.wh_stars,
-        "done": done,
-        "avg": body.avg,
+        "score": score, "ok": ok, "need": whm.FLIP_OK, "verdict": label, "color": color,
+        "xp": xp, "next_key": next_key, "scores": {str(k): v for k, v in scores.items()},
+        "sel": sel, "runs": card.wh_runs, "goal": int(card.wh_goal or 2), "state": card.wh_state,
+        "stars": int(card.wh_stars or 0), "avg": float(card.wh_avg or 0), **{"result": res},
     }
+
+
+@router.post("/warehouse/select")
+def warehouse_select(
+    body: WarehouseSelectIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Отметка предложений для прогона (хотя бы одно остаётся)."""
+    from app import english_warehouse as whm
+
+    w = db.get(VocabWord, body.word_id)
+    if w is None:
+        raise HTTPException(404, "word not found")
+    pid = pilot.id if pilot else 0
+    card = _card(db, pid, body.word_id)
+    n = min(whm.MAX_DIFF, len(_parse_meta(w.meta).get("sentences") or []))
+    st = whm.load_state(card.wh_run)
+    sel = (list(body.sel) + [False] * n)[:n]
+    sel = whm.set_selection(st, sel) if n else []
+    card.wh_run = whm.dump_state(st)
+    db.commit()
+    return {"sel": sel}
+
+
+@router.post("/warehouse/goal")
+def warehouse_goal(
+    body: WarehouseGoalIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """set_run_goal: число прогонов 1/2/3/5."""
+    from app import english_warehouse as whm
+
+    if body.goal not in whm.PASS_CHOICES:
+        raise HTTPException(400, "goal must be one of 1,2,3,5")
+    pid = pilot.id if pilot else 0
+    card = _card(db, pid, body.word_id)
+    card.wh_goal = max(1, min(5, body.goal))
+    db.commit()
+    return {"goal": card.wh_goal}
 
 
 @router.post("/missions/start")

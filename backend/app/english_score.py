@@ -196,3 +196,24 @@ def score_best(
         if sc > best_score:
             best_score, best_marks, best_heard = sc, marks, a
     return best_score, best_marks, best_heard
+
+
+def score_word(target: str, alternatives: list[str], sounds_like: list[str] | None = None) -> int:
+    """Порт десктопного textutil.score_word (десктоп): словоформа/sounds_like → 100, иначе лучшее сходство."""
+    forms = word_forms(target) | {s.lower() for s in (sounds_like or [])}
+    best = 0.0
+    for alt in alternatives:
+        for t in tokens(alt) or [""]:
+            if t in forms:
+                return 100
+            best = max(best, similarity(t, target.lower()))
+    return round(100 * best)
+
+
+def verdict(score: int) -> tuple[str, str]:
+    """Как десктоп textutil.verdict: (текст, ключ цвета)."""
+    if score >= 85:
+        return "ОТЛИЧНО", "green"
+    if score >= 60:
+        return "ХОРОШО", "amber"
+    return "ЕЩЁ РАЗ", "red"

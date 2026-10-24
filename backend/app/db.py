@@ -69,6 +69,7 @@ def _ensure_columns() -> None:
         ("card_progress", "wh_runs", "INTEGER DEFAULT 0"),
         ("card_progress", "wh_goal", "INTEGER DEFAULT 2"),
         ("card_progress", "wh_stars", "INTEGER DEFAULT 0"),
+        ("card_progress", "wh_run", "TEXT DEFAULT ''"),
         ("card_progress", "wh_avg", "DOUBLE PRECISION DEFAULT 0" if not _engine_url().startswith("sqlite") else "FLOAT DEFAULT 0"),
     ]
     url = _engine_url()
