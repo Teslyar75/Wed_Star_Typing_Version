@@ -14,6 +14,9 @@ export type ServerAsrResult = {
 };
 
 export type ServerListenOpts = {
+  /** "word" — сервер считает score_word (как десктоп для слова карточки) */
+  mode?: "sentence" | "word";
+  wordId?: number;
   expected: string;
   targetWord?: string;
   onInterim?: (text: string) => void;
@@ -233,6 +236,8 @@ export async function listenOnceServer(opts: ServerListenOpts): Promise<ServerAs
   fd.append("audio", wav, "utterance.wav");
   fd.append("expected", opts.expected);
   fd.append("target_word", opts.targetWord || "");
+  fd.append("mode", opts.mode || "sentence");
+  fd.append("word_id", String(opts.wordId || 0));
 
   try {
     const r = await fetch("/api/english/asr", {

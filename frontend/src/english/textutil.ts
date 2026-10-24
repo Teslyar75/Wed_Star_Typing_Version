@@ -5,7 +5,7 @@ const CONTRACTIONS: Record<string, string> = {
   "doesn't": "does not",
   "didn't": "did not",
   "can't": "can not",
-  cannot: "can not",
+  "cannot": "can not",
   "won't": "will not",
   "wouldn't": "would not",
   "shouldn't": "should not",
@@ -17,6 +17,7 @@ const CONTRACTIONS: Record<string, string> = {
   "haven't": "have not",
   "hasn't": "has not",
   "hadn't": "had not",
+  "mustn't": "must not",
   "i'm": "i am",
   "you're": "you are",
   "we're": "we are",
@@ -25,14 +26,27 @@ const CONTRACTIONS: Record<string, string> = {
   "she's": "she is",
   "it's": "it is",
   "that's": "that is",
+  "there's": "there is",
+  "what's": "what is",
+  "who's": "who is",
+  "let's": "let us",
   "i've": "i have",
   "you've": "you have",
   "we've": "we have",
   "they've": "they have",
   "i'll": "i will",
   "you'll": "you will",
+  "he'll": "he will",
+  "she'll": "she will",
   "we'll": "we will",
   "they'll": "they will",
+  "it'll": "it will",
+  "i'd": "i would",
+  "you'd": "you would",
+  "he'd": "he would",
+  "she'd": "she would",
+  "we'd": "we would",
+  "they'd": "they would"
 };
 
 const NUMBERS = [
@@ -94,6 +108,9 @@ export function similarity(a: string, b: string): number {
   return 1 - lev(a, b) / Math.max(a.length, b.length);
 }
 
+/** Неправильные формы — те же группы, что textutil.IRREGULAR на десктопе. */
+const IRREGULAR: Record<string, string[]> = {"be": ["am", "are", "be", "been", "being", "is", "was", "were"], "have": ["had", "has", "have", "having"], "do": ["did", "do", "does", "doing", "done"], "go": ["go", "goes", "going", "gone", "went"], "say": ["said", "say"], "make": ["made", "make"], "get": ["get", "got", "gotten"], "know": ["knew", "know", "known"], "think": ["think", "thought"], "take": ["take", "taken", "took"], "see": ["saw", "see", "seen"], "come": ["came", "come"], "give": ["gave", "give", "given"], "find": ["find", "found"], "tell": ["tell", "told"], "become": ["became", "become"], "leave": ["leave", "left"], "feel": ["feel", "felt"], "bring": ["bring", "brought"], "begin": ["began", "begin", "begun"], "keep": ["keep", "kept"], "hold": ["held", "hold"], "write": ["write", "written", "wrote"], "stand": ["stand", "stood"], "hear": ["hear", "heard"], "let": ["let"], "mean": ["mean", "meant"], "set": ["set"], "meet": ["meet", "met"], "run": ["ran", "run"], "pay": ["paid", "pay"], "sit": ["sat", "sit"], "speak": ["speak", "spoke", "spoken"], "lie": ["lain", "lay", "lie"], "lead": ["lead", "led"], "read": ["read"], "grow": ["grew", "grow", "grown"], "lose": ["lose", "lost"], "fall": ["fall", "fallen", "fell"], "send": ["send", "sent"], "build": ["build", "built"], "understand": ["understand", "understood"], "draw": ["draw", "drawn", "drew"], "break": ["break", "broke", "broken"], "spend": ["spend", "spent"], "cut": ["cut"], "rise": ["rise", "risen", "rose"], "drive": ["drive", "driven", "drove"], "buy": ["bought", "buy"], "wear": ["wear", "wore", "worn"], "choose": ["choose", "chose", "chosen"], "seek": ["seek", "sought"], "throw": ["threw", "throw", "thrown"], "catch": ["catch", "caught"], "deal": ["deal", "dealt"], "win": ["win", "won"], "forget": ["forget", "forgot", "forgotten"], "sell": ["sell", "sold"], "fight": ["fight", "fought"], "teach": ["taught", "teach"], "eat": ["ate", "eat", "eaten"], "sing": ["sang", "sing", "sung"], "drink": ["drank", "drink", "drunk"], "fly": ["flew", "flown", "fly"], "sleep": ["sleep", "slept"], "swim": ["swam", "swim", "swum"], "light": ["light", "lit"], "hit": ["hit"], "put": ["put"], "child": ["child", "children"], "man": ["man", "men"], "woman": ["woman", "women"], "person": ["people", "person"], "foot": ["feet", "foot"], "tooth": ["teeth", "tooth"], "mouse": ["mice", "mouse"], "good": ["best", "better", "good"], "bad": ["bad", "worse", "worst"]};
+
 export function wordForms(word: string): Set<string> {
   const w = word.toLowerCase();
   const forms = new Set([w, w + "s", w + "es", w + "ed", w + "d", w + "ing", w + "er", w + "ly"]);
@@ -102,6 +119,12 @@ export function wordForms(word: string): Set<string> {
     forms.add(w.slice(0, -1) + "ied");
   }
   if (w.endsWith("e")) forms.add(w.slice(0, -1) + "ing");
+  if (w.length >= 3 && !"aeiouwxy".includes(w[w.length - 1]!) && "aeiou".includes(w[w.length - 2]!) &&
+      !"aeiou".includes(w[w.length - 3]!)) {
+    forms.add(w + w[w.length - 1] + "ed");
+    forms.add(w + w[w.length - 1] + "ing");
+  }
+  for (const f of IRREGULAR[w] ?? []) forms.add(f);
   return forms;
 }
 
@@ -146,4 +169,28 @@ export function scoreSentence(
     if (hasTarget && !matched.some((ok, k) => ok && forms.has(exp[k]!))) score = Math.min(score, 59);
   }
   return { score, marks: exp.map((w, k) => [w, matched[k]!]) };
+}
+
+
+/** Порт textutil.score_word: словоформа или sounds_like → 100, иначе лучшее сходство. */
+export function scoreWord(target: string, alternatives: string[], soundsLike: string[] = []): number {
+  const tw = target.toLowerCase();
+  const forms = wordForms(tw);
+  for (const s of soundsLike) forms.add(s.toLowerCase());
+  let best = 0;
+  for (const alt of alternatives) {
+    const toks = tokens(alt);
+    for (const tk of toks.length ? toks : [""]) {
+      if (forms.has(tk)) return 100;
+      best = Math.max(best, similarity(tk, tw));
+    }
+  }
+  return Math.round(100 * best);
+}
+
+/** Порт textutil.verdict: ≥85 ОТЛИЧНО, ≥60 ХОРОШО, иначе ЕЩЁ РАЗ. */
+export function verdict(score: number): { text: string; tone: "green" | "amber" | "red" } {
+  if (score >= 85) return { text: "ОТЛИЧНО", tone: "green" };
+  if (score >= 60) return { text: "ХОРОШО", tone: "amber" };
+  return { text: "ЕЩЁ РАЗ", tone: "red" };
 }

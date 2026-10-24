@@ -70,7 +70,6 @@ export default function SettingsPage({ onChange }: Props) {
             [
               ["auto_speak", "en_auto_speak"],
               ["asr", "en_asr"],
-              ["self_score", "en_self_score_opt"],
             ] as const
           ).map(([key, lab]) => (
             <label key={key} className="en-set-row">
