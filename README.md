@@ -13,6 +13,23 @@
 
 ## Быстрый старт
 
+### Что нужно для запуска
+
+| | Требование |
+|---|---|
+| **Система** | Windows 10/11 (Docker Desktop + WSL2 и виртуализация в BIOS), Linux или macOS |
+| **Docker** | Docker Desktop 4.x или Docker Engine 24+ — обязательно **с Compose v2**: команда `docker compose` (через пробел). Старая `docker-compose` (v1) не подходит |
+| **Память** | от 4 ГБ свободной оперативной памяти: Postgres + API + сборка фронта |
+| **Диск** | ~5 ГБ свободно на первую сборку (образы ~1.5 ГБ + `node_modules`); после — ~2 ГБ |
+| **Порты** | **80** (и **443**, если нужен HTTPS) свободны. Занят — `start.sh` и `.bat` сами перейдут на **8080** (443 → 8443) |
+| **Интернет** | первый запуск: скачивание образов и пакетов, ~1.5 ГБ, обычно 5–10 минут |
+| **Браузер** | Chrome, Edge, Firefox или Safari последних версий (нужны PWA, Web Audio, Canvas) |
+| **Модель речи** | необязательна: Vosk-модель в `../models` (или `MODELS_DIR`). Без неё всё работает, кроме распознавания произношения в «Английском» |
+| **Не нужно** | Python, Node.js, npm, база данных — всё собирается и живёт внутри контейнеров |
+
+Проверка после запуска: `curl http://localhost/api/health` → `{"ok":true}` (на 8080 — тот же адрес с портом).
+Если что-то не так — таблица [«Если не запускается»](#если-не-запускается) ниже.
+
 ### Ярлык на рабочий стол (Windows + Docker)
 
 1. **Docker Desktop** установлен и может быть уже запущен (зелёный статус).
@@ -20,7 +37,8 @@
    Создать ярлык заново: `install-desktop-shortcut.bat`
 3. Скрипт: `start-star-typing-web.bat` (без полной пересборки при каждом старте). Пересборка: `start-star-typing-web.bat /rebuild`.
 
-Нужно: Docker Desktop; порт **80** свободен.
+Нужно: Docker Desktop с Compose v2; свободные 80/443 (иначе 8080/8443). Старые
+Docker без Compose v2 и занятые порты скрипт теперь распознаёт и объясняет, а не молчит.
 
 ### Обновления (GitHub Releases)
 
@@ -47,7 +65,13 @@ cd Wed_Star_Typing_Version
 контейнер) — поднимает на **http://localhost:8080**. Порт можно задать заранее:
 `WEB_PORT=8000 ./start.sh`.
 
+Нужен Docker Engine 24+ с Compose v2 (Ubuntu / Debian: `sudo apt install docker.io docker-compose-v2`)
+и право работать с Docker без sudo: `sudo usermod -aG docker $USER`, затем выйти и войти в систему.
+Первый запуск — 5–10 минут: скачиваются образы и собирается фронт.
+
 ### Docker вручную
+
+Нужен Compose v2: `docker compose version` должен отвечать (v1 `docker-compose` не подойдёт).
 
 ```bash
 git clone https://github.com/Teslyar75/Wed_Star_Typing_Version.git
@@ -72,6 +96,10 @@ export DOMAIN=star.example.com
 export ACME_EMAIL=you@example.com
 docker compose up --build -d
 ```
+
+Для публичного адреса нужно: домен с A-записью на этот сервер, открытые входящие **80 и 443**
+(80 обязателен — Caddy получает сертификат через него) и рабочий адрес почты в `ACME_EMAIL`.
+Локально ничего этого не требуется: `DOMAIN` по умолчанию `:80`, без TLS.
 
 ### Если не запускается
 
