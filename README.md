@@ -33,6 +33,20 @@ start-star-typing-web.bat /rebuild
 
 Релиз разработчику: bump `frontend/package.json` + `CHANGELOG.md`, затем `git tag v0.2.0 && git push origin v0.2.0` (Actions создаст Release).
 
+### Linux и macOS
+
+```bash
+git clone https://github.com/Teslyar75/Wed_Star_Typing_Version.git
+cd Wed_Star_Typing_Version
+./start.sh                 # соберёт и откроет http://localhost
+./start.sh --rebuild       # пересобрать после обновления
+./start.sh --stop          # остановить
+```
+
+Скрипт сам проверяет Docker и Compose v2, а если **порт 80 занят** (nginx, другой
+контейнер) — поднимает на **http://localhost:8080**. Порт можно задать заранее:
+`WEB_PORT=8000 ./start.sh`.
+
 ### Docker вручную
 
 ```bash
@@ -46,6 +60,11 @@ docker compose up --build
 | UI | http://localhost |
 | API | http://localhost/api/health → `{"ok":true}` |
 
+Порт занят — `WEB_PORT=8080 docker compose up -d`, сайт будет на `http://localhost:8080`.
+Модель распознавания речи ищется в `../models` (папка десктопного репозитория);
+другое место — `MODELS_DIR=/путь/к/models docker compose up -d`. Без модели всё
+работает, кроме распознавания произношения в «Английском».
+
 Прод с HTTPS (Let's Encrypt):
 
 ```bash
@@ -53,6 +72,20 @@ export DOMAIN=star.example.com
 export ACME_EMAIL=you@example.com
 docker compose up --build -d
 ```
+
+### Если не запускается
+
+| Что видно | Причина и что делать |
+| --- | --- |
+| `port is already allocated` / `address already in use` | порт 80 занят (IIS, nginx, XAMPP, другой контейнер). Запустите `./start.sh` — он сам уйдёт на 8080, или задайте `WEB_PORT=8080` |
+| `'compose' is not a docker command` | стоит Compose v1. Нужен v2: обновите Docker Desktop, на Ubuntu — `sudo apt install docker-compose-v2` |
+| `Docker did not become ready` | Docker не запущен или не поднялся: откройте Docker Desktop и дождитесь зелёного статуса (Windows: нужны WSL2 и виртуализация в BIOS) |
+| Сборка идёт очень долго | первый запуск скачивает ~1.5 ГБ образов и собирает фронт: 5–10 минут — это нормально |
+| Сайт открылся, но «Английский» без распознавания речи | нет модели Vosk: положите её в `../models` или укажите `MODELS_DIR` |
+| Порт 8080 тоже занят | `WEB_PORT=8000 ./start.sh` (любой свободный) |
+
+Старый ярлык на рабочем столе запускает Windows-скрипт `start-star-typing-web.bat`:
+он тоже проверяет Compose и сам переезжает на 8080.
 
 ### Разработка без Docker
 

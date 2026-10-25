@@ -27,8 +27,10 @@ services:
       SECRET_KEY_FILE: /secrets/jwt_secret
       VOSK_MODEL_DIR: /models/vosk-model-small-en-us-0.15
     volumes:
-      # та же модель, что у десктопа (репозиторий My_New_Stamina/models)
-      - ../models:/models:ro
+      # та же модель, что у десктопа (репозиторий My_New_Stamina/models).
+      # Клонировали только веб-версию — папки нет, распознавание речи просто выключено.
+      # Другое место:  MODELS_DIR=/путь/к/models ./start.sh
+      - "${MODELS_DIR:-../models}:/models:ro"
       - backend_secrets:/secrets
     depends_on:
       postgres:
@@ -77,8 +79,10 @@ services:
       DOMAIN: ${DOMAIN:-:80}
       ACME_EMAIL: ${ACME_EMAIL:-admin@localhost}
     ports:
-      - "80:80"
-      - "443:443"
+      # порт можно поменять:  WEB_PORT=8080 ./start.sh
+      # (сколько внутри — не важно: Caddy слушает 80 в контейнере)
+      - "${WEB_PORT:-80}:80"
+      - "${WEB_HTTPS_PORT:-443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - frontend_dist:/srv/frontend:ro

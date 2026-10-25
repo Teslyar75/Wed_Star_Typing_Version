@@ -1,0 +1,61 @@
+name: Docker
+
+# Проверка запуска веб-версии так, как это делает пользователь: чистый клон,
+# start.sh поднимает стек, сайт и API отвечают. Отдельно — занятый порт 80.
+on:
+  push:
+    branches: [master, main, agent/opencode/web-launch]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  launcher:
+    name: start.sh поднимает стек
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Запуск
+        run: ./start.sh --no-open
+
+      - name: Сайт и API отвечают
+        run: |
+          curl -fsS http://localhost/api/health
+          echo
+          curl -fsS -o /dev/null -w "главная: %{http_code}\n" http://localhost/
+          js=$(curl -fsS http://localhost/ | grep -o '/assets/[^"]*\.js' | head -1)
+          curl -fsS -o /dev/null -w "скрипт $js: %{http_code}\n" "http://localhost$js"
+
+      - name: Логи и остановка
+        if: always()
+        run: |
+          docker compose ps -a || true
+          docker compose logs --tail=40 || true
+          docker compose down -v || true
+
+  busy-port:
+    name: Порт 80 занят — переход на 8080
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Занять порт 80 посторонним сервером
+        run: |
+          sudo nohup python3 -m http.server 80 >/tmp/foreign.log 2>&1 &
+          sleep 2
+          curl -fsS -o /dev/null http://127.0.0.1/ && echo "порт 80 занят — как у пользователя с nginx/IIS"
+
+      - name: Запуск должен сам уйти на 8080
+        run: ./start.sh --no-open
+
+      - name: Сайт на 8080 отвечает
+        run: |
+          curl -fsS http://localhost:8080/api/health
+          echo
+          curl -fsS -o /dev/null -w "главная на 8080: %{http_code}\n" http://localhost:8080/
+
+      - name: Остановка
+        if: always()
+        run: |
+          docker compose down -v || true
+          sudo pkill -f "http.server 80" || true
