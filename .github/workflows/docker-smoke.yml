@@ -1,0 +1,58 @@
+name: Docker smoke
+
+# Проверка запуска веб-версии так, как это делает пользователь:
+# чистый клон → docker compose up --build → проверка сайта и API.
+on:
+  push:
+    branches: [agent/opencode/docker-smoke]
+  workflow_dispatch:
+
+jobs:
+  compose:
+    name: Чистый клон и docker compose up
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Что в системе
+        run: |
+          docker version --format '{{.Server.Version}}'
+          docker compose version
+          echo "рядом с репозиторием (../models):"
+          ls -la .. || true
+
+      - name: Запуск стека
+        run: |
+          set +e
+          docker compose up -d --build --wait --wait-timeout 300
+          echo "ИТОГ: код docker compose up = $?"
+          docker compose ps
+          exit 0
+
+      - name: Проверка сайта и API
+        run: |
+          set +e
+          echo "--- /api/health ---"
+          curl -sS -m 20 -w "\nкод HTTP: %{http_code}\n" http://localhost/api/health
+          echo "--- главная страница ---"
+          curl -sS -m 20 -o /tmp/index.html -w "код HTTP: %{http_code}, размер: %{size_download}\n" http://localhost/
+          head -c 400 /tmp/index.html; echo
+          echo "--- статика (js) ---"
+          js=$(grep -o '/assets/[^"]*\.js' /tmp/index.html | head -1)
+          echo "файл: $js"
+          curl -sS -m 20 -o /dev/null -w "код HTTP: %{http_code}, размер: %{size_download}\n" "http://localhost$js"
+          exit 0
+
+      - name: Логи контейнеров, если что-то не так
+        if: always()
+        run: |
+          for s in postgres backend frontend caddy; do
+            echo "===== $s ====="
+            docker compose logs --tail=60 "$s" 2>&1 || true
+          done
+          echo "===== состояние ====="
+          docker compose ps -a
+
+      - name: Остановка
+        if: always()
+        run: docker compose down -v || true
