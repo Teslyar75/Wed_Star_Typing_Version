@@ -1,0 +1,4 @@
+# Скрипты запуска должны быть с LF: с CRLF bash на Linux не понимает первую строку
+# (#!/usr/bin/env bash\r) и падает с «bad interpreter».
+*.sh text eol=lf
+*.bat text eol=crlf
