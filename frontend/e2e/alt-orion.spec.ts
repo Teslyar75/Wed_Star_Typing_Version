@@ -38,12 +38,12 @@ for (const skin of ["spaceship", "steampunk"]) {
       await expect(page.getByTestId("orion-msg").nth(1)).toBeVisible({ timeout: 15000 });
       await noScroll(page);
       await page.screenshot({ path: `${SHOTS}/orion-${skin}-${vp.width}-chat.png` });
-      for (const s of ["tasks", "archive", "settings"]) {
+      for (const s of ["agents", "archive"]) {
         await page.getByTestId("cmp-overview").click();
         await page.locator(`.cmp-menu [data-screen="${s}"]`).click();
         await expect(page.getByTestId(`orion-${s}`)).toBeVisible();
         await noScroll(page);
-        if (s === "settings") {
+        if (s === "agents") {
           await expect(page.getByTestId("orion-mode-guide")).toBeVisible();
           for (const m of ["hosted", "contributor"]) {
             const card = page.getByTestId(`orion-mode-${m}`);

@@ -32,6 +32,7 @@ import { WALLPAPER_DIM, wallpaperUrl } from "./shell/altWallpaper";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
 import OrionCallButton from "./guide/OrionCallButton";
+import MarksCapture from "./orion/MarksCapture";
 import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
 import { COMM_UNREAD_EVENT } from "./comm/commApi";
@@ -331,6 +332,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [goPrevWindow, setTab]);
 
+
   const switchLang = (code: string) => {
     setLang(code);
     setLangState(code);
@@ -363,6 +365,7 @@ export default function App() {
 
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
+      <MarksCapture tab={tab} />
       {starsOn && (
         <div
           className={`space-bg space-bg-${spaceProfile} skin-bg skin-bg-${bgEngineOf(skin)}`}
@@ -576,7 +579,7 @@ export default function App() {
         onFullHelp={() => setTab("settings")}
       />
       <IdleSlideshow />
-      <GuideDialog />
+            <GuideDialog />
       <GuideEvents />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />
 

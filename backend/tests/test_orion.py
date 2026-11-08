@@ -24,6 +24,9 @@ def _env(monkeypatch):
     monkeypatch.setattr(settings, "orion_admin_token", "adm-test-token")
     monkeypatch.setattr(settings, "orion_chat_rate_per_min", 1000)
     api_orion._hits.clear()
+    def _no_bridge(*_a, **_k):
+        raise api_orion.ProviderError("opencode_bridge_down")
+    monkeypatch.setattr(api_orion, "call_opencode", _no_bridge)
 
 
 ADM = {"X-Orion-Admin": "adm-test-token"}
@@ -127,3 +130,49 @@ def test_tasks_and_archive() -> None:
     c.post("/api/orion/chat", json={"text": "расскажи про скорочтение пожалуйста"})
     a = c.get("/api/orion/archive", params={"q": "скорочтение"}).json()["items"]
     assert a and a[0]["match"].lower() == "скорочтение"
+    recent = c.get("/api/orion/archive", params={"q": ""}).json()["items"]
+    assert recent and recent[0]["text"]
+    assert c.delete("/api/orion/messages").json()["ok"]
+    assert c.get("/api/orion/archive").json()["items"] == []
+
+
+def test_default_orion_passenger() -> None:
+    c, _ = _pilot()
+    r = c.get("/api/orion/agents").json()
+    assert r["active"] == "orion"
+    ids = [a["agent_id"] for a in r["items"]]
+    assert ids[0] == "orion"
+    orion = r["items"][0]
+    assert orion["name"] == "Орион"
+    assert orion["access"] == "commander"
+    assert orion["kind"] == "opencode"
+    assert orion["voice"] == "ship"
+    assert orion["note"]
+    assert c.delete("/api/orion/agents/orion").json()["disabled"] is True
+    still = c.get("/api/orion/agents").json()["items"]
+    assert any(a["agent_id"] == "orion" and a["enabled"] is False for a in still)
+
+
+def test_default_orion_model() -> None:
+    c, _ = _pilot()
+    orion = next(a for a in c.get("/api/orion/agents").json()["items"] if a["agent_id"] == "orion")
+    assert orion["model"] == "opencode/deepseek-v4.1-flash-free"
+    assert orion["kind"] == "opencode"
+
+
+def test_opencode_bridge_chat(monkeypatch) -> None:
+    c, _ = _pilot()
+    seen = {}
+
+    def fake(prompt, model, profile):
+        seen["model"] = model
+        seen["profile"] = profile
+        seen["prompt"] = prompt
+        return "ответ deepseek с борта"
+
+    monkeypatch.setattr("app.api_orion.call_opencode", fake)
+    r = c.post("/api/orion/chat", json={"text": "привет, кто ты?"}).json()
+    assert r["reply"] == "ответ deepseek с борта"
+    assert seen["model"] == "opencode/deepseek-v4.1-flash-free"
+    assert seen["profile"] == "orion-commander"
+    assert "привет" in seen["prompt"]

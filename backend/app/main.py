@@ -15,6 +15,7 @@ from app.api_migrate import router as migrate_router
 from app.api_import import router as import_router
 from app.api_missions import router as missions_router
 from app.api_orion import router as orion_router
+from app.api_updates import router as updates_router
 from app.api_docs import router as docs_router
 from app.api_comm import router as comm_router
 from app.api_pilots import router as pilots_router
@@ -45,6 +46,16 @@ async def lifespan(_app: FastAPI):
     from app.api_english import start_seed_worker
 
     start_seed_worker()
+    import threading
+
+    def _warm_english() -> None:
+        try:
+            from app import english_packs as packs
+            packs.warmup()
+        except Exception:
+            pass
+
+    threading.Thread(target=_warm_english, daemon=True, name="cefr-warmup").start()
     yield
 
 
@@ -79,6 +90,7 @@ app.include_router(slideshow_router)
 app.include_router(lounge_router)
 app.include_router(tts_router)
 app.include_router(orion_router)
+app.include_router(updates_router)
 app.include_router(docs_router)
 app.include_router(comm_router)
 app.include_router(portal_router)

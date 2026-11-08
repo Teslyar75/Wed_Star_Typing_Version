@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.auth_deps import get_current_pilot, get_optional_pilot
@@ -64,6 +64,27 @@ class OrionPref(Base):
     __tablename__ = "orion_prefs"
     pilot_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     mode: Mapped[str] = mapped_column(String(16), default="guide")
+    active_agent: Mapped[str] = mapped_column(String(40), default="")
+
+
+class OrionAgent(Base):
+    """Заселённый на борт агент пилота (десктоп: stamina/orion.py agents.json)."""
+    __tablename__ = "orion_agents"
+    __table_args__ = (UniqueConstraint("pilot_id", "agent_id", name="uq_orion_agent"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    pilot_id: Mapped[int] = mapped_column(Integer, index=True)
+    agent_id: Mapped[str] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(40), default="")
+    kind: Mapped[str] = mapped_column(String(24), default="openai_compat")
+    access: Mapped[str] = mapped_column(String(16), default="crew")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    provider: Mapped[str] = mapped_column(String(16), default="openai")
+    base_url: Mapped[str] = mapped_column(String(300), default="")
+    model: Mapped[str] = mapped_column(String(120), default="")
+    vision: Mapped[bool] = mapped_column(Boolean, default=False)
+    manners: Mapped[str] = mapped_column(Text, default="")
+    note: Mapped[str] = mapped_column(String(200), default="")
+    voice: Mapped[str] = mapped_column(String(16), default="ship")
 
 
 class OrionSetting(Base):
@@ -296,10 +317,28 @@ class ByoCfg(BaseModel):
     vision: bool = False
 
 
+
+def _prompt(body: ChatIn, boarded: OrionAgent | None) -> str:
+    """Манеры, архив и отметка корабля — как на десктопе, до реплики пилота."""
+    parts: list[str] = []
+    ctx = (body.context or "").strip()
+    if ctx:
+        parts.append(ctx if ctx.startswith("[") else "[КОРАБЛЬ] " + ctx)
+    if boarded is not None and (boarded.manners or "").strip():
+        parts.append("[МАНЕРЫ АГЕНТА]\n" + boarded.manners.strip()[:4000])
+    quotes = [q.strip() for q in (body.quotes or []) if str(q).strip()]
+    if quotes:
+        parts.append("ИЗ АРХИВА — прошлые сообщения борта:\n" + "\n".join(quotes[:12]))
+    parts.append((body.text or "").strip())
+    return "\n\n".join(p for p in parts if p)
+
 class ChatIn(BaseModel):
     text: str = Field(default="", max_length=8000)
     images: list[str] = Field(default_factory=list, max_length=3)
     byo: ByoCfg | None = None
+    agent_id: str = Field(default="", max_length=40)
+    quotes: list[str] = Field(default_factory=list, max_length=20)
+    context: str = Field(default="", max_length=2000)
 
 
 class ModeIn(BaseModel):
@@ -325,13 +364,54 @@ class ProposalIn(BaseModel):
     description: str = Field(default="", max_length=8000)
 
 
+
+def call_opencode(prompt: str, model: str, profile: str) -> str:
+    """Спросить OpenCode CLI на хосте через tools/opencode_bridge.py."""
+    base = (settings.orion_opencode_url or "http://host.docker.internal:8765").rstrip("/")
+    headers = {}
+    if settings.orion_opencode_token:
+        headers["X-Orion-OpenCode"] = settings.orion_opencode_token
+    try:
+        with httpx.Client(timeout=settings.orion_opencode_timeout) as client:
+            r = client.post(f"{base}/run", headers=headers, json={
+                "prompt": prompt, "model": model, "agent": profile,
+                "timeout": settings.orion_opencode_timeout,
+            })
+    except httpx.HTTPError as exc:
+        raise ProviderError("opencode_bridge_down") from exc
+    try:
+        data = r.json()
+    except ValueError as exc:
+        raise ProviderError("opencode_bad_reply") from exc
+    if r.status_code >= 400 or data.get("error"):
+        raise ProviderError(str(data.get("error") or f"opencode_http_{r.status_code}"))
+    reply = str(data.get("reply") or "").strip()
+    if not reply:
+        raise ProviderError("empty")
+    return reply
+
+
+def opencode_status() -> dict:
+    base = (settings.orion_opencode_url or "http://host.docker.internal:8765").rstrip("/")
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            r = client.get(f"{base}/health")
+        data = r.json() if r.status_code == 200 else {}
+        cli = str(data.get("cli") or "")
+        return {"available": bool(cli), "cli": cli, "model": data.get("model") or settings.orion_opencode_model,
+                "reason": "" if cli else "no_cli"}
+    except (httpx.HTTPError, ValueError):
+        return {"available": False, "cli": "", "model": settings.orion_opencode_model, "reason": "bridge_down"}
+
+
 # ---------- эндпоинты ----------
 @router.get("/config")
 def get_config(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> dict:
     return {"mode": current_mode(db, pilot), "modes": mode_status(db, pilot),
             "roles": sorted(roles_of(db, pilot)), "logged_in": pilot is not None,
             "pilot": pilot.callsign if pilot else "",
-            "byo_storage": "client", "max_images": 3, "max_image_bytes": 2_000_000}
+            "byo_storage": "client", "max_images": 3, "max_image_bytes": 2_000_000,
+            "opencode": opencode_status()}
 
 
 @router.put("/mode")
@@ -365,17 +445,46 @@ def chat(body: ChatIn, db: Session = Depends(get_db), pilot: Pilot | None = Depe
                 .order_by(OrionMessage.id.desc()).limit(10).all())
         history = [{"role": r.role, "text": r.text} for r in reversed(rows)]
     reply, used, reason = "", mode, ""
+    agent_tag = ""
+    boarded = None
+    if pilot:
+        _ensure_default_agent(db, pilot)
+        aid = (body.agent_id or "").strip()
+        if not aid and mode not in ("byo", "hosted", "contributor"):
+            aid = _pref(db, pilot).active_agent
+        if aid:
+            boarded = (db.query(OrionAgent)
+                       .filter(OrionAgent.pilot_id == pilot.id, OrionAgent.agent_id == aid,
+                               OrionAgent.enabled.is_(True))
+                       .first())
+    prompt = _prompt(body, boarded)
     try:
-        if mode == "byo":
+        if boarded is not None:
+            if boarded.kind == "opencode":
+                profile = OPENCODE_PROFILES.get(boarded.access or "crew", "orion-chat")
+                model = boarded.model or settings.orion_opencode_model or DEFAULT_AGENT["model"]
+                reply = call_opencode(prompt, model, profile)
+                used, agent_tag = "byo", boarded.name or boarded.agent_id
+            elif boarded.kind == "github_bridge":
+                raise ProviderError("github_bridge_later")
+            else:
+                key = x_orion_key or ""
+                if not (boarded.base_url and boarded.model and key):
+                    raise ProviderError("agent_not_configured")
+                reply = call_provider(boarded.provider or "openai", boarded.base_url, boarded.model,
+                                      key, history, prompt, body.images, bool(boarded.vision),
+                                      check_url=True)
+                used, agent_tag = "byo", boarded.name or boarded.agent_id
+        elif mode == "byo":
             cfg = body.byo
             if not (cfg and cfg.base_url and cfg.model and x_orion_key):
                 raise ProviderError("byo_not_configured")
             reply = call_provider(cfg.provider, cfg.base_url, cfg.model, x_orion_key, history,
-                                  body.text, body.images, cfg.vision, check_url=True)
+                                  prompt, body.images, cfg.vision, check_url=True)
         elif mode == "hosted":
             reply = call_provider(settings.orion_llm_provider, settings.orion_llm_base_url,
                                   settings.orion_llm_model, settings.orion_llm_api_key, history,
-                                  body.text, body.images, bool(settings.orion_llm_vision), check_url=False)
+                                  prompt, body.images, bool(settings.orion_llm_vision), check_url=False)
         elif mode == "contributor":
             reply = ("Режим «Участник разработки»: опиши изменение — я оформлю предложение (ветка/PR, "
                      "мерж только мейнтейнер). Экран «Предложения» в Настройках Ориона.")
@@ -384,12 +493,13 @@ def chat(body: ChatIn, db: Session = Depends(get_db), pilot: Pilot | None = Depe
     except ProviderError as e:
         reason, used = str(e), "guide"
     if used == "guide":
-        reply = guide_reply(body.text)
+        reply = guide_reply(body.text or prompt)
     if pilot:
         db.add(OrionMessage(pilot_id=pilot.id, role="user", mode=used, text=body.text, images=len(body.images)))
         db.add(OrionMessage(pilot_id=pilot.id, role="orion", mode=used, text=reply))
         db.commit()
     return {"reply": reply, "mode_used": used, "fallback": used != mode, "reason": reason,
+            "agent": agent_tag, "agent_id": (boarded.agent_id if boarded else ""),
             "capabilities": st.get(used, st["guide"])["capabilities"]}
 
 
@@ -400,31 +510,46 @@ def messages(offset: int = 0, limit: int = 20, db: Session = Depends(get_db),
     total = q.count()
     rows = q.order_by(OrionMessage.id.desc()).offset(max(0, offset)).limit(max(1, min(limit, 50))).all()
     return {"total": total, "items": [{"id": r.id, "role": r.role, "mode": r.mode, "text": r.text,
-                                       "images": r.images} for r in reversed(rows)]}
+                                       "images": r.images,
+                                       "at": r.created_at.isoformat() if r.created_at else ""} for r in reversed(rows)]}
+
+
+@router.delete("/messages")
+def clear_messages(db: Session = Depends(get_db), pilot: Pilot = Depends(get_current_pilot)) -> dict:
+    n = db.query(OrionMessage).filter(OrionMessage.pilot_id == pilot.id).delete()
+    db.commit()
+    return {"ok": True, "deleted": n}
 
 
 @router.get("/archive")
 def archive(q: str = "", limit: int = 20, ctx: int = 40, db: Session = Depends(get_db),
             pilot: Pilot = Depends(get_current_pilot)) -> dict:
     needle = q.strip().lower()
-    if not needle:
-        return {"q": q, "items": []}
     ctx = max(10, min(ctx, 120))
+    cap = max(1, min(limit, 400))
     out = []
     rows = (db.query(OrionMessage).filter(OrionMessage.pilot_id == pilot.id)
             .order_by(OrionMessage.id.desc()).limit(2000))
     for r in rows:
-        i = r.text.lower().find(needle)
-        if i < 0:
-            continue
-        a, b = max(0, i - ctx), min(len(r.text), i + len(needle) + ctx)
-        out.append({"id": r.id, "role": r.role, "before": ("…" if a else "") + r.text[a:i],
-                    "match": r.text[i:i + len(needle)],
-                    "after": r.text[i + len(needle):b] + ("…" if b < len(r.text) else ""),
-                    "at": r.created_at.isoformat() if r.created_at else ""})
-        if len(out) >= max(1, min(limit, 50)):
+        text = r.text or ""
+        at = r.created_at.isoformat() if r.created_at else ""
+        if needle:
+            i = text.lower().find(needle)
+            if i < 0:
+                continue
+            a, b = max(0, i - ctx), min(len(text), i + len(needle) + ctx)
+            item = {"id": r.id, "role": r.role,
+                    "before": ("…" if a else "") + text[a:i],
+                    "match": text[i:i + len(needle)],
+                    "after": text[i + len(needle):b] + ("…" if b < len(text) else ""),
+                    "at": at, "text": text}
+        else:
+            item = {"id": r.id, "role": r.role, "before": text[:ctx], "match": "",
+                    "after": text[ctx:ctx * 2], "at": at, "text": text}
+        out.append(item)
+        if len(out) >= cap:
             break
-    return {"q": q, "items": out}
+    return {"q": q, "items": out, "found": len(out)}
 
 
 @router.get("/tasks")
@@ -586,3 +711,178 @@ def admin_audit(limit: int = 50, db: Session = Depends(get_db), _a: str = Depend
     rows = db.query(OrionAudit).order_by(OrionAudit.id.desc()).limit(max(1, min(limit, 200)))
     return {"items": [{"actor": r.actor, "action": r.action, "detail": r.detail,
                        "at": r.created_at.isoformat() if r.created_at else ""} for r in rows]}
+
+
+class AgentIn(BaseModel):
+    agent_id: str = Field(default="", max_length=40)
+    name: str = Field(default="", max_length=40)
+    kind: str = Field(default="openai_compat", pattern="^(opencode|openai_compat|github_bridge)$")
+    access: str = Field(default="crew", pattern="^(commander|observer|crew)$")
+    enabled: bool = True
+    provider: str = Field(default="openai", pattern="^(openai|anthropic)$")
+    base_url: str = Field(default="", max_length=300)
+    model: str = Field(default="", max_length=120)
+    vision: bool = False
+    manners: str = Field(default="", max_length=8000)
+    note: str = Field(default="", max_length=200)
+    voice: str = Field(default="ship", pattern="^(ship|agent|off)$")
+
+
+def _agent_out(a: OrionAgent) -> dict:
+    return {
+        "id": a.id, "agent_id": a.agent_id, "name": a.name, "kind": a.kind, "access": a.access,
+        "enabled": a.enabled, "provider": a.provider, "base_url": a.base_url, "model": a.model,
+        "vision": a.vision, "manners": a.manners, "note": getattr(a, "note", "") or "",
+        "voice": getattr(a, "voice", "ship") or "ship", "needs_key": a.kind == "openai_compat",
+    }
+
+
+def _pref(db: Session, pilot: Pilot) -> OrionPref:
+    row = db.get(OrionPref, pilot.id)
+    if row is None:
+        row = OrionPref(pilot_id=pilot.id, mode="guide", active_agent="")
+        db.add(row)
+        db.flush()
+    return row
+
+
+DEFAULT_AGENT = {
+    "agent_id": "orion",
+    "name": "Орион",
+    "kind": "opencode",
+    "access": "commander",
+    "enabled": True,
+    "voice": "ship",
+    "model": "opencode/deepseek-v4.1-flash-free",
+    "note": "Бортовой разум: доклад отсека, порядок на корабле, новый функционал",
+}
+OPENCODE_PROFILES = {"commander": "orion-commander", "observer": "orion-recon", "crew": "orion-chat"}
+
+
+def _ensure_default_agent(db: Session, pilot: Pilot) -> OrionAgent:
+    """Орион есть всегда — как stamina/orion.py registry()."""
+    row = db.query(OrionAgent).filter_by(pilot_id=pilot.id, agent_id="orion").first()
+    if row is None:
+        row = OrionAgent(
+            pilot_id=pilot.id,
+            agent_id=DEFAULT_AGENT["agent_id"],
+            name=DEFAULT_AGENT["name"],
+            kind=DEFAULT_AGENT["kind"],
+            access=DEFAULT_AGENT["access"],
+            enabled=DEFAULT_AGENT["enabled"],
+            voice=DEFAULT_AGENT["voice"],
+            model=DEFAULT_AGENT["model"],
+            note=DEFAULT_AGENT["note"],
+        )
+        db.add(row)
+        pref = _pref(db, pilot)
+        if not pref.active_agent:
+            pref.active_agent = "orion"
+        db.commit()
+        db.refresh(row)
+    changed = False
+    if not (row.model or "").strip():
+        row.model = DEFAULT_AGENT["model"]
+        changed = True
+    if row.kind != "opencode":
+        row.kind = "opencode"
+        changed = True
+    if changed:
+        db.commit()
+        db.refresh(row)
+    return row
+
+
+@router.get("/agents")
+def list_agents(db: Session = Depends(get_db), pilot: Pilot = Depends(get_current_pilot)) -> dict:
+    _ensure_default_agent(db, pilot)
+    rows = db.query(OrionAgent).filter(OrionAgent.pilot_id == pilot.id).order_by(OrionAgent.id).all()
+    pref = _pref(db, pilot)
+    if not pref.active_agent or not any(a.agent_id == pref.active_agent for a in rows):
+        pref.active_agent = "orion"
+        db.commit()
+    return {"active": pref.active_agent or "orion", "items": [_agent_out(a) for a in rows]}
+
+
+@router.post("/agents")
+def create_agent(body: AgentIn, db: Session = Depends(get_db),
+                 pilot: Pilot = Depends(get_current_pilot)) -> dict:
+    aid = (body.agent_id or body.name or "agent").strip().lower()
+    aid = "".join(ch for ch in aid if ch.isalnum() or ch in "-_")[:40] or "agent"
+    others = {a.agent_id for a in db.query(OrionAgent).filter(OrionAgent.pilot_id == pilot.id)}
+    base, n = aid, 2
+    while aid in others:
+        aid = f"{base}{n}"
+        n += 1
+    presets = {
+        "openai": ("https://api.openai.com/v1", "gpt-4o-mini"),
+        "anthropic": ("https://api.anthropic.com", "claude-3-5-sonnet-latest"),
+    }
+    url, model = body.base_url, body.model
+    if not url and body.provider in presets:
+        url, model = url or presets[body.provider][0], model or presets[body.provider][1]
+    row = OrionAgent(
+        pilot_id=pilot.id, agent_id=aid, name=(body.name or aid)[:40], kind=body.kind,
+        access=body.access, enabled=body.enabled, provider=body.provider,
+        base_url=url, model=model, vision=body.vision, manners=body.manners,
+        note=(body.note or "")[:200], voice=body.voice or "ship",
+    )
+    db.add(row)
+    pref = _pref(db, pilot)
+    if not pref.active_agent:
+        pref.active_agent = aid
+    db.commit()
+    db.refresh(row)
+    return _agent_out(row)
+
+
+@router.put("/agents/{agent_id}")
+def update_agent(agent_id: str, body: AgentIn, db: Session = Depends(get_db),
+                 pilot: Pilot = Depends(get_current_pilot)) -> dict:
+    row = db.query(OrionAgent).filter_by(pilot_id=pilot.id, agent_id=agent_id).first()
+    if row is None:
+        raise HTTPException(404, "agent")
+    row.name = (body.name or row.name)[:40]
+    row.kind = body.kind
+    row.access = body.access
+    row.enabled = body.enabled
+    row.provider = body.provider
+    row.base_url = body.base_url or row.base_url
+    row.model = body.model or row.model
+    row.vision = body.vision
+    row.manners = body.manners
+    row.note = (body.note or "")[:200]
+    row.voice = body.voice or row.voice or "ship"
+    db.commit()
+    return _agent_out(row)
+
+
+@router.post("/agents/{agent_id}/activate")
+def activate_agent(agent_id: str, db: Session = Depends(get_db),
+                   pilot: Pilot = Depends(get_current_pilot)) -> dict:
+    row = db.query(OrionAgent).filter_by(pilot_id=pilot.id, agent_id=agent_id).first()
+    if row is None:
+        raise HTTPException(404, "agent")
+    pref = _pref(db, pilot)
+    pref.active_agent = agent_id
+    db.commit()
+    return {"active": agent_id}
+
+
+@router.delete("/agents/{agent_id}")
+def delete_agent(agent_id: str, db: Session = Depends(get_db),
+                 pilot: Pilot = Depends(get_current_pilot)) -> dict:
+    row = db.query(OrionAgent).filter_by(pilot_id=pilot.id, agent_id=agent_id).first()
+    if row is None:
+        raise HTTPException(404, "agent")
+    if row.agent_id == "orion":
+        row.enabled = False
+        db.commit()
+        return {"ok": True, "disabled": True}
+    db.delete(row)
+    pref = _pref(db, pilot)
+    if pref.active_agent == agent_id:
+        nxt = db.query(OrionAgent).filter_by(pilot_id=pilot.id).first()
+        pref.active_agent = nxt.agent_id if nxt else ""
+    db.commit()
+    return {"ok": True}

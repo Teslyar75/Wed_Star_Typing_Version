@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     orion_chat_rate_per_min: int = 20
     orion_byo_allow_http: bool = False
     orion_byo_allow_private: bool = False
+    orion_opencode_url: str = "http://host.docker.internal:8765"
+    orion_opencode_token: str = ""
+    orion_opencode_timeout: float = 180.0
+    orion_opencode_model: str = "opencode/deepseek-v4.1-flash-free"
+    web_update_url: str = "http://host.docker.internal:8766"
+    web_update_token: str = ""
+    web_update_timeout: float = 30.0
 
     def repo_root(self) -> Path:
         """Корень с пакетом stamina (соседний клон My_Stamina) или этот репозиторий."""

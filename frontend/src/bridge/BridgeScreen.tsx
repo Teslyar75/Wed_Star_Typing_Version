@@ -22,6 +22,7 @@ import RhythmBar from "./RhythmBar";
 import MissionMiniPlaque, { type MissionBrief } from "./MissionMiniPlaque";
 import DebriefModal, { type DebriefData } from "./DebriefModal";
 import { useCabin } from "../settings/cabinStore";
+import { useZen } from "../zen/zenStore";
 import { setModalStack } from "../shell/routeStore";
 import ZenPortal from "../zen/ZenPortal";
 import { zt } from "../zen/zenI18n";
@@ -118,6 +119,9 @@ export default function BridgeScreen() {
   engineRef.current = engine;
   cargoOriginalRef.current = cargoOriginal;
   textIdRef.current = textId;
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const zenOn = useZen((s) => s.on);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const keyErrTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const duckOnType = useRadio((s) => s.duckOnType);
@@ -128,6 +132,20 @@ export default function BridgeScreen() {
   const showTranslator = useCabin((s) => s.translator);
   const sightOn = useCabin((s) => s.sight);
   const now = () => performance.now() / 1000;
+
+  useEffect(() => {
+    useZen.getState().setBridge({
+      getText: () => engineRef.current.text,
+      getIndex: () => engineRef.current.index,
+      getLang: () => langRef.current,
+      advanceTo: (index, extra) => {
+        const ok = engineRef.current.advanceTo(index, extra, performance.now() / 1000);
+        if (ok) setTick((x) => x + 1);
+        return ok;
+      },
+    });
+    return () => useZen.getState().setBridge(null);
+  }, []);
 
   /** Прицел + целевая клавиша: при промахе вспышка красным; в покое цель — оранжевый. */
   const showErrorFlash = useCallback(() => {
@@ -981,6 +999,14 @@ export default function BridgeScreen() {
               onClick={() => setShowHeat((v) => !v)}
             >
               {t("heatmap")}
+            </button>
+            <button
+              type="button"
+              className={`hud-btn ${zenOn ? "amber" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => useZen.getState().toggle()}
+            >
+              ◯ {t("zen_dzen")}  Ctrl+M
             </button>
           </div>
         </aside>

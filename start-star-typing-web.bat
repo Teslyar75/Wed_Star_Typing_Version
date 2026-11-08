@@ -53,6 +53,20 @@ exit /b 1
 
 :docker_ok
 echo [1/5] Docker ready.
+echo       OpenCode bridge on :8765
+start "Orion OpenCode" /min py -3 "%~dp0tools\opencode_bridge.py"
+echo       Updater on :8766
+start "Star Typing updater" /min py -3 "%~dp0tools\web_updater.py"
+set "GIT_UPDATED=0"
+if /I not "%WEB_NO_AUTOUPDATE%"=="1" (
+  echo       Checking GitHub for web updates...
+  py -3 "%~dp0tools\web_updater.py" --once > "%TEMP%\st-web-upd.txt" 2>&1
+  findstr /C:"UPDATED" "%TEMP%\st-web-upd.txt" >nul
+  if not errorlevel 1 (
+    echo       New commits from GitHub — will rebuild images.
+    set "GIT_UPDATED=1"
+  )
+)
 
 REM Older Docker ships Compose v1 ("docker-compose"). The stack needs v2.
 docker compose version >nul 2>&1
@@ -70,6 +84,7 @@ docker image inspect web_star_typing-frontend >nul 2>&1
 if errorlevel 1 set "DO_BUILD=1"
 docker image inspect web_star_typing-backend >nul 2>&1
 if errorlevel 1 set "DO_BUILD=1"
+if "!GIT_UPDATED!"=="1" set "DO_BUILD=1"
 
 :do_compose
 if "!DO_BUILD!"=="1" goto do_build

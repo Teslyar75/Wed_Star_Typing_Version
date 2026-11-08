@@ -26,12 +26,20 @@ services:
       SECRET_KEY: ${SECRET_KEY:-local-dev-star-typing-jwt-secret-key-32b}
       SECRET_KEY_FILE: /secrets/jwt_secret
       VOSK_MODEL_DIR: /models/vosk-model-small-en-us-0.15
+      ENGLISH_DATA_DIR: /english-data
+      ORION_OPENCODE_URL: http://host.docker.internal:8765
+      ORION_OPENCODE_MODEL: opencode/deepseek-v4.1-flash-free
+      ORION_OPENCODE_TIMEOUT: "180"
+      WEB_UPDATE_URL: http://host.docker.internal:8766
     volumes:
       # та же модель, что у десктопа (репозиторий My_New_Stamina/models).
       # Клонировали только веб-версию — папки нет, распознавание речи просто выключено.
       # Другое место:  MODELS_DIR=/путь/к/models ./start.sh
       - "${MODELS_DIR:-../models}:/models:ro"
+      - ../stamina/english/data:/english-data:ro
       - backend_secrets:/secrets
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,10 +87,8 @@ services:
       DOMAIN: ${DOMAIN:-:80}
       ACME_EMAIL: ${ACME_EMAIL:-admin@localhost}
     ports:
-      # порт можно поменять:  WEB_PORT=8080 ./start.sh
-      # (сколько внутри — не важно: Caddy слушает 80 в контейнере)
-      - "${WEB_PORT:-80}:80"
-      - "${WEB_HTTPS_PORT:-443}:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - frontend_dist:/srv/frontend:ro

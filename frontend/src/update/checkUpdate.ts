@@ -91,3 +91,38 @@ export async function checkForUpdate(opts?: { force?: boolean }): Promise<Update
   writeCache(info);
   return info;
 }
+
+export type HostUpdateStatus = {
+  ok: boolean;
+  available?: boolean;
+  can_apply?: boolean;
+  behind?: number;
+  branch?: string;
+  head?: string;
+  remote?: string;
+  action?: string;
+  reason?: string;
+};
+
+export async function hostUpdateStatus(): Promise<HostUpdateStatus> {
+  try {
+    const r = await fetch("/api/updates/status", { credentials: "include" });
+    if (!r.ok) return { ok: false, reason: `http_${r.status}` };
+    return (await r.json()) as HostUpdateStatus;
+  } catch {
+    return { ok: false, reason: "network" };
+  }
+}
+
+export async function applyHostUpdate(): Promise<{ ok: boolean; updated?: boolean; action?: string; error?: string }> {
+  const r = await fetch("/api/updates/apply", { method: "POST", credentials: "include" });
+  const data = (await r.json().catch(() => ({}))) as {
+    ok?: boolean;
+    updated?: boolean;
+    action?: string;
+    error?: string;
+    detail?: string;
+  };
+  if (!r.ok) return { ok: false, error: data.error || data.detail || `http_${r.status}` };
+  return { ok: Boolean(data.ok), updated: Boolean(data.updated), action: data.action, error: data.error };
+}

@@ -52,6 +52,24 @@ else
   HAVE_WAIT=0
 fi
 
+
+# Автообновление с GitHub (origin/master, только ff-only). WEB_NO_AUTOUPDATE=1 — выключить.
+if [ "${WEB_NO_AUTOUPDATE:-0}" != "1" ] && [ -d .git ]; then
+  say "Проверяю GitHub на обновления…"
+  PY=python3
+  command -v python3 >/dev/null 2>&1 || PY=python
+  if "$PY" tools/web_updater.py --once | tee "${TMPDIR:-/tmp}/st-web-upd.txt" | grep -q UPDATED; then
+    warn "Новые коммиты с GitHub — пересобираю образы."
+    REBUILD=1
+  fi
+fi
+# Мост кнопки «Обновить сейчас» в Настройках
+if command -v python3 >/dev/null 2>&1; then
+  python3 tools/web_updater.py >/dev/null 2>&1 &
+elif command -v python >/dev/null 2>&1; then
+  python tools/web_updater.py >/dev/null 2>&1 &
+fi
+
 start() {
   say "Поднимаю контейнеры (порт $PORT)..."
   if [ "$REBUILD" = 1 ]; then

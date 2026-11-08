@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import random
-import threading
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -15,6 +14,9 @@ from sqlalchemy.orm import Mapped, mapped_column, Session
 from app.auth_deps import get_optional_pilot
 from app.db import Base, get_db
 from app.pilots import Pilot
+from app import english_warehouse as whm
+from app import english_packs as packs
+from app import english_quality as qeng
 
 router = APIRouter(prefix="/api/english", tags=["english"])
 
@@ -62,8 +64,7 @@ class CardProgress(Base):
     wh_goal: Mapped[int] = mapped_column(Integer, default=2)
     wh_stars: Mapped[int] = mapped_column(Integer, default=0)
     wh_avg: Mapped[float] = mapped_column(Float, default=0.0)
-    # JSON прогона (порт warehouse.run_state десктопа): current/passes/sel/best/awards
-    wh_run: Mapped[str] = mapped_column(Text, default="")
+    wh_q: Mapped[str] = mapped_column(Text, default="")
 
 
 class EnglishList(Base):
@@ -177,9 +178,14 @@ class WordOut(BaseModel):
     wh_goal: int = 2
     wh_stars: int = 0
     wh_avg: float = 0.0
-    sounds_like: list[str] = []
-    wh_current: dict[str, int] = {}
-    wh_sel: list[bool] = []
+    q_filled: int = 0
+    q_goal: int = 20
+    q_hint: str = ""
+    n_sents: int = 0
+    left_today: int = 4
+    q_by: dict = Field(default_factory=dict)
+    q_done_keys: list[str] = Field(default_factory=list)
+    difficulty_n: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -192,36 +198,6 @@ def _parse_meta(raw: str | None) -> dict:
         return j if isinstance(j, dict) else {}
     except json.JSONDecodeError:
         return {}
-
-
-def _wh_state(card: CardProgress | None) -> dict:
-    from app import english_warehouse as wh
-
-    return wh.load_state(card.wh_run if card is not None else "")
-
-
-def _wh_current(card: CardProgress | None) -> dict[int, int]:
-    from app import english_warehouse as wh
-
-    if card is None:
-        return {}
-    st = _wh_state(card)
-    cur = wh.current_scores(st)
-    if not cur and card.wh_state == "done" and isinstance(st.get("cleared"), dict):
-        # как load_scores: для отработанных — сохранённый результат
-        for k, v in (st["cleared"].get("scores") or {}).items():
-            try:
-                cur[int(k)] = int(v or 0)
-            except (TypeError, ValueError):
-                pass
-    return cur
-
-
-def _wh_sel(card: CardProgress | None) -> list[bool]:
-    if card is None:
-        return []
-    raw = _wh_state(card).get("sel")
-    return [bool(x) for x in raw] if isinstance(raw, list) else []
 
 
 def serialize_word(w: VocabWord, card: CardProgress | None = None) -> WordOut:
@@ -251,10 +227,94 @@ def serialize_word(w: VocabWord, card: CardProgress | None = None) -> WordOut:
         wh_goal=int(card.wh_goal if card else 2) or 2,
         wh_stars=int(card.wh_stars if card else 0),
         wh_avg=float(card.wh_avg if card else 0),
-        sounds_like=[str(x) for x in (m.get("sounds_like") or [])],
-        wh_current={str(k): v for k, v in _wh_current(card).items()},
-        wh_sel=_wh_sel(card),
     )
+
+
+
+def _stars_for_avg(avg: float) -> int:
+    if avg >= 95:
+        return 3
+    if avg >= 80:
+        return 2
+    if avg >= 60:
+        return 1
+    return 0
+
+
+def _q_rec(card: CardProgress) -> dict:
+    raw = (getattr(card, "wh_q", None) or "").strip()
+    if not raw:
+        return {}
+    try:
+        d = json.loads(raw)
+        return d if isinstance(d, dict) else {}
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+class _QP:
+    """Адаптер CardProgress.wh_q → quality.py (progress.data['quality'][slug])."""
+
+    def __init__(self, rec: dict, settings: dict, slug: str):
+        self.settings = dict(settings or {})
+        store = {slug: rec} if rec else {}
+        self.data = {"quality": store, "settings": self.settings, "version": 2}
+
+    def save(self) -> None:
+        pass
+
+
+def _qp_from_card(card: CardProgress, settings: dict) -> tuple[_QP, str]:
+    slug = str(card.word_id)
+    return _QP(_q_rec(card), settings, slug), slug
+
+
+def _q_flush(card: CardProgress, qp: _QP, slug: str) -> None:
+    rec = (qp.data.get("quality") or {}).get(slug) or {}
+    card.wh_q = json.dumps(rec, ensure_ascii=False)
+
+
+def _qp_bundle(rows: list[CardProgress], settings: dict) -> _QP:
+    store: dict = {}
+    for c in rows:
+        rec = _q_rec(c)
+        if rec:
+            store[str(c.word_id)] = rec
+    qp = _QP({}, settings, "0")
+    qp.data["quality"] = store
+    return qp
+
+
+def _card_sents(w: VocabWord) -> list[dict]:
+    m = _parse_meta(w.meta)
+    out: list[dict] = []
+    for s in (m.get("sentences") or [])[:5]:
+        if not isinstance(s, dict):
+            continue
+        en = (s.get("en") or "").strip()
+        if not en:
+            continue
+        out.append({"en": en, "ru": (s.get("ru") or "").strip()})
+    if not out and (w.example or "").strip():
+        out.append({"en": w.example.strip(), "ru": (m.get("example_ru") or "").strip()})
+    return out
+
+
+def _pack_wh(w: VocabWord, card: CardProgress, settings: dict, sents: list[dict]) -> WordOut:
+    wo = serialize_word(w, card)
+    n = len(sents)
+    qp, slug = _qp_from_card(card, settings)
+    cnt = qeng.counts(qp, slug, n_sents=n)
+    wo.sentences = sents
+    wo.n_sents = n
+    wo.q_filled = int(cnt["filled"])
+    wo.q_goal = int(cnt["goal"])
+    wo.q_hint = qeng.hint(qp, slug, n_sents=n)
+    wo.left_today = qeng.left_today(qp, slug)
+    wo.q_by = {k: list(v) for k, v in (cnt.get("by") or {}).items()}
+    wo.q_done_keys = sorted(str(x) for x in (cnt.get("done_keys") or []))
+    wo.difficulty_n = max(1, min(5, n))
+    return wo
 
 
 DEFAULT_EN_SETTINGS = {
@@ -269,6 +329,8 @@ DEFAULT_EN_SETTINGS = {
     "reverse_cards": False,
     "xp_to_rank": True,
     "warehouse_passes": 2,
+    "quality_goal": 20,
+    "quality_daily_cap": 4,
 }
 
 
@@ -294,25 +356,39 @@ class KnownIn(BaseModel):
     my_tr: str = ""
 
 
+class EnsureWordIn(BaseModel):
+    word: str
+    slug: str = ""
+    pos: str = ""
+    translation: str = ""
+    definition: str = ""
+    ipa: str = ""
+    difficulty: str = ""
+    example: str = ""
+
+
 class WarehouseMoveIn(BaseModel):
     word_id: int
     state: str = Field(pattern="^(shelf|away|done)$")
 
 
-class WarehouseAttemptIn(BaseModel):
+class WarehouseRunIn(BaseModel):
     word_id: int
-    key: int = Field(ge=-1, le=2)  # -1 = слово, 0..2 = предложение
+    avg: float = Field(ge=0, le=100)
+    goal: int | None = Field(default=None, ge=1, le=5)
+
+
+class WarehouseQualityIn(BaseModel):
+    word_id: int
+    group: str = Field(pattern="^[ABCDE]$")
     score: int = Field(ge=0, le=100)
-
-
-class WarehouseSelectIn(BaseModel):
-    word_id: int
-    sel: list[bool]
+    si: int | None = None
+    self_rated: bool = False
 
 
 class WarehouseGoalIn(BaseModel):
     word_id: int
-    goal: int
+    goal: int = Field(ge=5, le=20)
 
 
 class ListCreateIn(BaseModel):
@@ -345,6 +421,8 @@ class SettingsIn(BaseModel):
     reverse_cards: bool | None = None
     xp_to_rank: bool | None = None
     warehouse_passes: int | None = None
+    quality_goal: int | None = None
+    quality_daily_cap: int | None = None
 
 
 class FromBookIn(BaseModel):
@@ -407,13 +485,6 @@ def _iter_seed_rows(limit: int) -> list[dict]:
 
 
 def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, int | bool]:
-    """Потокобезопасная обёртка: одновременно досевает только один запрос."""
-    with _SEED_LOCK:
-        db.expire_all()
-        return _seed_vocab_unlocked(db, limit, batch)
-
-
-def _seed_vocab_unlocked(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, int | bool]:
     """Досеять словарь порцией + починить rank/slug у уже вставленных слов.
 
     Ранний сид мог вставить top-слова с rank=0; повторный insert их пропускал —
@@ -502,39 +573,6 @@ def _seed_vocab_unlocked(db: Session, limit: int = 20000, batch: int = 400) -> d
     }
 
 
-_SEED_LOCK = threading.RLock()
-
-
-def _ensure_seeded_for(db: Session, need_rank: int, max_rounds: int = 40, *, need_dev: bool = False) -> None:
-    """Досеять словарь, пока набор с лимитом need_rank не заполнен целиком.
-
-    Раньше сид шёл одной порцией (500) только при пустой БД, и на свежей базе
-    набор S-3000 навсегда оставался с ~650 словами.
-    """
-    def _full() -> bool:
-        have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
-        dev_ok = not need_dev or db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() > 0
-        return have >= need_rank and dev_ok
-
-    if _full():
-        return
-    # один досев за раз: параллельные запросы ждут, а не дерутся за запись в SQLite
-    with _SEED_LOCK:
-        db.expire_all()
-        _ensure_seeded_locked(db, need_rank, max_rounds, need_dev)
-
-
-def _ensure_seeded_locked(db: Session, need_rank: int, max_rounds: int, need_dev: bool) -> None:
-    for _ in range(max_rounds):
-        have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
-        dev_ok = not need_dev or db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() > 0
-        if have >= need_rank and dev_ok:
-            return
-        res = _seed_vocab(db, 20000, 2000)
-        if res.get("done") or not (res.get("added") or res.get("updated")):
-            return
-
-
 def start_seed_worker() -> None:
     """Фоновый досев полного словаря при старте сервера (свежая БД сразу полная)."""
     import sys
@@ -556,7 +594,6 @@ def start_seed_worker() -> None:
             db.close()
 
     threading.Thread(target=_run, name="vocab-seed", daemon=True).start()
-
 
 @router.post("/seed")
 def seed_vocab(
@@ -920,9 +957,6 @@ async def english_asr(
     audio: UploadFile = File(...),
     expected: str = Form(...),
     target_word: str = Form(""),
-    mode: str = Form("sentence"),
-    word_id: int = Form(0),
-    db: Session = Depends(get_db),
 ) -> dict:
     """
     Браузер шлёт WAV 16-bit PCM; сервер гоняет Vosk + score_sentence (как десктоп).
@@ -945,20 +979,7 @@ async def english_asr(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=422, detail=f"recognize failed: {exc}") from exc
 
-    if mode == "word":
-        # десктоп: проверка слова — score_word(word, alts, sounds_like), без разметки
-        from app.english_score import score_word
-
-        sounds: list[str] = []
-        if word_id:
-            vw = db.get(VocabWord, word_id)
-            if vw is not None:
-                sounds = [str(x) for x in (_parse_meta(vw.meta).get("sounds_like") or [])]
-        clean = [a for a in alts if a and a.strip()]
-        score = score_word(expected, clean, sounds) if clean else 0
-        marks, heard = [], (clean[0] if clean else "")
-    else:
-        score, marks, heard = score_best(expected, alts, target_word.strip() or None)
+    score, marks, heard = score_best(expected, alts, target_word.strip() or None)
     return {
         "ok": True,
         "engine": "vosk-server",
@@ -994,7 +1015,6 @@ def _settings(db: Session, pid: int) -> dict:
 def list_sets(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> list[dict]:
     from app.english_vocab import SET_LIMIT, THEMATIC_SETS, in_set, sets_catalog
 
-    _ensure_seeded_for(db, max(SET_LIMIT.values()), need_dev=True)
     pid = pilot.id if pilot else 0
     cards = {c.word_id: c for c in db.query(CardProgress).filter_by(pilot_id=pid).all()}
     known_ids = {wid for wid, c in cards.items() if c.known or c.bin == "learned" or c.interval >= 21}
@@ -1029,19 +1049,60 @@ def list_sets(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_o
 @router.get("/lookup")
 def lookup_word(
     q: str = Query(..., min_length=1),
+    set_id: str = "",
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> WordOut:
+    """Обычный английский case != SQL CASE из S-DEV (slug dev:case)."""
+    from app.english_vocab import THEMATIC_SETS
+
     if db.query(VocabWord).count() == 0:
         _seed_vocab(db, 500, 500)
     needle = q.strip().lower()
-    w = (
-        db.query(VocabWord)
-        .filter((VocabWord.word == needle) | (VocabWord.slug == needle) | (VocabWord.word.ilike(needle)))
-        .first()
-    )
+    want_dev = (set_id in THEMATIC_SETS) or needle.startswith("dev:") or needle.startswith("dev-")
+    w = None
+    if needle:
+        w = db.query(VocabWord).filter(VocabWord.slug == needle).first()
+        if w is not None and not want_dev and str(w.slug or "").startswith("dev:"):
+            w = None
+    if w is None and want_dev:
+        slug = needle if needle.startswith("dev:") else f"dev:{needle}"
+        w = db.query(VocabWord).filter(VocabWord.slug == slug).first()
     if w is None:
-        w = db.query(VocabWord).filter(VocabWord.word.ilike(f"{needle}%")).order_by(VocabWord.rank).first()
+        qn = db.query(VocabWord).filter(func.lower(VocabWord.word) == needle)
+        if not want_dev:
+            qn = qn.filter(~VocabWord.slug.like("dev:%"))
+        w = qn.order_by(VocabWord.rank.asc()).first()
+    packed = None if want_dev else packs.find_cefr_word(needle)
+    if w is None and packed:
+        w = _ensure_vocab_from_pack(db, packed)
+        if w is not None and str(w.slug or "").startswith("dev:"):
+            # омоним SQL CASE / IT: не подменяем английский смысл
+            pid = pilot.id if pilot else 0
+            card = db.query(CardProgress).filter_by(pilot_id=pid, word_id=w.id).first()
+            base = serialize_word(w, card)
+            sents = packed.get("sentences") or []
+            ex = ""
+            if sents and isinstance(sents[0], dict):
+                ex = str(sents[0].get("en") or "")
+            return base.model_copy(update={
+                "word": packed.get("word") or base.word,
+                "translation": packed.get("ru") or base.translation,
+                "definition": packed.get("definition") or "",
+                "ipa": packed.get("ipa") or "",
+                "pos": packed.get("pos") or base.pos,
+                "example": ex,
+                "example_ru": (sents[0].get("ru") if sents and isinstance(sents[0], dict) else "") or "",
+                "sentences": sents,
+                "slug": packed.get("slug") or needle,
+                "rank": int(packed.get("cefr_order") or 0) + 1,
+                "difficulty": packed.get("difficulty") or base.difficulty,
+            })
+    if w is None:
+        pref = db.query(VocabWord).filter(VocabWord.word.ilike(f"{needle}%"))
+        if not want_dev:
+            pref = pref.filter(~VocabWord.slug.like("dev:%"))
+        w = pref.order_by(VocabWord.rank.asc()).first()
     if w is None:
         raise HTTPException(404, "word not found")
     pid = pilot.id if pilot else 0
@@ -1159,13 +1220,8 @@ def words_in_set(
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
     """Фильтры как desktop vocab.filtered — до пагинации, страница в SQL."""
-    from app.english_vocab import SET_LIMIT, THEMATIC_SETS
-
-    if set_id in THEMATIC_SETS:
-        if db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() == 0:
-            _ensure_seeded_for(db, 20000, need_dev=True)
-    else:
-        _ensure_seeded_for(db, SET_LIMIT.get(set_id, 3000))
+    if db.query(VocabWord).count() == 0:
+        _seed_vocab(db, 2000, 500)
     limit = max(1, min(limit, 120))
     offset = max(0, offset)
     status_n = (status or "all").lower()
@@ -1221,30 +1277,78 @@ def mark_known(
 @router.get("/warehouse/cards")
 def warehouse_cards(
     state: str = Query("shelf"),
+    diff: int | None = Query(None),
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
-) -> list[WordOut]:
-    """Склад карточек: shelf | away | done (WAREHOUSE_CARDS.md)."""
-    if state not in ("shelf", "away", "done"):
-        raise HTTPException(400, "state must be shelf|away|done")
+) -> dict:
+    """Склад: shelf | away | done | today. Качество — слоты как на десктопе."""
+    if state not in ("shelf", "away", "done", "today"):
+        raise HTTPException(400, "state must be shelf|away|done|today")
     pid = pilot.id if pilot else 0
+    settings = _settings(db, pid)
     rows = (
         db.query(CardProgress)
-        .filter(CardProgress.pilot_id == pid, CardProgress.wh_state == state)
-        .order_by(CardProgress.id.desc())
-        .limit(200)
+        .filter(CardProgress.pilot_id == pid)
+        .limit(800)
         .all()
     )
-    out: list[WordOut] = []
+    ids = [c.word_id for c in rows]
+    words = {w.id: w for w in db.query(VocabWord).filter(VocabWord.id.in_(ids)).all()} if ids else {}
+    shelf: list[WordOut] = []
+    away: list[WordOut] = []
+    done: list[WordOut] = []
+    dirty = False
     for c in rows:
-        w = db.get(VocabWord, c.word_id)
+        w = words.get(c.word_id)
         if w is None:
             continue
-        wo = serialize_word(w, c)
-        if state == "shelf" and not (wo.sentences or wo.example):
+        sents = _card_sents(w)
+        if not sents:
             continue
-        out.append(wo)
-    return out
+        st = (c.wh_state or "")
+        qp, slug = _qp_from_card(c, settings)
+        complete = qeng.is_complete(qp, slug, n_sents=len(sents))
+        if complete and st not in ("away", "done"):
+            avg = qeng.average_score(qp, slug)
+            c.wh_state = "done"
+            c.wh_avg = avg
+            c.wh_stars = _stars_for_avg(avg)
+            st = "done"
+            dirty = True
+        pack = _pack_wh(w, c, settings, sents)
+        if st == "away":
+            away.append(pack)
+        elif st == "done":
+            done.append(pack)
+        elif c.known or (c.interval or 0) >= 21:
+            if not complete:
+                shelf.append(pack)
+    if dirty:
+        db.commit()
+    bundle = _qp_bundle(rows, settings)
+    due_ids = set(qeng.due_today(bundle, [str(c.word_id) for c in rows]))
+    today = [x for x in (shelf + away) if str(x.id) in due_ids]
+    pool = {"shelf": shelf, "away": away, "done": done, "today": today}[state]
+    if diff in (1, 2, 3):
+        if state == "done":
+            pool = [x for x in pool if int(x.wh_stars or 0) == diff]
+        else:
+            pool = [x for x in pool if int(x.difficulty_n or 0) == diff]
+    if state == "done":
+        pool.sort(key=lambda x: (-(x.wh_stars or 0), -(x.wh_avg or 0), x.rank or 0))
+    else:
+        pool.sort(key=lambda x: (x.difficulty_n or 0, x.rank or 0, (x.word or "").lower()))
+    cap = qeng.daily_cap(_QP({}, settings, "0"))
+    return {
+        "cards": pool,
+        "counts": {
+            "shelf": len(shelf),
+            "away": len(away),
+            "done": len(done),
+            "today": len(today),
+        },
+        "cap": cap,
+    }
 
 
 @router.post("/warehouse/move")
@@ -1258,30 +1362,38 @@ def warehouse_move(
         raise HTTPException(404, "word not found")
     pid = pilot.id if pilot else 0
     card = _card(db, pid, body.word_id)
-    from app import english_warehouse as whm
-
+    prev = (card.wh_state or "")
     if body.state == "shelf":
-        # reopen_on_shelf: сброс прохождения
-        st = whm.load_state(card.wh_run)
-        whm.clear_run_progress(st)
-        card.wh_run = whm.dump_state(st)
         card.wh_state = "shelf"
         card.wh_runs = 0
         card.wh_stars = 0
         card.wh_avg = 0
         card.known = 1
+        if prev == "done":
+            settings = _settings(db, pid)
+            qp, slug = _qp_from_card(card, settings)
+            if qeng.get(qp, slug):
+                qeng.reset(qp, slug)
+                _q_flush(card, qp, slug)
     elif body.state == "away":
-        # return_to_work: снова «не знаю», к проверке сегодня
         card.wh_state = "away"
         card.known = 0
         card.due = date.today()
-        if not card.reps:
-            card.reps = 1
     else:
         card.wh_state = "done"
     db.commit()
     return {"ok": True, "state": card.wh_state}
 
+
+
+class WarehouseAttemptIn(BaseModel):
+    word_id: int
+    key: int = Field(ge=-1, le=2)  # -1 = слово, 0..2 = предложение
+    score: int = Field(ge=0, le=100)
+
+class WarehouseSelectIn(BaseModel):
+    word_id: int
+    sel: list[bool]
 
 @router.post("/warehouse/attempt")
 def warehouse_attempt(
@@ -1346,7 +1458,6 @@ def warehouse_attempt(
         "stars": int(card.wh_stars or 0), "avg": float(card.wh_avg or 0), **{"result": res},
     }
 
-
 @router.post("/warehouse/select")
 def warehouse_select(
     body: WarehouseSelectIn,
@@ -1369,6 +1480,64 @@ def warehouse_select(
     db.commit()
     return {"sel": sel}
 
+@router.post("/warehouse/quality")
+def warehouse_quality(
+    body: WarehouseQualityIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Зачесть слот качества (A слово / B чтение / C перевод / D аудио / E своё)."""
+    w = db.get(VocabWord, body.word_id)
+    if w is None:
+        raise HTTPException(404, "word not found")
+    pid = pilot.id if pilot else 0
+    card = _card(db, pid, body.word_id)
+    sents = _card_sents(w)
+    if not sents:
+        raise HTTPException(400, "no sentences")
+    settings = _settings(db, pid)
+    qp, slug = _qp_from_card(card, settings)
+    n = len(sents)
+    qeng.ensure(qp, slug, n_sents=n)
+    res, key = qeng.auto(
+        qp, slug, body.group, body.score,
+        si=body.si, self_rated=body.self_rated, n_sents=n,
+    )
+    _q_flush(card, qp, slug)
+    cnt = qeng.counts(qp, slug, n_sents=n)
+    complete = False
+    if qeng.is_complete(qp, slug, n_sents=n) and (card.wh_state or "") != "done":
+        avg = qeng.average_score(qp, slug)
+        card.wh_avg = avg
+        card.wh_stars = _stars_for_avg(avg)
+        card.wh_state = "done"
+        card.english_xp = (card.english_xp or 0) + (10 if card.wh_stars >= 2 else 5)
+        complete = True
+    elif (card.wh_state or "") not in ("away", "done"):
+        card.wh_state = card.wh_state or "shelf"
+    db.commit()
+    need = None
+    if res == "low" and key:
+        sm = qeng.slot_map("word", n)
+        need = int((sm.get(key) or {}).get("threshold") or 0)
+    return {
+        "ok": True,
+        "result": res,
+        "key": key,
+        "need": need,
+        "filled": int(cnt["filled"]),
+        "goal": int(cnt["goal"]),
+        "hint": qeng.hint(qp, slug, n_sents=n),
+        "by": {k: list(v) for k, v in (cnt.get("by") or {}).items()},
+        "done_keys": sorted(str(x) for x in (cnt.get("done_keys") or [])),
+        "left_today": qeng.left_today(qp, slug),
+        "complete": complete,
+        "stars": int(card.wh_stars or 0),
+        "avg": float(card.wh_avg or 0),
+        "state": card.wh_state,
+        "cap": qeng.daily_cap(qp),
+    }
+
 
 @router.post("/warehouse/goal")
 def warehouse_goal(
@@ -1376,16 +1545,67 @@ def warehouse_goal(
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
-    """set_run_goal: число прогонов 1/2/3/5."""
-    from app import english_warehouse as whm
-
-    if body.goal not in whm.PASS_CHOICES:
-        raise HTTPException(400, "goal must be one of 1,2,3,5")
+    w = db.get(VocabWord, body.word_id)
+    if w is None:
+        raise HTTPException(404, "word not found")
     pid = pilot.id if pilot else 0
     card = _card(db, pid, body.word_id)
-    card.wh_goal = max(1, min(5, body.goal))
+    sents = _card_sents(w)
+    settings = _settings(db, pid)
+    qp, slug = _qp_from_card(card, settings)
+    g = qeng.set_goal(qp, slug, body.goal, n_sents=len(sents) or 1)
+    _q_flush(card, qp, slug)
     db.commit()
-    return {"goal": card.wh_goal}
+    cnt = qeng.counts(qp, slug, n_sents=len(sents) or 1)
+    return {"ok": True, "goal": g, "filled": int(cnt["filled"]), "total": int(cnt["total"])}
+
+
+@router.post("/warehouse/run")
+def warehouse_run(
+    body: WarehouseRunIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Засчитать прогон склада (ср. ≥ 85%). Авто → done при достижении goal."""
+    PASS_QUALITY = 85.0
+    w = db.get(VocabWord, body.word_id)
+    if w is None:
+        raise HTTPException(404, "word not found")
+    pid = pilot.id if pilot else 0
+    card = _card(db, pid, body.word_id)
+    if body.goal:
+        card.wh_goal = body.goal
+    settings = _settings(db, pid)
+    goal = card.wh_goal or int(settings.get("warehouse_passes") or 2)
+    card.wh_goal = goal
+    if body.avg < PASS_QUALITY:
+        return {"ok": False, "accepted": False, "runs": card.wh_runs, "goal": goal, "avg": body.avg}
+    card.wh_runs = (card.wh_runs or 0) + 1
+    card.wh_avg = body.avg
+    # звёзды по точности
+    stars = 1 if body.avg >= 60 else 0
+    if body.avg >= 80:
+        stars = 2
+    if body.avg >= 95:
+        stars = 3
+    card.wh_stars = max(card.wh_stars or 0, stars)
+    card.english_xp = (card.english_xp or 0) + (5 if stars >= 2 else 2)
+    done = False
+    if card.wh_runs >= goal:
+        card.wh_state = "done"
+        done = True
+    elif not card.wh_state:
+        card.wh_state = "shelf"
+    db.commit()
+    return {
+        "ok": True,
+        "accepted": True,
+        "runs": card.wh_runs,
+        "goal": goal,
+        "stars": card.wh_stars,
+        "done": done,
+        "avg": body.avg,
+    }
 
 
 @router.post("/missions/start")
@@ -1845,3 +2065,276 @@ def book_hub(
             }
         )
     return out
+
+
+# ---------- хаб НАБОРЫ: CEFR · глаголы (данные десктопа) ----------
+from app import english_packs as packs
+
+
+
+def _ensure_vocab_from_pack(db: Session, rec: dict) -> VocabWord:
+    slug = str(rec.get("slug") or rec.get("word") or "").strip().lower()
+    word = str(rec.get("word") or "").strip()
+    if not word:
+        raise HTTPException(400, "word")
+    row = (
+        db.query(VocabWord)
+        .filter((VocabWord.slug == slug) | (VocabWord.word == word) | (VocabWord.word == word.lower()))
+        .first()
+    )
+    if row is not None:
+        return row
+    sents = rec.get("sentences") or []
+    example = ""
+    if sents and isinstance(sents[0], dict):
+        example = str(sents[0].get("en") or "")
+    level = str(rec.get("level") or "a1")
+    meta = {
+        "pos": rec.get("pos") or "",
+        "ru": rec.get("ru") or rec.get("translation") or "",
+        "definition": rec.get("definition") or "",
+        "ipa": rec.get("ipa") or "",
+        "difficulty": rec.get("difficulty") or "",
+        "slug": slug,
+        "sentences": sents[:5],
+        "sets": [f"cefr-{level.lower().replace('.', '-')}"],
+    }
+    row = VocabWord(
+        word=word[:64],
+        translation=str(rec.get("ru") or rec.get("translation") or "")[:256],
+        example=example[:500] if example else "",
+        slug=slug[:80],
+        rank=int(rec.get("cefr_order") or rec.get("rank") or 0) + 1,
+        meta=json.dumps(meta, ensure_ascii=False),
+    )
+    db.add(row)
+    try:
+        db.commit()
+        db.refresh(row)
+    except Exception:
+        db.rollback()
+        row = (
+            db.query(VocabWord)
+            .filter((VocabWord.slug == slug) | (VocabWord.word == word) | (VocabWord.word == word.lower()))
+            .first()
+        )
+        if row is None:
+            raise
+    return row
+
+
+def _attach_ids(db: Session, words: list[dict]) -> list[dict]:
+    if not words:
+        return words
+    needles = []
+    for w in words:
+        if w.get("slug"):
+            needles.append(w["slug"])
+        if w.get("word"):
+            needles.append(w["word"])
+            needles.append(w["word"].lower())
+    rows = (
+        db.query(VocabWord.id, VocabWord.slug, VocabWord.word)
+        .filter(or_(VocabWord.slug.in_(needles), VocabWord.word.in_(needles)))
+        .all()
+    )
+    by: dict[str, int] = {}
+    for i, slug, word in rows:
+        if slug:
+            by[slug.lower()] = i
+        if word:
+            by[word.lower()] = i
+    for w in words:
+        w["id"] = by.get((w.get("slug") or "").lower()) or by.get((w.get("word") or "").lower()) or 0
+    return words
+
+
+def _pilot_known_slugs(db: Session, pid: int | None) -> set[str]:
+    if not pid:
+        return set()
+    rows = (
+        db.query(VocabWord.slug, VocabWord.word)
+        .join(CardProgress, CardProgress.word_id == VocabWord.id)
+        .filter(CardProgress.pilot_id == pid)
+        .filter((CardProgress.known == 1) | (CardProgress.bin == "learned") | (CardProgress.interval >= 21))
+        .all()
+    )
+    out: set[str] = set()
+    for slug, word in rows:
+        if slug:
+            out.add(slug.lower())
+        if word:
+            out.add(word.lower())
+    return out
+
+
+def _cefr_level_info(db: Session, pid: int | None, stop_at: str | None = None, warm_only: bool = False) -> list[dict]:
+    known = _pilot_known_slugs(db, pid)
+    prev_ok = True
+    rows = []
+    for lv, title, _d in packs.LEVELS:
+        exists = packs.cefr_path(lv).exists()
+        slugs = packs.cefr_slugs_if_warm(lv)
+        if slugs is None and exists and not warm_only:
+            slugs = packs.cefr_slugs(lv)
+        if slugs is None:
+            # холодный уровень: A1 открыт, остальные ждут прогресс — без разбора JSON
+            unlocked = bool(exists) and (not rows)
+            rows.append({
+                "id": lv, "title": title, "total": 0, "known": 0, "pct": 0,
+                "unlocked": unlocked, "ready": bool(exists),
+            })
+            prev_ok = False
+            if stop_at and lv == stop_at:
+                break
+            continue
+        kn = sum(1 for s in slugs if s.lower() in known)
+        total = len(slugs)
+        pct = int(100 * kn / total) if total else 0
+        unlocked = prev_ok
+        rows.append({
+            "id": lv, "title": title, "total": total, "known": kn, "pct": pct,
+            "unlocked": unlocked, "ready": True,
+        })
+        prev_ok = unlocked and pct >= packs.UNLOCK_PCT
+        if stop_at and lv == stop_at:
+            break
+    return rows
+
+
+def _known_slugs(db: Session, pid: int | None, slugs: list[str]) -> set[str]:
+    if not pid or not slugs:
+        return set()
+    rows = db.query(VocabWord).filter(VocabWord.slug.in_(slugs)).all()
+    if not rows:
+        rows = db.query(VocabWord).filter(VocabWord.word.in_(slugs)).all()
+    ids = {w.id: (w.slug or w.word.lower()) for w in rows}
+    if not ids:
+        return set()
+    cards = (
+        db.query(CardProgress)
+        .filter(CardProgress.pilot_id == pid, CardProgress.word_id.in_(list(ids)))
+        .all()
+    )
+    out = set()
+    for c in cards:
+        if c.known or c.bin == "learned" or c.interval >= 21:
+            slug = ids.get(c.word_id)
+            if slug:
+                out.add(slug)
+    return out
+
+
+@router.get("/hub-stats")
+def hub_stats(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> dict:
+    pid = pilot.id if pilot else None
+    level_rows = _cefr_level_info(db, pid, warm_only=True)
+    cefr_total = sum(r["total"] for r in level_rows)
+    cefr_known = sum(r["known"] for r in level_rows)
+    verbs = packs.all_verbs()
+    v_slugs = [v.get("lemma") for v in verbs if v.get("lemma")]
+    v_known = _known_slugs(db, pid, v_slugs)
+    return {
+        "cefr": {"total": cefr_total, "known": cefr_known, "levels": level_rows, "ready": True},
+        "verbs": {"total": len(verbs), "known": len(v_known), "ready": bool(verbs)},
+        "book": {"ready": True},
+    }
+
+
+@router.get("/cefr/levels")
+def cefr_levels(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> dict:
+    """Чипы уровней: без разбора холодных JSON (счётчики — когда набор уже в кэше)."""
+    pid = pilot.id if pilot else None
+    rows = _cefr_level_info(db, pid, warm_only=True)
+    return {
+        "total": sum(r["total"] for r in rows),
+        "known": sum(r["known"] for r in rows),
+        "levels": rows,
+        "ready": True,
+    }
+
+
+@router.post("/ensure-word")
+def ensure_word(
+    body: EnsureWordIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    del pilot
+    packed = packs.find_cefr_word(body.word or body.slug) or {
+        "word": body.word,
+        "slug": body.slug or body.word.strip().lower(),
+        "pos": body.pos,
+        "ru": body.translation,
+        "definition": body.definition,
+        "ipa": body.ipa,
+        "difficulty": body.difficulty,
+        "sentences": [{"en": body.example, "ru": ""}] if body.example else [],
+    }
+    row = _ensure_vocab_from_pack(db, packed)
+    return {"id": row.id, "word": row.word, "slug": row.slug}
+
+
+@router.get("/cefr/{level}")
+def cefr_level(
+    level: str,
+    block: int = 0,
+    page: int = 0,
+    page_size: int = 24,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Порция карточек: только этот уровень, страница 24, без hub_stats на 8 файлах."""
+    if level not in {lv for lv, _t, _d in packs.LEVELS}:
+        raise HTTPException(404, "cefr_level")
+    if not packs.cefr_path(level).exists():
+        raise HTTPException(404, "cefr_level")
+    pid = pilot.id if pilot else None
+    rows = _cefr_level_info(db, pid, stop_at=level, warm_only=False)
+    info = next((r for r in rows if r["id"] == level), None)
+    if info and not info["unlocked"]:
+        prev = next((r["id"] for r in rows if r["id"] != level), "")
+        hint = f"{level} откроется, когда пройдёшь {packs.UNLOCK_PCT}% предыдущего уровня"
+        if prev:
+            hint = f"{level} откроется, когда пройдёшь {packs.UNLOCK_PCT}% уровня {prev}"
+        return {
+            "level": level, "unlocked": False, "hint": hint,
+            "block": 0, "blocks": 0, "page": 0, "pages": 0, "words": [], **info,
+        }
+    data = packs.cefr_page(level, block, page, page_size)
+    chunk = data["words"]
+    slugs = [w["slug"] for w in chunk]
+    known = _known_slugs(db, pid, slugs)
+    for w in chunk:
+        w["known"] = w["slug"] in known
+    _attach_ids(db, chunk)
+    words = [packs.card_view(w) for w in chunk]
+    return {
+        "level": level,
+        "title": packs.LEVEL_TITLE.get(level, level),
+        "unlocked": True,
+        "block": data["block"],
+        "blocks": data["blocks"],
+        "page": data["page"],
+        "pages": data["pages"],
+        "page_size": data["page_size"],
+        "block_size": packs.BLOCK_SIZE,
+        "block_words": data["block_words"],
+        "total": info["total"] if info and info["total"] else data["total"],
+        "known": info["known"] if info else 0,
+        "words": words,
+    }
+
+
+@router.get("/verbs")
+def verbs_list(q: str = "", limit: int = 80) -> dict:
+    rows = packs.search_verbs(q, max(1, min(int(limit), 200)))
+    return {"total": len(packs.all_verbs()), "items": [packs.summarize_verb(v) for v in rows]}
+
+
+@router.get("/verbs/{lemma}")
+def verb_detail(lemma: str) -> dict:
+    v = packs.find_verb(lemma)
+    if v is None:
+        raise HTTPException(404, "verb")
+    return {"verb": packs.summarize_verb(v), "tenses": packs.verb_tenses(v)}
