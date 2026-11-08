@@ -12,7 +12,7 @@
 | S0 e2e CI | готов | `master` `a6142bf` | `cursor/s0-e2e-ci-2598` **462bc08** · [PR #17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) |
 | S1 зоны / EN / lifecycle | готов | S0 | `cursor/s1-zones-en-lifecycle-2598` **7c9a276** · [PR #18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) |
 | S2 Документы MVP | готов, GitHub 5/5 | S1 | `cursor/s2-docs-mvp-2598` **d45e1bd** · [PR #19](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/19) |
-| S3 Эфир | in progress | S2 | `cursor/s3-ether-2598` — **чат пилотов**, не радиорубка |
+| S3 Эфир | in progress, PR открыт | S2 | `cursor/s3-ether-2598` **b8b85c4** · [PR #20](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/20) |
 | S4 Орион поведение | не начат | S3 | отдельная ветка/PR |
 | S5 English плотность/сканер | не начат | S4 | отдельная ветка/PR |
 | S6 стопор книги/главы | не начат | S5 | отдельная ветка/PR |

@@ -13,7 +13,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | S0 | `462bc08` | `cursor/s0-e2e-ci-2598` | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | был green на этом SHA (проверить latest) | по PR | merge **не** делали |
 | S1 | `7c9a276` | `cursor/s1-zones-en-lifecycle-2598` | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | был green на этом SHA | по PR | base = S0 ветка; merge **не** делали |
 | S2 | `d45e1bd` | `cursor/s2-docs-mvp-2598` | [#19](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/19) | **GitHub 5/5 SUCCESS** CI `42462921472`, Docker `42462921491` | Docker green на PR | Merge не делать |
-| S3 | in progress | `cursor/s3-ether-2598` | ещё нет | ещё нет | ещё нет | база S2 `d45e1bd`. **Чат пилотов (`comm`)**, не radio. Radio isolation WIP сохранён на ветке |
+| S3 | `b8b85c4` | `cursor/s3-ether-2598` | [#20](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/20) | **локально** vitest 209 / pytest 171 / e2e 42 / build ok. GitHub CI смотреть Actions, не путать | Docker-демона здесь нет; на PR — docker-smoke | база S2 `d45e1bd`. Чат пилотов (`comm`), не radio. Merge не делать |
 | S4–S7 | — | — | — | — | — | не начаты |
 
 Проверять remote перед зависимостью:
