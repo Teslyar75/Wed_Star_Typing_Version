@@ -185,12 +185,12 @@ export default function EnglishOverview({
             <button type="button" className="en-sector tone-ready" onClick={() => onOpenSet("cefr")}>
               <div className="ens-top"><span className="ens-code">S-CEFR</span><span className="ens-sub">CEFR</span></div>
               <div className="ens-name">{t("en_group_cefr")}</div>
-              <div className="ens-meta muted">{hub?.cefr.ready ? t("en_know").replace("{0}", String(hub.cefr.known)).replace("{1}", String(hub.cefr.total)) : t("en_cefr_preparing")}</div>
+              <div className="ens-meta muted">{hub?.cefr?.ready ? t("en_know").replace("{0}", String(hub.cefr?.known ?? 0)).replace("{1}", String(hub.cefr?.total ?? 0)) : t("en_cefr_preparing")}</div>
             </button>
             <button type="button" className="en-sector tone-ready" onClick={() => onOpenSet("verbs")}>
               <div className="ens-top"><span className="ens-code">S-VRB</span><span className="ens-sub">{t("en_sets_verbs")}</span></div>
               <div className="ens-name">{t("en_group_verbs")}</div>
-              <div className="ens-meta muted">{hub?.verbs.ready ? t("en_know").replace("{0}", String(hub.verbs.known)).replace("{1}", String(hub.verbs.total)) : t("en_cefr_preparing")}</div>
+              <div className="ens-meta muted">{hub?.verbs?.ready ? t("en_know").replace("{0}", String(hub.verbs?.known ?? 0)).replace("{1}", String(hub.verbs?.total ?? 0)) : t("en_cefr_preparing")}</div>
             </button>
             <button type="button" className="en-sector tone-idle" onClick={() => onOpenSet("book")}>
               <div className="ens-top"><span className="ens-code">S-BOOK</span><span className="ens-sub">{t("en_sets_book")}</span></div>
