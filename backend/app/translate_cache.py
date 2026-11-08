@@ -11,6 +11,7 @@ import urllib.request
 from datetime import datetime
 
 from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from app.db import Base
@@ -53,7 +54,14 @@ def cache_put(db: Session, source: str, src: str, dst: str, translated: str, *, 
     else:
         db.add(TranslationCache(digest=dig, src_lang=src, dst_lang=dst, text=translated))
     if commit:
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            row = db.query(TranslationCache).filter_by(digest=dig, src_lang=src, dst_lang=dst).first()
+            if row:
+                row.text = translated
+                db.commit()
 
 
 def _google(text: str, sl: str, tl: str) -> str:

@@ -547,6 +547,8 @@ def start_seed_worker() -> None:
 
         db = SessionLocal()
         try:
+            # сначала S-3000 (карты/сканер), потом полный словарь — не держать lock на 20k
+            _ensure_seeded_for(db, 3000)
             _ensure_seeded_for(db, 20000, need_dev=True)
         except Exception:  # noqa: BLE001 — досев догонят запросы /set и /sets
             db.rollback()
