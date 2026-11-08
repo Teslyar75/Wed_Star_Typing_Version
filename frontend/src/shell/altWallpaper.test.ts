@@ -9,4 +9,8 @@ describe("wallpaperUrl", () => {
   it("generic skins fall back", () => {
     expect(wallpaperUrl("zen_garden", "bridge")).toBeNull();
   });
+  it("docs has no wallpaper file — fallback", () => {
+    expect(wallpaperUrl("spaceship", "docs")).toBeNull();
+    expect(wallpaperUrl("steampunk", "docs")).toBeNull();
+  });
 });

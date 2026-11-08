@@ -1,0 +1,137 @@
+/* Документы: высота окна, список постранично, редактор внутри панели. Печать — @media print. */
+.docs-panel {
+  height: calc(100vh - 150px);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  gap: 6px;
+}
+.docs-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: none;
+  flex-wrap: wrap;
+}
+.docs-status { font-size: 12px; opacity: 0.85; }
+.docs-status.err, .docs-status.conflict { color: #e6c45c; }
+.docs-status.ok { color: #6fbf73; }
+.docs-list {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.docs-row {
+  height: 56px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid rgba(127, 200, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+.docs-row:hover, .docs-row:focus { border-color: rgba(127, 200, 255, 0.55); }
+.docs-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.docs-row-meta { font-size: 12px; opacity: 0.7; flex: none; }
+.docs-editor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+.docs-title-input {
+  flex: none;
+  font: inherit;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(127, 200, 255, 0.25);
+  border-radius: 6px;
+  color: inherit;
+}
+.docs-body-input {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  font: inherit;
+  line-height: 1.45;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(127, 200, 255, 0.25);
+  border-radius: 6px;
+  color: inherit;
+  overflow: auto;
+}
+.docs-pager {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex: none;
+}
+.docs-empty { opacity: 0.75; padding: 12px; }
+.docs-versions {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow: hidden;
+}
+.docs-ver {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-left: 3px solid rgba(127, 200, 255, 0.45);
+}
+.docs-print-sheet {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media print {
+  body * { visibility: hidden !important; }
+  .docs-print-sheet,
+  .docs-print-sheet * {
+    visibility: visible !important;
+  }
+  .docs-print-sheet {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    color: #000;
+    background: #fff;
+    padding: 16px;
+    white-space: pre-wrap;
+    font: 14pt / 1.4 serif;
+  }
+  .docs-print-sheet h1 {
+    font-size: 18pt;
+    margin: 0 0 12px;
+  }
+}

@@ -1,18 +1,19 @@
 /** Зоны верхнего ряда и состав зоны «Мостик». Канон — этот файл (NAV_ZONES.md в web-репо нет). */
 import type { Tab } from "./tabs";
 
-export type ZoneId = "bridge" | "english" | "speed" | "lounge" | "radio" | "orion" | "settings";
+export type ZoneId = "bridge" | "english" | "speed" | "lounge" | "radio" | "docs" | "orion" | "settings";
 
 /** Следующие этапы — не в шапке, не в хоткеях. */
-export const DEFERRED_ZONES = ["docs", "comm"] as const;
+export const DEFERRED_ZONES = ["comm"] as const;
 
-/** Порядок зон в шапке. Ctrl+1…N, N = длина массива (сейчас 7). */
+/** Порядок зон в шапке. Ctrl+1…N, N = длина массива (сейчас 8). Документы перед Орионом. */
 export const ZONE_ORDER: ZoneId[] = [
   "bridge",
   "english",
   "speed",
   "lounge",
   "radio",
+  "docs",
   "orion",
   "settings",
 ];

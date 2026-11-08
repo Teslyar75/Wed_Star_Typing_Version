@@ -56,6 +56,7 @@ const FlightLogPanel = lazy(() => import("./flightlog/FlightLogPanel"));
 const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
+const DocsPanel = lazy(() => import("./docs/DocsPanel"));
 const OrionPanel = lazy(() => import("./orion/OrionPanel"));
 
 function TabFallback() {
@@ -252,7 +253,7 @@ export default function App() {
         e.preventDefault();
         setCmdOpen((v) => !v);
       }
-      /* Ctrl+1…N — существующие зоны (ZONE_ORDER), без Docs/Comm */
+      /* Ctrl+1…N — существующие зоны (ZONE_ORDER), без Comm */
       if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-9]$/.test(e.key)) {
         const next = zoneFromDigit(e.key);
         if (!next) return;
@@ -507,6 +508,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "radio"}>
           <RadioPanel />
+        </LazyTab>
+        <LazyTab when={tab === "docs"}>
+          <DocsPanel />
         </LazyTab>
         <LazyTab when={tab === "orion"}>
           <OrionPanel />

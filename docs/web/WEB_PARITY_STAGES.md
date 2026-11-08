@@ -11,7 +11,7 @@
 | --- | --- | --- | --- |
 | S0 e2e CI | готов | `master` `a6142bf` | `cursor/s0-e2e-ci-2598` **462bc08** · [PR #17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) |
 | S1 зоны / EN / lifecycle | готов | S0 | `cursor/s1-zones-en-lifecycle-2598` **7c9a276** · [PR #18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) |
-| S2 Документы MVP | in progress | S1 | `cursor/s2-docs-mvp-2598` |
+| S2 Документы MVP | код на ветке, ждём GitHub CI | S1 | `cursor/s2-docs-mvp-2598` (PR после push) |
 | S3 Эфир | не начат | S2 (после зелёного CI) | отдельная ветка/PR |
 | S4 Орион поведение | не начат | S3 | отдельная ветка/PR |
 | S5 English плотность/сканер | не начат | S4 | отдельная ветка/PR |
