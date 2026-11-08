@@ -1,14 +1,17 @@
 # Star Typing Web — статус (Excellence / Parity / Surpass)
 
+**Актуальная очередь агента (S0–S7):** [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md), [WEB_PARITY_STAGES.md](./WEB_PARITY_STAGES.md), [PROGRESS.md](./PROGRESS.md).  
+«S1» Горбов и «S7 skins» в таблице ниже — **другие** исторические эпики, не этапы очереди 08.11.
+
 Репозиторий: [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)  
-Планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md); UI ← десктоп: монорепо `docs/web/UI_DESKTOP_PARITY.md`
+Исторические планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md).
 
 ## Готово
 
 | Эпик | Что в проде |
 | --- | --- |
 | W0 | Онбординг кабины, адаптив шапки, фокус мостика |
-| P1 | Drill-миссии ★★★, ремонт клавиш, heatmap, карта на мостике |
+| P1 | Drill-миссии ★★★, ремонт клавиш, heatmap, карта в `MissionsPanel` (не на BridgeScreen) |
 | P2 | Библиотека: полка+паспорт, PDF/TXT/вставка, rename/delete, Gutenberg+CEFR, bilinguis EN↔RU/UK · хвосты — [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
 | P3 | English: отсеки due/inbox/favorite/learned, из книги, ранг/XP |
 | P4 | Тахистоскоп, E-Pyr, журнал результатов с фильтром режима |
@@ -26,15 +29,18 @@
 | **G1** | Tetris + Breakout + `lounge_scores` + touch |
 | **H1** | Help drawer, welcome-тур, Ctrl+K, space profiles frost/light/full |
 | **S7 skins** | Per-skin FX + hard-reset при смене; эталон Звездолёт; image-сцены отложены |
-| **O1** | Орион: Чат/Агенты/Архив, OpenCode-мост :8765, голос, метки ПКМ · [SESSION_2026-11-08](./SESSION_2026-11-08.md) |
-| **J1** | Журнал Обзор+Monkeytype, дзен Ctrl+M, EN-склад CEFR/глаголы/наборы |
+| **O1** | Орион: Чат/Агенты/Архив, OpenCode-мост :8765, голос, метки ПКМ |
+| **J1** | Журнал Обзор+Monkeytype, дзен Ctrl+M, EN-склад CEFR/глаголы |
 | **W-fast** | Lazy-вкладки, auto frost на слабых CPU, ContinueHub + 7d-сводка на мостике |
 
 ## Инциденты / фиксации
 
 | Дата | Что |
 | --- | --- |
-| 2026-11-08 | Орион+журнал+дзен+OpenCode влиты в веб. Голос: start() в click. Caddy 300s. Журнал: [SESSION_2026-11-08](./SESSION_2026-11-08.md) |
+| 2026-11-08 | Орион+журнал+дзен+OpenCode + S0–S3. Голос: start() в click. Caddy 300s. |
+| 2026-11-08 | CI e2e на `a6142bf` красный: 3 fail + 1 flaky. Диагноз: overlay перехват клика «Экипаж»; гид G1 ловит Enter; вкладка English — `button` не `tab`; «Из книги» strict-mode (nav + обзор); карта миссий в `MissionsPanel`; sqlite 2 worker + honor top-10. S0: [SESSION_2026-11-08](./SESSION_2026-11-08.md). |
+| 2026-11-08 | S1 (зоны/EN/lifecycle, не эпик Горбова): хоткеи 1–7 по `ZONE_ORDER`; abort/epoch/observeBox; скрытый EN уже размонтировался — покрыто тестами. Docs/Comm тогда не добавлялись. |
+| 2026-11-08 | S2 Документы MVP (ветка `cursor/s2-docs-mvp-2598`, не merge): зона docs перед Орионом; `/api/docs` cookie-изоляция; autosave/rev/409; версии 10 мин/20; print CSS. |
 | 2026-10-13 | Битый `index.css` (`truncated oversized` + вложенные `*/`) ломал стекло → белые окна; почищено; SW `st-shell-v38`. Docker: данные на D:, логи на C: — Disk full валил демон. Журнал: [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
 
 ## На будущее

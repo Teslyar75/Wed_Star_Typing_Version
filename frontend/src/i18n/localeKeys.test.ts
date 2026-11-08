@@ -41,3 +41,19 @@ describe("base locale keys", () => {
     }
   });
 });
+
+/** uk: полная паритетность ключей с en (en — самый полный словарь) и без неоставленных русских слов. */
+describe("uk locale parity", () => {
+  it("uk has exactly the en key set", () => {
+    const en = Object.keys(i18n.getResourceBundle("en", "ui")).sort();
+    const uk = Object.keys(i18n.getResourceBundle("uk", "ui")).sort();
+    expect(en.filter((k) => !uk.includes(k)), "missing in uk").toEqual([]);
+    expect(uk.filter((k) => !en.includes(k)), "extra in uk").toEqual([]);
+  });
+
+  it("uk values contain no Russian-only letters", () => {
+    const b = i18n.getResourceBundle("uk", "ui") as Record<string, string>;
+    const bad = Object.entries(b).filter(([k, v]) => !/^[a-zа-яё]+$/i.test(k) && !k.startsWith("opt_yo") && /[ёыэъЁЫЭЪ]/.test(v)).map(([k]) => k);
+    expect(bad).toEqual([]);
+  });
+});

@@ -10,6 +10,8 @@ htmlcov/
 .env
 .env.local
 *.db
+*.db-wal
+*.db-shm
 .DS_Store
 frontend/test-results/
 frontend/playwright-report/

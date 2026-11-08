@@ -1,16 +1,20 @@
 # Star Typing — веб-версия (документация)
 
-**Код веб-версии:** отдельный репозиторий  
-→ [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)
+**Сначала:** [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md) — вход для Cursor, очередь S0–S7, прямое общение с Сергеем.  
+Корень репо: [AGENTS.md](../../AGENTS.md).
 
-Локальная рабочая копия в монорепо: папка `web_star_typing/` (свой `.git`, в `My_Stamina` не коммитится).
+**Код:** [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)
 
 | Файл | Назначение |
 | --- | --- |
-| [STATUS.md](./STATUS.md) | что уже в проде / инциденты |
-| [SESSION_2026-10-13.md](./SESSION_2026-10-13.md) | журнал: библиотека, Docker, починка CSS стекла |
-| [PARITY_PLAN.md](./PARITY_PLAN.md) | эпики P1–P8 |
-| [WEB_PLAN.md](./WEB_PLAN.md) | стек, фазы 0–8, промпты Cursor, узкие места (2 языка, сегментация, UPLINK) |
+| [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md) | **вход**, права, возобновление |
+| [WEB_PARITY_STAGES.md](./WEB_PARITY_STAGES.md) | актуальная очередь S0–S7 |
+| [PROGRESS.md](./PROGRESS.md) | SHA / PR / CI факты |
+| [BLOCKERS.md](./BLOCKERS.md) | блокеры |
+| [STATUS.md](./STATUS.md) | что уже в коде (эпики W0–P8…); не путать S1/S7 с очередью выше |
+| [JOURNAL.md](./JOURNAL.md) | дневник сессий |
+| [PARITY_PLAN.md](./PARITY_PLAN.md) | **исторический** P1–P8 (сделано) |
+| [WEB_PLAN.md](./WEB_PLAN.md) | **исторический** фазы 0–8 |
 
 ## Скины (все версии)
 

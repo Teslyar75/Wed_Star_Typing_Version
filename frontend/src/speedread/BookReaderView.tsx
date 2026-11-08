@@ -23,6 +23,8 @@ type Props = {
   onLibrary: () => void;
   onHyperdrive: () => void;
   onCards?: () => void;
+  /** «⌨ НА МОСТИК» — отправить книгу в слепую печать */
+  onBridge?: () => void;
 };
 
 /** line-height текста в порте (px); fallback = font × 1.95 как в CSS */
@@ -75,6 +77,7 @@ export default function BookReaderView({
   onLibrary,
   onHyperdrive,
   onCards,
+  onBridge,
 }: Props) {
   const rootRef = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLElement | null>(null);
@@ -445,6 +448,11 @@ export default function BookReaderView({
         >
           {fullscreen ? "✕" : t("sr_book_fs")}
         </button>
+        {onBridge ? (
+          <button type="button" className="hud-btn sr-book-bridge" title={t("sr_book_bridge_tip")} onClick={onBridge}>
+            {t("sr_book_bridge")}
+          </button>
+        ) : null}
         {onCards ? (
           <button type="button" className="hud-btn amber sr-book-cards" onClick={onCards}>
             → {t("sr_book_cards")}

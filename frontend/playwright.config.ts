@@ -11,10 +11,15 @@ const py =
     ? path.join(backend, ".venv", "Scripts", "python.exe")
     : path.join(backend, ".venv", "bin", "python");
 
+/** Свой sqlite для e2e. Стираем только его и только в команде webServer — не в import конфига (worker иначе снесёт таблицы после init_db). */
+const wipeE2eDb = `"${py}" -c "from pathlib import Path; [p.unlink(missing_ok=True) for p in Path('.').glob('star_typing_web_e2e.db*')]"`;
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 90_000,
   fullyParallel: false,
+  /* SQLite не держит параллельных писателей: 2 worker = UNIQUE translations + гонки honor. */
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: FRONT,
@@ -23,12 +28,16 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `"${py}" -m uvicorn app.main:app --host 127.0.0.1 --port 8000`,
+      command: `${wipeE2eDb} && "${py}" -m uvicorn app.main:app --host 127.0.0.1 --port 8000`,
       cwd: backend,
       url: `${API}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 90_000,
-      env: { ...process.env, TRANSLATE_OFFLINE: "1" },
+      env: {
+        ...process.env,
+        TRANSLATE_OFFLINE: "1",
+        DATABASE_URL: "sqlite:///./star_typing_web_e2e.db",
+      },
     },
     {
       command: "npm run dev -- --host 127.0.0.1 --port 5173",

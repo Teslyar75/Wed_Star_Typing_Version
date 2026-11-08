@@ -1,0 +1,126 @@
+@font-face {
+  font-family: "ST Roboto Mono";
+  src: url("/fonts/roboto_mono/RobotoMono-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 700;
+  font-display: swap;
+}
+.zen-root, .zen-embed {
+  --bg: #323437; --sub: #646669; --subalt: #2c2e31; --text: #d1d0c5; --main: #e2b714; --err: #ca4754; --errx: #7e2a33;
+  position: fixed; inset: 0; z-index: 9000; background: var(--bg); color: var(--text);
+  font-family: "ST Roboto Mono", "Roboto Mono", monospace; overflow: auto;
+}
+.zen-root button, .zen-embed button { font: inherit; background: none; border: 0; color: var(--sub); cursor: pointer; padding: 0 .4em; transition: color .12s; }
+.zen-root button:hover, .zen-embed button:hover { color: var(--text); }
+.zen-inner { max-width: 1280px; min-height: 100vh; margin: 0 auto; padding: 2rem 2.5rem 1rem; display: grid; grid-template-rows: auto 1fr auto; box-sizing: border-box; }
+.zen-top { display: flex; align-items: center; gap: .6rem; height: 3rem; }
+.zen-logo { display: flex; align-items: center; gap: .5rem; color: var(--main); }
+.zen-logo svg { width: 2rem; height: 2rem; fill: var(--main); }
+.zen-logo div { display: flex; flex-direction: column; line-height: 1; }
+.zen-logo small { font-size: .55rem; color: var(--sub); visibility: hidden; }
+.zen-logo span { font-size: 2rem; color: var(--text); letter-spacing: -.02em; font-family: "Lexend Deca", "ST Roboto Mono", sans-serif; }
+.zen-icons button { font-size: 1.15rem; }
+.zen-spacer { flex: 1; }
+.zen-user { display: flex; align-items: center; gap: .4rem; font-size: .9rem !important; }
+.zen-user svg, .zen-avatar svg { width: 1rem; height: 1rem; fill: currentColor; }
+.zen-back { opacity: 0; font-size: .85rem !important; }
+.zen-top:hover .zen-back, .zen-back:focus { opacity: 1; color: var(--main) !important; }
+.zen-root.typing .zen-icons, .zen-root.typing .zen-user, .zen-root.typing .zen-config, .zen-root.typing .zen-foot, .zen-root.typing .zen-lang { opacity: 0; transition: opacity .15s; }
+.zen-test { display: flex; flex-direction: column; justify-content: center; }
+.zen-config { align-self: center; display: flex; align-items: center; gap: .1rem; background: var(--subalt); border-radius: 8px; padding: .5rem .9rem; font-size: .75rem; margin-bottom: 3rem; }
+.zen-config button.on { color: var(--main); }
+.zen-sep { width: 4px; height: 1.3rem; background: var(--bg); border-radius: 2px; margin: 0 .4rem; }
+.zen-lang { text-align: center; color: var(--sub); font-size: .9rem; margin-bottom: 1rem; }
+.zen-counter { color: var(--main); font-size: 1.6rem; height: 2.2rem; }
+.zen-words-wrap { height: calc(3 * (2rem * 1.5 + 4px)); overflow: hidden; position: relative; }
+.zen-words { display: flex; flex-wrap: wrap; position: relative; font-size: 2rem; line-height: 1.5; transition: transform .12s; }
+.zen-word { margin: 0 .5ch 4px; color: var(--sub); border-bottom: 2px solid transparent; }
+.zen-word.error { border-bottom-color: var(--err); }
+.zen-l.ok { color: var(--text); }
+.zen-l.bad { color: var(--err); }
+.zen-l.extra { color: var(--errx); }
+.zen-caret { position: absolute; pointer-events: none; transition: left .09s linear, top .09s; }
+.zen-caret.underline { background: transparent; border-bottom: 3px solid var(--main); border-radius: 1px; }
+.zen-caret.line { background: var(--main); border-radius: 1px; margin-left: -1px; }
+.zen-caret.block { background: var(--main); opacity: .45; border-radius: 2px; }
+.zen-caret.blink { animation: zen-blink 1s step-end infinite; }
+@keyframes zen-blink { 50% { opacity: 0; } }
+.zen-restart { text-align: center; margin-top: 2rem; font-size: 1.2rem; }
+.zen-foot { color: var(--sub); font-size: .75rem; }
+.zen-hints { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; }
+kbd { background: var(--sub); color: var(--bg); border-radius: 4px; padding: .05rem .35rem; font-family: inherit; font-size: .7rem; }
+.zen-links { display: flex; gap: 1.2rem; }
+.zen-sub { color: var(--sub); font-size: .9rem; }
+.zen-result { display: flex; flex-direction: column; justify-content: center; gap: 1.5rem; }
+.zen-res-top { display: grid; grid-template-columns: auto 1fr; gap: 2rem; align-items: center; }
+.zen-res-big { display: flex; flex-direction: column; gap: .5rem; }
+.zen-res-big .zen-sub { font-size: 2rem; line-height: 1; }
+.zen-huge { font-size: 4rem; color: var(--main); line-height: 1; }
+.zen-chart { width: 100%; height: 200px; }
+.zen-chart .grid { stroke: var(--subalt); stroke-width: 1; }
+.zen-chart text { fill: var(--sub); font-size: 11px; font-family: inherit; }
+.zen-chart .wpm { fill: none; stroke: var(--main); stroke-width: 3; }
+.zen-chart .raw { fill: none; stroke: var(--sub); stroke-width: 2; }
+.zen-chart .err { fill: var(--err); font-size: 14px; }
+.zen-res-row { display: flex; gap: 3rem; }
+.zen-mid { color: var(--main); font-size: 2rem; line-height: 1.1; }
+.zen-mid small { font-size: .9rem; }
+.zen-res-actions { display: flex; justify-content: center; gap: 2rem; font-size: 1.2rem; }
+.zen-account { padding-top: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.zen-acc-tabs { display: flex; gap: .4rem; font-size: .85rem; }
+.zen-acc-tabs button { background: var(--subalt) !important; border-radius: 6px !important; padding: .35rem .9rem !important; }
+.zen-acc-tabs button.on { background: var(--main) !important; color: var(--bg) !important; }
+.zen-acc-card { background: var(--subalt); border-radius: 10px; padding: 1rem 1.25rem; }
+.zen-pilot { display: grid; grid-template-columns: auto 1.5fr 1fr 1fr 1fr; gap: 1.5rem; align-items: center; }
+.zen-avatar { width: 4.5rem; height: 4.5rem; border-radius: 50%; background: var(--sub); display: grid; place-items: center; color: var(--subalt); }
+.zen-avatar svg { width: 2.4rem; height: 2.4rem; }
+.zen-pilot-name { font-size: 2rem; }
+.zen-level { display: flex; align-items: center; gap: .5rem; margin-top: .4rem; font-size: .8rem; }
+.zen-level b { width: 8rem; height: .4rem; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.zen-level i { display: block; height: 100%; background: var(--main); }
+.zen-level em { font-style: normal; color: var(--sub); }
+.zen-big { font-size: 2rem; }
+.zen-pb-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.zen-pbs { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
+.zen-pb { position: relative; }
+.zen-pb-k { color: var(--sub); font-size: .75rem; }
+.zen-pb-v { font-size: 2.4rem; line-height: 1.2; }
+.zen-pb-a { color: var(--sub); font-size: 1.1rem; }
+.zen-pb-src { position: absolute; top: 0; right: .3rem; font-size: .6rem; border-radius: 3px; padding: 0 .25rem; background: var(--bg); color: var(--sub); }
+.zen-pb-src.ST { color: var(--main); }
+.zen-act-months { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; color: var(--sub); font-size: .7rem; height: 1rem; }
+.zen-act-grid { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px; }
+.zen-act-col { display: grid; grid-template-rows: repeat(7, 1fr); gap: 3px; }
+.zen-act-c { display: block; aspect-ratio: 1; border-radius: 2px; background: var(--bg); }
+.zen-act-c.empty { background: transparent; }
+.zen-act-c.l1 { background: #6b5a1a; } .zen-act-c.l2 { background: #8f7816; } .zen-act-c.l3 { background: #b89715; } .zen-act-c.l4 { background: var(--main); }
+.zen-act-legend { display: flex; justify-content: flex-end; align-items: center; gap: 3px; margin-top: .5rem; color: var(--sub); font-size: .7rem; }
+.zen-act-legend .zen-act-c { width: .7rem; }
+.hud-btn.zen-enter { letter-spacing: .05em; }
+
+/* встраивание общей таблицы ST+MT в бортжурнал (тот же компонент, те же данные) */
+.zen-embed { position: static; inset: auto; z-index: auto; overflow: visible; border-radius: 10px; padding: .75rem 1rem 1rem; }
+.zen-embed .zen-account { padding-top: 0; }
+.zen-embed-title { margin: 0 0 .5rem; font-size: .85rem; color: var(--sub); font-weight: 400; }
+.zen-mt-status { display: inline-flex; align-items: center; gap: .25rem; color: var(--sub); font-size: .75rem; }
+.zen-mt-status.error, .zen-mt-status.backoff { color: var(--err); }
+.zen-mt-status .zen-mt-refresh { padding: 0 .35rem !important; font-size: 1rem; }
+.zen-mt-status .zen-mt-refresh:disabled { opacity: .4; cursor: default; }
+.zen-pilot-name a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--sub); }
+.zen-pilot-name a:hover { color: var(--main); }
+.zen-activity { position: relative; }
+.zen-act-c:not(.empty) { cursor: pointer; }
+.zen-act-tip { position: absolute; transform: translate(-50%, calc(-100% - 6px)); background: var(--bg); color: var(--text);
+  border: 1px solid var(--sub); border-radius: 6px; padding: .3rem .55rem; font-size: .75rem; white-space: nowrap; pointer-events: none; z-index: 2; }
+@media (max-height: 820px) {
+  .zen-account { gap: .6rem; }
+  .zen-acc-card { padding: .6rem 1rem; }
+  .zen-pilot-name { font-size: 1.5rem; }
+  .zen-pb-v { font-size: 1.8rem; }
+}
+
+/* Бортжурнал: одна прокрутка на всю страницу (календарь достижим на 1366x768/1280x800/1280x720), без вложенных */
+section.flog.flog-scroll { overflow-y: auto !important; overflow-x: hidden !important; height: 100% !important; max-height: 100% !important; }
+section.flog.flog-scroll > * { flex-shrink: 0 !important; }
+section.flog.flog-scroll > .flog-bottom { flex: 0 0 auto !important; min-height: 0 !important; }
+.zen-act-tip.r { transform: translate(-100%, calc(-100% - 6px)); }
+.zen-act-tip.l { transform: translate(0, calc(-100% - 6px)); }

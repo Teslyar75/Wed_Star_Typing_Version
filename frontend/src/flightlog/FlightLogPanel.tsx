@@ -5,6 +5,7 @@ import { colorFor } from "../bridge/heatmapColor";
 import { t, getLang } from "../i18n";
 import { skinRank } from "../theme/voice";
 import MonkeytypePanel from "./MonkeytypePanel";
+import { useMt } from "../zen/mtStore";
 
 type Summary = {
   flights: number;
@@ -105,6 +106,10 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
     else setSum(null);
     if (kRes.ok) setKeys(await kRes.json());
     else setKeys([]);
+  }, []);
+
+  useEffect(() => {
+    void useMt.getState().sync();
   }, []);
 
   useEffect(() => {

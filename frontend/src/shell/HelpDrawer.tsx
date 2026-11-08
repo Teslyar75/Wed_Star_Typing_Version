@@ -2,8 +2,10 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { t, getLang } from "../i18n";
+import { ZONE_ORDER } from "./zones";
 import { voiceLookup } from "../theme/voice";
 import { ti } from "../idle/idleI18n";
+import { zt } from "../zen/zenI18n";
 
 type Tab = string;
 
@@ -17,7 +19,7 @@ const KEYBOARD_NAV =
   "• Ctrl+Home / Ctrl+End — первая / последняя кнопка в группе.\n" +
   "• Enter / Пробел — нажать кнопку в фокусе.\n" +
   "• Home — Орион · Page Up — слайды · Page Down — экран.\n" +
-  "• Ctrl+1…6 — зона; F6 — цикл шапка ↔ содержимое.\n" +
+  `• Ctrl+1…${ZONE_ORDER.length} — зона; F6 — цикл шапка ↔ содержимое.\n` +
   "• Ctrl+K — палитра; F1 — справка; Backspace — предыдущий раздел.\n\n" +
   "Tab с мостика уводит к кнопкам (полёт ставится на паузу). Стрелки во время набора остаются в прицеле — сначала Tab.\n" +
   "В гипердрайве и играх отдыха стрелки остаются за управлением режима.";
@@ -91,9 +93,28 @@ const PAGES: Record<string, { title: string; body: string }> = {
   radio: {
     title: "РАДИОРУБКА",
     body:
-      "Эфир и приёмник.\n\n" +
+      "Радиорубка: станции и приёмник.\n\n" +
       "• Избранное, поиск станций, шкала громкости.\n" +
-      "• Duck при наборе на мостике приглушает радио.",
+      "• Duck при наборе на мостике приглушает радио.\n" +
+      "• Подстраница «эфир» здесь — вещание станции, не чат экипажа.",
+  },
+  comm: {
+    title: "ЭФИР",
+    body:
+      "Эфир — общая лента сообщений экипажа.\n\n" +
+      "• Напишите в поле внизу и нажмите «ОТПРАВИТЬ» (или Enter).\n" +
+      "• Видны все сообщения: и ваши, и других пилотов. Своё отмечено ▸.\n" +
+      "• «ОБНОВИТЬ» — перечитать ленту; непрочитанное подсвечивает кнопку ЭФИР.\n" +
+      "• Это канал пилотов, не разговор с Орионом.",
+  },
+  docs: {
+    title: "ДОКУМЕНТЫ",
+    body:
+      "Бортовой блокнот пилота. Документы лежат в профиле, не в файлах браузера.\n\n" +
+      "• Список — создать и открыть.\n" +
+      "• Текст сохраняется сам; при ошибке или конфликте статус честный, чужая запись не перезаписывается.\n" +
+      "• Версии — снимки не чаще чем раз в 10 минут, последние 20.\n" +
+      "• Печать — кнопка «Печать» и стили браузера (Ctrl+P).",
   },
   settings: {
     title: "НАСТРОЙКИ",
@@ -177,6 +198,12 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
           {page.body.split("\n").map((line, i) =>
             line.trim() === "" ? <br key={i} /> : <p key={i}>{line}</p>,
           )}
+          {lockedTab.current === "bridge" ? (
+            <>
+              <hr className="help-sep" />
+              <p className="help-zen">{zt("help")}</p>
+            </>
+          ) : null}
           {lockedTab.current === "settings" ? (
             <>
               <hr className="help-sep" />

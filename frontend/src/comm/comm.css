@@ -1,0 +1,17 @@
+.comm-panel { height: calc(100vh - 150px); }
+.comm-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: none;
+}
+.comm-head h2 { margin: 0; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.comm-head .btn { margin-left: auto; }
+.orion-msg.mine { border-color: color-mix(in srgb, var(--st-cyan, #7ec8ff) 45%, transparent); }
+.comm-call { font-size: 12px; }
+.comm-acc-cyan { color: var(--st-cyan, #7ec8ff); }
+.comm-acc-amber { color: var(--st-amber, #e6c45c); }
+.comm-acc-green { color: var(--st-green, #6fbf73); }
+.comm-acc-red { color: var(--st-red, #d96a5f); }
+.comm-acc-purple { color: #c08bff; }
+.nav-tab.unread { color: var(--st-amber, #e6c45c); }

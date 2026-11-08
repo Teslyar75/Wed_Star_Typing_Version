@@ -1,18 +1,29 @@
-/** Зоны верхнего ряда и состав зоны «Мостик». См. docs/web/NAV_ZONES.md */
+/** Зоны верхнего ряда и состав зоны «Мостик». Канон — этот файл (NAV_ZONES.md в web-репо нет). */
 import type { Tab } from "./tabs";
 
-export type ZoneId = "bridge" | "english" | "speed" | "lounge" | "radio" | "orion" | "settings";
+export type ZoneId = "bridge" | "english" | "speed" | "lounge" | "radio" | "comm" | "docs" | "orion" | "settings";
 
-/** Порядок зон в шапке (Ctrl+1…6). */
+/** Следующие этапы — не в шапке, не в хоткеях. */
+export const DEFERRED_ZONES = [] as const;
+
+/** Порядок зон в шапке. Ctrl+1…N. Desktop 3.8.3: radio → comm(Эфир) → docs → orion. */
 export const ZONE_ORDER: ZoneId[] = [
   "bridge",
   "english",
   "speed",
   "lounge",
   "radio",
+  "comm",
+  "docs",
   "orion",
   "settings",
 ];
+
+/** Ctrl/Cmd + цифра 1–9 → существующая зона; лишние цифры игнорируются. */
+export function zoneFromDigit(digit: string): ZoneId | undefined {
+  if (!/^[1-9]$/.test(digit)) return undefined;
+  return ZONE_ORDER[Number(digit) - 1];
+}
 
 /** Подменю Мостика (не на верхнем ряду). */
 export const BRIDGE_SUBTABS: Tab[] = ["missions", "cargo", "log", "bridgeSettings"];

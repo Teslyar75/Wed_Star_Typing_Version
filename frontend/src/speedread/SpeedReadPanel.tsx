@@ -7,6 +7,7 @@ import ZoneSettingsShell from "../shell/ZoneSettingsShell";
 import SpeedOverview, { type SrBook, type SrSession, type SrTrainer } from "./SpeedOverview";
 import HyperdriveView from "./HyperdriveView";
 import BookReaderView from "./BookReaderView";
+import { sendTextToBridge } from "../library/sendToBridge";
 import TableExView from "./TableExView";
 import PyramidExView from "./PyramidExView";
 import FlashExView from "./FlashExView";
@@ -360,7 +361,7 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
   const maxW = Math.max(100, ...chartPoints);
 
   return (
-    <div className="speed sr-hub">
+    <div className="speed sr-hub" data-sr-page={page} data-sr-mode={mode}>
       <header className="sr-hub-head">
         <h2 className="route-title">{t("speed")}</h2>
         <nav className="tabs sr-subs" aria-label={t("speed")}>
@@ -368,6 +369,7 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
             <button
               key={p.id}
               type="button"
+              data-sr-nav={p.id}
               className={`tab ${page === p.id ? "on" : ""}`}
               onClick={() => {
                 if (p.id === "reader") {
@@ -514,6 +516,16 @@ export default function SpeedReadPanel({ onOpenBridge }: SpeedProps) {
               onTheme={(th) => patchPrefs({ bookTheme: th })}
               onLibrary={() => setPage("library")}
               onHyperdrive={() => void openHyperdrive()}
+              onBridge={
+                textId == null
+                  ? undefined
+                  : () => {
+                      void sendTextToBridge({ textId, title: book.title, lang: book.lang }).then((err) => {
+                        if (err) window.alert(err);
+                        else onOpenBridge?.();
+                      });
+                    }
+              }
               onCards={
                 textId == null
                   ? undefined

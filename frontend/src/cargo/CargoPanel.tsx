@@ -8,8 +8,10 @@ import {
   fmtInt,
   loadCargoBoard,
   PENDING_CARGO_KEY,
+  prepareOnServer,
   processText,
   saveCargoBoard,
+  type GlueResult,
   type CargoOpts,
 } from "./processText";
 
@@ -23,6 +25,7 @@ const OPTS: { key: keyof CargoOpts; titleKey: string; descKey: string; def: bool
   { key: "spaces", titleKey: "opt_spaces", descKey: "opt_spaces_desc", def: true },
   { key: "yo", titleKey: "opt_yo", descKey: "opt_yo_desc", def: false },
   { key: "translit", titleKey: "opt_translit", descKey: "opt_translit_desc", def: false },
+  { key: "glue", titleKey: "opt_glue", descKey: "opt_glue_desc", def: true },
 ];
 
 function loadOpts(): CargoOpts {
@@ -44,7 +47,23 @@ export default function CargoPanel({ onOpenBridge }: Props) {
   const [boardTick, setBoardTick] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const adapted = useMemo(() => processText(raw, opts), [raw, opts]);
+  const local = useMemo(() => processText(raw, opts), [raw, opts]);
+  const srvKey = `${JSON.stringify(opts)}\u0000${raw}`;
+  const [srv, setSrv] = useState<{ key: string; res: GlueResult } | null>(null);
+  useEffect(() => {
+    if (!opts.glue || !raw.trim()) return;
+    const key = srvKey;
+    const id = window.setTimeout(() => {
+      void prepareOnServer(raw, opts).then((res) => setSrv({ key, res }));
+    }, 350);
+    return () => window.clearTimeout(id);
+  }, [srvKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const glueRes = opts.glue && srv?.key === srvKey ? srv.res : null;
+  const adapted = glueRes ? glueRes.text : local;
+  const finalText = useCallback(
+    async () => (opts.glue && !glueRes && raw.trim() ? (await prepareOnServer(raw, opts)).text : adapted),
+    [adapted, glueRes, opts, raw],
+  );
   const board = useMemo(() => loadCargoBoard(), [boardTick, adapted]);
   const sameBoard = Boolean(board && board.text === adapted && adapted.length > 0);
   const progressPct = sameBoard && board && board.text.length ? Math.round((board.index / board.text.length) * 100) : 0;
@@ -68,10 +87,11 @@ export default function CargoPanel({ onOpenBridge }: Props) {
     setOpts((o) => ({ ...o, [key]: !o[key] }));
   };
 
-  const applyToField = () => {
+  const applyToField = async () => {
     if (!adapted) return;
+    const text = await finalText();
     setOriginal(raw);
-    setRaw(adapted);
+    setRaw(text);
   };
 
   const clear = () => {
@@ -93,25 +113,15 @@ export default function CargoPanel({ onOpenBridge }: Props) {
 
   const onFile = async (file: File | null) => {
     if (!file) return;
-    const name = file.name.toLowerCase();
-    if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".text") || name.endsWith(".csv")) {
-      const text = await file.text();
-      setOriginal(text);
-      setRaw(text);
-      return;
-    }
+    /* txt/html/epub/fb2/pdf → бэкенд: кодировка utf-8/cp1251, шапка Gutenberg, html→текст, PDF-чистка */
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("title", file.name);
-    fd.append("lang", "en");
-    const r = await fetch("/api/texts/upload", { method: "POST", body: fd, credentials: "include" });
+    const r = await fetch("/api/texts/extract", { method: "POST", body: fd, credentials: "include" });
     if (!r.ok) {
       setStatus(await r.text());
       return;
     }
-    const doc = await r.json();
-    const segs: { original: string }[] = await (await fetch(`/api/texts/${doc.id}/segments?limit=5000`)).json();
-    const text = segs.map((s) => s.original).join(" ");
+    const { text } = (await r.json()) as { text: string };
     setOriginal(text);
     setRaw(text);
   };
@@ -126,7 +136,8 @@ export default function CargoPanel({ onOpenBridge }: Props) {
   };
 
   const saveBoard = useCallback(
-    (start: boolean, fromIndex = 0) => {
+    async (start: boolean, fromIndex = 0) => {
+      const adapted = await finalText();
       if (!adapted.trim()) {
         setStatus(t("cargo_empty"));
         return;
@@ -153,7 +164,7 @@ export default function CargoPanel({ onOpenBridge }: Props) {
       );
       onOpenBridge?.();
     },
-    [adapted, onOpenBridge, original, raw],
+    [finalText, onOpenBridge, original, raw],
   );
 
   const previewInfo = !adapted
@@ -176,7 +187,7 @@ export default function CargoPanel({ onOpenBridge }: Props) {
         <input
           ref={fileRef}
           type="file"
-          accept=".txt,.md,.text,.pdf,.epub,text/plain"
+          accept=".txt,.md,.text,.pdf,.epub,.fb2,.html,.htm,text/plain"
           hidden
           onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
         />
@@ -236,12 +247,17 @@ export default function CargoPanel({ onOpenBridge }: Props) {
               );
             })}
           </ul>
-          <button type="button" className="hud-btn amber cargo-apply" onClick={applyToField}>
+          <button type="button" className="hud-btn amber cargo-apply" onClick={() => void applyToField()}>
             ✦ {t("apply_to_field")}
           </button>
           <div className="cargo-preview-block">
             <div className="lab">{t("trainer_preview")}</div>
             <div className="cargo-preview-meta">{previewInfo}</div>
+            {glueRes && glueRes.count > 0 ? (
+              <div className="cargo-preview-meta muted" data-testid="cargo-glue">
+                {t("glue_fixed_n").replace("{0}", fmtInt(glueRes.count))}: {glueRes.examples.slice(0, 4).join(", ")}
+              </div>
+            ) : null}
             <pre className="cargo-preview">{adapted ? adapted.slice(0, 260) + (adapted.length > 260 ? "…" : "") : t("cargo_preview_hint")}</pre>
           </div>
         </aside>
@@ -250,7 +266,7 @@ export default function CargoPanel({ onOpenBridge }: Props) {
       <footer className="cargo-foot">
         <span className="muted cargo-status">{status}</span>
         <div className="cargo-foot-actions">
-          <button type="button" className="hud-btn" onClick={() => saveBoard(false)}>
+          <button type="button" className="hud-btn" onClick={() => void saveBoard(false)}>
             {t("save_aboard")}
           </button>
           <button
@@ -262,11 +278,11 @@ export default function CargoPanel({ onOpenBridge }: Props) {
               opacity: sameBoard ? 1 : 0.45,
             }}
             disabled={!sameBoard}
-            onClick={() => saveBoard(true, board?.index ?? 0)}
+            onClick={() => void saveBoard(true, board?.index ?? 0)}
           >
             {sameBoard ? t("resume_pct").replace("{0}", String(progressPct)) : t("resume_place")}
           </button>
-          <button type="button" className="hud-btn amber" onClick={() => saveBoard(true, 0)}>
+          <button type="button" className="hud-btn amber" onClick={() => void saveBoard(true, 0)}>
             ▶ {t("board_and_start")}
           </button>
         </div>

@@ -157,7 +157,13 @@ def to_paragraphs(lines: list[str]) -> str:
         if not cur:
             cur = ln
         elif re.search(r"[^\W\d_] ?[-\u00ad]$", cur) and ln[:1].islower():
-            cur = re.sub(r" ?[-\u00ad]$", "", cur) + ln                  # сло- / во → слово (и «сло -»)
+            from app.glue_fix import join_hyphenated  # сло- / во → слово, forty- / five → forty-five
+            m = re.search(r"([^\W\d_]+) ?([-\u00ad])$", cur)
+            first = re.match(r"[^\W\d_]+", ln)
+            if m and first:
+                cur = cur[:m.start()] + join_hyphenated(m.group(1), first.group(0), m.group(2)) + ln[first.end():]
+            else:
+                cur = re.sub(r" ?[-\u00ad]$", "", cur) + ln
         else:
             cur = cur + " " + ln
         if ln.endswith(SENT_END) and len(ln) < width * 0.75:

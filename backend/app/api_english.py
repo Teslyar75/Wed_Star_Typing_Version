@@ -14,6 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column, Session
 from app.auth_deps import get_optional_pilot
 from app.db import Base, get_db
 from app.pilots import Pilot
+from app import english_warehouse as whm
 from app import english_packs as packs
 from app import english_quality as qeng
 
@@ -571,6 +572,28 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
         "zero_rank": zero_left,
     }
 
+
+def start_seed_worker() -> None:
+    """Фоновый досев полного словаря при старте сервера (свежая БД сразу полная)."""
+    import sys
+
+    if "pytest" in sys.modules:
+        return
+
+    def _run() -> None:
+        from app.db import SessionLocal
+
+        db = SessionLocal()
+        try:
+            # сначала S-3000 (карты/сканер), потом полный словарь — не держать lock на 20k
+            _ensure_seeded_for(db, 3000)
+            _ensure_seeded_for(db, 20000, need_dev=True)
+        except Exception:  # noqa: BLE001 — досев догонят запросы /set и /sets
+            db.rollback()
+        finally:
+            db.close()
+
+    threading.Thread(target=_run, name="vocab-seed", daemon=True).start()
 
 @router.post("/seed")
 def seed_vocab(
@@ -1362,6 +1385,100 @@ def warehouse_move(
     return {"ok": True, "state": card.wh_state}
 
 
+
+class WarehouseAttemptIn(BaseModel):
+    word_id: int
+    key: int = Field(ge=-1, le=2)  # -1 = слово, 0..2 = предложение
+    score: int = Field(ge=0, le=100)
+
+class WarehouseSelectIn(BaseModel):
+    word_id: int
+    sel: list[bool]
+
+@router.post("/warehouse/attempt")
+def warehouse_attempt(
+    body: WarehouseAttemptIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Попытка по слову (key=-1) или предложению (key=0..2) — порт pages_warehouse.on_speech.
+
+    Балл — автоматическая оценка распознанной речи (score_word / score_sentence).
+    Совпадение ≥ FLIP_OK (80%) — задание закрыто; прогон засчитывается сам (finish_pass).
+    """
+    from app import english_warehouse as whm
+    from app.english_score import verdict
+
+    w = db.get(VocabWord, body.word_id)
+    if w is None:
+        raise HTTPException(404, "word not found")
+    pid = pilot.id if pilot else 0
+    card = _card(db, pid, body.word_id)
+    n = min(whm.MAX_DIFF, len(_parse_meta(w.meta).get("sentences") or []))
+    if body.key >= n:
+        raise HTTPException(400, "bad sentence index")
+    st = whm.load_state(card.wh_run)
+    sel = whm.selection(st, n)
+    if not card.wh_goal:
+        card.wh_goal = int(_settings(db, pid).get("warehouse_passes") or whm.DEFAULT_PASSES)
+    if card.wh_state in ("", "away") and card.known:
+        card.wh_state = "shelf"
+    slug = (w.slug or w.word).lower()
+    scores = whm.current_scores(st)
+    score = int(body.score)
+    scores[body.key] = max(scores.get(body.key, 0), score)
+    ok = score >= whm.FLIP_OK
+    xp = 0
+    if True:  # десктоп пишет и слово (si=-1), и предложения
+        xp += whm.record_sentence(st, slug, body.key, score, ok=ok, today=date.today().isoformat())
+        db.add(SpeechAttempt(pilot_id=pid, word_id=body.word_id, mode="warehouse", score=score, ok=1 if ok else 0))
+    next_key = body.key
+    res: dict = {"status": "incomplete"}
+    if ok:
+        next_key = whm.next_active(scores, sel, body.key)
+        res = whm.finish_pass(card, st, slug, scores, sel, int(card.wh_goal or 2))
+        if res["status"] in ("weak", "pass", "cleared"):
+            scores = {}
+            if res["status"] != "cleared":
+                next_key = whm.WORD_KEY
+        xp += int(res.get("xp") or 0)
+    else:
+        whm.save_current(st, scores)
+    if xp:
+        card.english_xp = (card.english_xp or 0) + xp
+        if pilot is not None:
+            pilot.xp += xp
+    card.wh_run = whm.dump_state(st)
+    db.commit()
+    label, color = verdict(score)
+    return {
+        "score": score, "ok": ok, "need": whm.FLIP_OK, "verdict": label, "color": color,
+        "xp": xp, "next_key": next_key, "scores": {str(k): v for k, v in scores.items()},
+        "sel": sel, "runs": card.wh_runs, "goal": int(card.wh_goal or 2), "state": card.wh_state,
+        "stars": int(card.wh_stars or 0), "avg": float(card.wh_avg or 0), **{"result": res},
+    }
+
+@router.post("/warehouse/select")
+def warehouse_select(
+    body: WarehouseSelectIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+) -> dict:
+    """Отметка предложений для прогона (хотя бы одно остаётся)."""
+    from app import english_warehouse as whm
+
+    w = db.get(VocabWord, body.word_id)
+    if w is None:
+        raise HTTPException(404, "word not found")
+    pid = pilot.id if pilot else 0
+    card = _card(db, pid, body.word_id)
+    n = min(whm.MAX_DIFF, len(_parse_meta(w.meta).get("sentences") or []))
+    st = whm.load_state(card.wh_run)
+    sel = (list(body.sel) + [False] * n)[:n]
+    sel = whm.set_selection(st, sel) if n else []
+    card.wh_run = whm.dump_state(st)
+    db.commit()
+    return {"sel": sel}
 
 @router.post("/warehouse/quality")
 def warehouse_quality(

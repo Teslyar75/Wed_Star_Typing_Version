@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import type { EnWord } from "./types";
+import { createEpoch, isAbortError } from "../shell/requestEpoch";
+import { observeBox } from "../shell/resizeGuard";
 import { useUiVariant } from "../shell/uiVariant";
 import { fitStarGrid, remapPage, type StarGrid } from "./starGrid";
 
@@ -102,24 +104,19 @@ export default function StarMapsPage({
   const pageSize = alt && grid ? grid.size : PAGE_SIZE;
   const sizeRef = useRef(pageSize);
 
-  /* alt: сетка по окну (5897486) — колонки 2..6, ряды по высоте, без прокрутки. */
+  /* alt: сетка по окну — колонки 2..6, ряды по высоте. observeBox глушит RO-петлю. */
   useEffect(() => {
     if (!alt) {
       setGrid(null);
       return;
     }
     const el = gridRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      if (r.width < 10 || r.height < 10) return;
-      const g = fitStarGrid(r.width, r.height);
+    if (!el) return;
+    return observeBox(el, ({ w, h }) => {
+      if (w < 10 || h < 10) return;
+      const g = fitStarGrid(w, h);
       setGrid((old) => (old && old.cols === g.cols && old.rows === g.rows ? old : g));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
+    });
   }, [alt]);
 
   useEffect(() => {
@@ -135,10 +132,16 @@ export default function StarMapsPage({
   }, [currentSet]);
 
   useEffect(() => {
+    const ac = new AbortController();
     void (async () => {
-      const r = await fetch("/api/english/sets", { credentials: "include" });
-      if (r.ok) setSets(await r.json());
+      try {
+        const r = await fetch("/api/english/sets", { credentials: "include", signal: ac.signal });
+        if (r.ok) setSets(await r.json());
+      } catch (e) {
+        if (isAbortError(e)) return;
+      }
     })();
+    return () => ac.abort();
   }, []);
 
   const pickSet = (id: string) => {
@@ -164,10 +167,15 @@ export default function StarMapsPage({
     setPage(0);
   };
 
-  const reqRef = useRef(0);
+  const epoch = useRef(createEpoch());
+  const loadAc = useRef<AbortController | null>(null);
   const load = useCallback(async () => {
-    const my = ++reqRef.current;
+    loadAc.current?.abort();
+    const ac = new AbortController();
+    loadAc.current = ac;
+    const my = epoch.current.next();
     setBusy(true);
+    const live = () => epoch.current.is(my) && !ac.signal.aborted;
     try {
       const params = new URLSearchParams({
         limit: String(pageSize),
@@ -180,19 +188,35 @@ export default function StarMapsPage({
       if (q.trim()) params.set("q", q.trim());
       if (pos) params.set("pos", pos);
       if (diff !== "all") params.set("difficulty", diff);
-      const r = await fetch(`/api/english/set/${encodeURIComponent(setId)}?${params}`, { credentials: "include" });
-      if (!r.ok) return;
-      const j = (await r.json()) as { items: EnWord[]; total: number };
-      if (my !== reqRef.current) return; // устаревший ответ (сменился размер страницы)
+      const url = `/api/english/set/${encodeURIComponent(setId)}?${params}`;
+      const opts = { credentials: "include" as const, signal: ac.signal };
+      let r = await fetch(url, opts);
+      if (!r.ok || !live()) return;
+      let j = (await r.json()) as { items: EnWord[]; total: number };
+      if (!live()) return;
+      if (!(j.items || []).length && !(j.total || 0)) {
+        await fetch("/api/english/seed?limit=3000&batch=400", { method: "POST", ...opts });
+        if (!live()) return;
+        r = await fetch(url, opts);
+        if (!r.ok || !live()) return;
+        j = (await r.json()) as { items: EnWord[]; total: number };
+        if (!live()) return;
+      }
       setItems(j.items || []);
       setTotal(j.total || 0);
-    } finally {
+      setBusy(false);
+    } catch (e) {
+      if (isAbortError(e) || !live()) return;
       setBusy(false);
     }
   }, [setId, q, pos, status, length, diff, sort, seed, page, pageSize]);
 
   useEffect(() => {
     void load();
+    return () => {
+      epoch.current.invalidate();
+      loadAc.current?.abort();
+    };
   }, [load]);
 
   const markKnown = async (w: EnWord) => {
@@ -404,6 +428,20 @@ export default function StarMapsPage({
           >
             ▶
           </button>
+          <button
+            type="button"
+            className="en-sm-chip"
+            disabled={page + 1 >= pages}
+            onClick={() => setPage((p) => p + 1)}
+            data-testid="sm-more"
+          >
+            Ещё {pageSize}
+          </button>
+          <span className="mono en-sm-shown" data-testid="sm-shown">
+            {total > 0
+              ? `Показано ${page * pageSize + 1}–${Math.min(total, page * pageSize + items.length)} из ${total}`
+              : "Показано 0 из 0"}
+          </span>
         </div>
         <p className="en-sm-tip">{t("en_board_tip")}</p>
         <div className="en-sm-cta">

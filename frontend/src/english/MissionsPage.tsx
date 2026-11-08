@@ -1,6 +1,7 @@
 /** МИССИИ EN — хаб как tab_04 + полёт/телеметрия как tab_04b. */
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
+import { isAbortError } from "../shell/requestEpoch";
 import MicTransmit from "./MicTransmit";
 import SpeakButton from "./SpeakButton";
 import { passed, scheduleAdvance } from "./speechStd";
@@ -62,6 +63,16 @@ export default function MissionsPage({
   const [msg, setMsg] = useState("");
   const [secs, setSecs] = useState(0);
   const autoRef = useRef(false);
+  const liveRef = useRef(true);
+  const startAc = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    liveRef.current = true;
+    return () => {
+      liveRef.current = false;
+      startAc.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (!tasks.length || done) return;
@@ -71,6 +82,9 @@ export default function MissionsPage({
   }, [tasks.length, done]);
 
   const start = async (override?: { mode?: typeof mode; source?: string }) => {
+    startAc.current?.abort();
+    const ac = new AbortController();
+    startAc.current = ac;
     setBusy(true);
     setMsg("");
     try {
@@ -78,6 +92,7 @@ export default function MissionsPage({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        signal: ac.signal,
         body: JSON.stringify({
           mode: override?.mode || mode,
           set_id: defaultSet,
@@ -88,11 +103,13 @@ export default function MissionsPage({
           speech_ok: asr,
         }),
       });
+      if (!liveRef.current) return;
       if (!r.ok) {
         setMsg(await r.text());
         return;
       }
       const j = (await r.json()) as { tasks: MissionTask[]; title: string };
+      if (!liveRef.current) return;
       setTasks(j.tasks || []);
       setI(0);
       setOk(0);
@@ -100,8 +117,11 @@ export default function MissionsPage({
       setDone(false);
       setPicked(null);
       setSecs(0);
+    } catch (e) {
+      if (isAbortError(e) || !liveRef.current) return;
+      setMsg(e instanceof Error ? e.message : "mission-error");
     } finally {
-      setBusy(false);
+      if (liveRef.current) setBusy(false);
     }
   };
 

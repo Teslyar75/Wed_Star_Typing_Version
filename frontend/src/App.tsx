@@ -1,3 +1,4 @@
+import { useMt } from "./zen/mtStore";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import GuideDialog from "./guide/GuideDialog";
 import GuideEvents, { bridgeName } from "./guide/GuideEvents";
@@ -22,7 +23,7 @@ import {
   handleTabNav,
   isTextEditTarget,
 } from "./shell/keyboardNav";
-import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
+import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneFromDigit, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
 import CompartmentHeader from "./shell/CompartmentHeader";
 import { useUiVariant } from "./shell/uiVariant";
@@ -34,13 +35,12 @@ import OrionCallButton from "./guide/OrionCallButton";
 import MarksCapture from "./orion/MarksCapture";
 import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
+import { COMM_UNREAD_EVENT } from "./comm/commApi";
 import RadioMinibar from "./radio/RadioMinibar";
 import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
 import { installStageFit } from "./shell/stageFit";
 import TabErrorBoundary from "./shell/TabErrorBoundary";
-import ZenOverlay from "./zen/ZenOverlay";
-import { useZen } from "./zen/zenStore";
 import UpdateBanner from "./update/UpdateBanner";
 
 const CockpitEntry = lazy(() => import("./auth/CockpitEntry"));
@@ -58,6 +58,8 @@ const FlightLogPanel = lazy(() => import("./flightlog/FlightLogPanel"));
 const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
+const DocsPanel = lazy(() => import("./docs/DocsPanel"));
+const CommPanel = lazy(() => import("./comm/CommPanel"));
 const OrionPanel = lazy(() => import("./orion/OrionPanel"));
 
 function TabFallback() {
@@ -87,6 +89,7 @@ export default function App() {
   );
   const [muted, setMuted] = useState(() => soundsMuted());
   const [pilot, setPilot] = useState<PilotChip | null>(null);
+  const [commUnread, setCommUnread] = useState(0);
   const [crewOpen, setCrewOpen] = useState(false);
   const [, bump] = useState(0);
   const skin = useSkin((s) => s.skin);
@@ -102,7 +105,6 @@ export default function App() {
   const crewRef = useRef(crewOpen);
   const topBarScrollRef = useRef<HTMLDivElement | null>(null);
   tabRef.current = tab;
-  const zenOn = useZen((s) => s.on);
   helpRef.current = helpOpen;
   cmdRef.current = cmdOpen;
   crewRef.current = crewOpen;
@@ -143,6 +145,11 @@ export default function App() {
     setTab(prev);
   }, [setTab]);
 
+  /* Monkeytype read-only: автосинхронизация при старте (троттлинг 5 мин, 429 — пауза сервера) */
+  useEffect(() => {
+    void useMt.getState().sync();
+  }, []);
+
   useEffect(() => {
     return installStageFit(() => stageRef.current);
   }, []);
@@ -165,11 +172,43 @@ export default function App() {
 
   useEffect(() => {
     window.dispatchEvent(new Event("st-cabin-change"));
-    useZen.getState().setOnBridge(tab === "bridge");
   }, [tab]);
 
   // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
   const pilotName = pilot?.callsign;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("st-pilot", { detail: { callsign: pilotName || "guest" } }));
+  }, [pilotName]);
+
+  useEffect(() => {
+    if (!pilotName) {
+      setCommUnread(0);
+      return;
+    }
+    let stop = false;
+    const tick = () => {
+      void fetch("/api/comm/unread", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : { unread: 0 }))
+        .then((d: { unread?: number }) => {
+          if (!stop) setCommUnread(Number(d.unread) || 0);
+        })
+        .catch(() => {
+          /* гость / сеть — бейдж молчит */
+        });
+    };
+    const onEvt = (e: Event) => {
+      const n = Number((e as CustomEvent).detail);
+      if (!stop && Number.isFinite(n)) setCommUnread(n);
+    };
+    tick();
+    const id = window.setInterval(tick, 15000);
+    window.addEventListener(COMM_UNREAD_EVENT, onEvt);
+    return () => {
+      stop = true;
+      window.clearInterval(id);
+      window.removeEventListener(COMM_UNREAD_EVENT, onEvt);
+    };
+  }, [pilotName]);
   const bindPilot = useUiVariant((s) => s.bindPilot);
   useEffect(() => bindPilot(pilotName ?? null), [pilotName, bindPilot]);
   const pilotRankRef = useRef<string | undefined>(undefined);
@@ -251,18 +290,17 @@ export default function App() {
         e.preventDefault();
         setCmdOpen((v) => !v);
       }
-      /* Ctrl+1…6 — зоны (см. docs/web/NAV_ZONES.md) */
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-6]$/.test(e.key)) {
+      /* Ctrl+1…N — существующие зоны (ZONE_ORDER) */
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-9]$/.test(e.key)) {
+        const next = zoneFromDigit(e.key);
+        if (!next) return;
         if (isTextEditTarget(e.target)) return;
-        const next = ZONE_ORDER[Number(e.key) - 1];
-        if (next) {
-          e.preventDefault();
-          setZone(next);
-          window.requestAnimationFrame(() => {
-            const tab = document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`);
-            if (tab) focusNav(tab);
-          });
-        }
+        e.preventDefault();
+        setZone(next);
+        window.requestAnimationFrame(() => {
+          const tabEl = document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`);
+          if (tabEl) focusNav(tabEl);
+        });
         return;
       }
       /* F6 — цикл шапка ↔ контент */
@@ -294,19 +332,6 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [goPrevWindow, setTab]);
 
-  useEffect(() => {
-    const onZen = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.code === "KeyM") {
-        if (tabRef.current === "bridge" || useZen.getState().on) {
-          e.preventDefault();
-          e.stopPropagation();
-          useZen.getState().toggle();
-        }
-      }
-    };
-    window.addEventListener("keydown", onZen, true);
-    return () => window.removeEventListener("keydown", onZen, true);
-  }, []);
 
   const switchLang = (code: string) => {
     setLang(code);
@@ -319,15 +344,14 @@ export default function App() {
     localStorage.setItem("st_space_profile", p);
   };
 
-  const zoneTabs: { id: ZoneId; label: string }[] = [
-    { id: "bridge", label: t("bridge") },
-    { id: "english", label: t("english") },
-    { id: "speed", label: t("speed") },
-    { id: "lounge", label: t("lounge") },
-    { id: "radio", label: t("radio") },
-    { id: "orion", label: ot("zone") },
-    { id: "settings", label: t("settings") },
-  ];
+  const zoneLabel = (id: ZoneId): string => {
+    if (id === "orion") return ot("zone");
+    return t(id);
+  };
+  const zoneTabs: { id: ZoneId; label: string }[] = ZONE_ORDER.map((id) => ({
+    id,
+    label: zoneLabel(id),
+  }));
 
   const bridgeSubs: { id: Tab; label: string }[] = [
     { id: "missions", label: t("missions") },
@@ -398,7 +422,8 @@ export default function App() {
                   data-tab={x.id}
                   data-nav-menu="1"
                   aria-selected={activeZone === x.id}
-                  className={`nav-tab ${activeZone === x.id ? "on" : ""}`}
+                  className={`nav-tab ${activeZone === x.id ? "on" : ""} ${x.id === "comm" && commUnread > 0 && activeZone !== "comm" ? "unread" : ""}`}
+                  data-comm-unread={x.id === "comm" ? String(commUnread) : undefined}
                   onClick={() => setZone(x.id)}
                 >
                   {x.label}
@@ -524,6 +549,12 @@ export default function App() {
         <LazyTab when={tab === "radio"}>
           <RadioPanel />
         </LazyTab>
+        <LazyTab when={tab === "comm"}>
+          <CommPanel />
+        </LazyTab>
+        <LazyTab when={tab === "docs"}>
+          <DocsPanel />
+        </LazyTab>
         <LazyTab when={tab === "orion"}>
           <OrionPanel />
         </LazyTab>
@@ -548,8 +579,7 @@ export default function App() {
         onFullHelp={() => setTab("settings")}
       />
       <IdleSlideshow />
-      {zenOn ? <ZenOverlay /> : null}
-      <GuideDialog />
+            <GuideDialog />
       <GuideEvents />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />
 

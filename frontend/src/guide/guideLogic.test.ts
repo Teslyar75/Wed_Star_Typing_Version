@@ -108,7 +108,7 @@ describe("гид G2: первый вход в зоны", () => {
       expect(l.join(" "), tr).toContain("{zone}");
       expect(l.join(" "), tr).toContain("{sir}");
     }
-    expect(ZONE_TRIGGERS).toHaveLength(10);
+    expect(ZONE_TRIGGERS).toHaveLength(12);
   });
   it("один раз на зону; лимит 10 минут; мостик уже показан первым запуском", () => {
     const s = markShown(st, "first_launch", T);

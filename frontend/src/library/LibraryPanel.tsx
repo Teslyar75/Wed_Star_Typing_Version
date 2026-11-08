@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
-import { PENDING_CARGO_KEY, loadCargoBoard, saveCargoBoard } from "../cargo/processText";
+import { sendTextToBridge } from "./sendToBridge";
 import { useReadingPos } from "../reading/positionStore";
 import { setModalStack } from "../shell/routeStore";
 import GutenbergModal from "./GutenbergModal";
@@ -159,49 +159,11 @@ export default function LibraryPanel({
     setBusy(true);
     setMsg("");
     try {
-      const r = await fetch(`/api/texts/${it.text_id}/prepared`, { credentials: "include" });
-      if (!r.ok) {
-        setMsg((await r.text()) || t("lib_type_blocked"));
+      const err = await sendTextToBridge({ textId: it.text_id, title: it.title, lang: it.lang });
+      if (err) {
+        setMsg(err);
         return;
       }
-      const prep = (await r.json()) as { body?: string; lang?: string; title?: string; chars?: number };
-      const body = (prep.body || "").trim();
-      if (!body) {
-        setMsg(t("cargo_empty"));
-        return;
-      }
-      let original = "";
-      try {
-        const cr = await fetch(`/api/texts/${it.text_id}/content`, { credentials: "include" });
-        if (cr.ok) {
-          const cj = (await cr.json()) as { body?: string };
-          original = (cj.body || "").trim();
-        }
-      } catch {
-        /* optional */
-      }
-      const board = loadCargoBoard();
-      const sameBook = board?.textId === it.text_id && board.text === body;
-      const index = sameBook && board.index > 0 && board.index < body.length ? board.index : 0;
-      saveCargoBoard({
-        text: body,
-        original: original || body,
-        index,
-        textId: it.text_id,
-        title: prep.title || it.title,
-      });
-      sessionStorage.setItem(
-        PENDING_CARGO_KEY,
-        JSON.stringify({
-          id: "cargo",
-          text: body,
-          lang: prep.lang || it.lang || "en",
-          index,
-          original: original || body,
-          text_id: it.text_id,
-          title: prep.title || it.title,
-        }),
-      );
       remember(it, "bridge");
       onOpenBridge?.();
     } catch (e) {
@@ -227,7 +189,7 @@ export default function LibraryPanel({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("title", file.name.replace(/\.(txt|pdf)$/i, ""));
+      fd.append("title", file.name.replace(/\.(txt|pdf|epub|fb2|html?)$/i, ""));
       fd.append("lang", "en");
       const r = await fetch("/api/texts/upload", { method: "POST", body: fd, credentials: "include" });
       if (!r.ok) {
@@ -360,7 +322,7 @@ export default function LibraryPanel({
       <input
         ref={txtRef}
         type="file"
-        accept=".txt,text/plain"
+        accept=".txt,.epub,.fb2,.html,.htm,text/plain"
         hidden
         onChange={(e) => {
           void onUpload(e.target.files?.[0] ?? null);

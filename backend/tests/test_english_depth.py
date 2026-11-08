@@ -121,15 +121,33 @@ def test_warehouse_run_flow() -> None:
     client.cookies.set("st_token", reg.cookies["st_token"])
 
     client.post("/api/english/seed?limit=40&batch=40")
-    words = client.get("/api/english/words?limit=3").json()
-    wid = words[0]["id"]
+    words = client.get("/api/english/words?limit=40").json()
+    w = words[0]
+    wid = w["id"]
+    if not w.get("sentences"):
+        import json as _json
+
+        from app.api_english import VocabWord
+        from app.db import SessionLocal
+
+        with SessionLocal() as db:
+            vw = db.get(VocabWord, wid)
+            m = _json.loads(vw.meta or "{}")
+            m["sentences"] = [{"en": f"I like {w['word']} a lot.", "ru": "…"}]
+            vw.meta = _json.dumps(m)
+            db.commit()
+        w["sentences"] = m["sentences"]
     assert client.post("/api/english/known", json={"word_id": wid, "known": True}).status_code == 200
     assert client.post("/api/english/warehouse/move", json={"word_id": wid, "state": "shelf"}).status_code == 200
-
-    shelf = client.get("/api/english/warehouse/cards?state=shelf").json()
-    # может быть пусто если у слова нет example/sentences в seed — тогда forced move всё равно ok
-    run = client.post("/api/english/warehouse/run", json={"word_id": wid, "avg": 90, "goal": 1})
-    assert run.status_code == 200
-    body = run.json()
-    assert body["accepted"] is True
-    assert body["done"] is True
+    assert client.post("/api/english/warehouse/goal", json={"word_id": wid, "goal": 1}).status_code == 200
+    n = min(3, len(w["sentences"]))
+    # клиент больше не присылает среднюю — баллы по заданиям, прогон засчитывает сервер
+    assert client.post("/api/english/warehouse/run", json={"word_id": wid, "avg": 90}).status_code in (404, 405)
+    r = client.post("/api/english/warehouse/attempt", json={"word_id": wid, "key": -1, "score": 70}).json()
+    assert r["ok"] is False and r["need"] == 80 and r["verdict"] == "ХОРОШО"
+    r = client.post("/api/english/warehouse/attempt", json={"word_id": wid, "key": -1, "score": 95}).json()
+    assert r["ok"] is True and r["next_key"] == 0
+    for i in range(n):
+        r = client.post("/api/english/warehouse/attempt", json={"word_id": wid, "key": i, "score": 95}).json()
+    assert r["result"]["status"] == "cleared"
+    assert r["state"] == "done" and r["stars"] == 3

@@ -25,6 +25,9 @@ const ITEMS: Item[] = [
   { kind: "tab", id: "speed", labelKey: "speed", search: "speed" },
   { kind: "tab", id: "lounge", labelKey: "lounge", search: "lounge" },
   { kind: "tab", id: "radio", labelKey: "radio", search: "radio" },
+  { kind: "tab", id: "comm", labelKey: "comm", search: "comm ether эфир ефір äther airwaves" },
+  { kind: "tab", id: "docs", labelKey: "docs", search: "docs documents документы" },
+  { kind: "tab", id: "orion", labelKey: "orion_zone", search: "orion" },
   { kind: "tab", id: "settings", labelKey: "settings", search: "settings" },
 ];
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
@@ -18,11 +18,25 @@ def _engine_url() -> str:
     return settings.database_url
 
 
-engine = create_engine(
-    _engine_url(),
-    connect_args={"check_same_thread": False} if _engine_url().startswith("sqlite") else {},
-)
+def _is_sqlite() -> bool:
+    return _engine_url().startswith("sqlite")
+
+
+# timeout — sqlite3 busy wait (сек): фон-досев словаря не должен ронять register/login.
+_connect_args = {"check_same_thread": False, "timeout": 30} if _is_sqlite() else {}
+engine = create_engine(_engine_url(), connect_args=_connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+if _is_sqlite():
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_on_connect(dbapi_conn, _connection_record) -> None:  # noqa: ANN001
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.fetchall()
+        cur.execute("PRAGMA busy_timeout=30000")
+        cur.fetchall()
+        cur.close()
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -45,6 +59,9 @@ def init_db() -> None:
     from app import api_radio as _radio  # noqa: F401
     from app import api_lounge as _lounge  # noqa: F401
     from app import api_import as _imp  # noqa: F401
+    from app import api_portal as _portal  # noqa: F401
+    from app import api_docs as _docs  # noqa: F401
+    from app import api_comm as _comm  # noqa: F401
     from app import api_monkeytype as _mt  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
@@ -72,6 +89,7 @@ def _ensure_columns() -> None:
         ("orion_prefs", "active_agent", "VARCHAR(40) DEFAULT ''"),
         ("orion_agents", "note", "VARCHAR(200) DEFAULT ''"),
         ("orion_agents", "voice", "VARCHAR(16) DEFAULT 'ship'"),
+        ("card_progress", "wh_run", "TEXT DEFAULT ''"),
         ("card_progress", "wh_avg", "DOUBLE PRECISION DEFAULT 0" if not _engine_url().startswith("sqlite") else "FLOAT DEFAULT 0"),
         ("card_progress", "wh_q", "TEXT DEFAULT ''"),
     ]

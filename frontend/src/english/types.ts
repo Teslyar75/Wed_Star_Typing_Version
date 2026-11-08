@@ -44,6 +44,9 @@ export type EnWord = {
   q_by?: Record<string, number[]>;
   q_done_keys?: string[];
   difficulty_n?: number;
+  sounds_like?: string[];
+  wh_current?: Record<string, number>;
+  wh_sel?: boolean[];
 };
 
 export type EnProgress = {

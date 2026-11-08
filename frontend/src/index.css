@@ -2966,6 +2966,10 @@ html[data-ui-scale="XXL"] .bridge-set-note {
   box-shadow: 0 0 12px color-mix(in srgb, var(--st-cyan) 30%, transparent);
 }
 
+.nav-tab.unread {
+  color: var(--st-amber, #e6c45c);
+}
+
 .top-right {
   display: flex;
   flex-wrap: nowrap;
@@ -9169,3 +9173,27 @@ body.zen-lock {
 .zen-acct-bar .zen-back-test { margin-left: auto; color: #646669; font-size: 0.8rem; }
 .zen-acct-page .mt-acct { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .zen-acct-page .mt-heat { flex: 1 1 auto; min-height: 0; }
+/* ручка перетаскивания плашки радио; плавающая плашка — поверх отсеков */
+.radio-mini-grip {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  color: var(--st-muted);
+  font-size: 0.8rem;
+  padding: 0 0.15rem;
+}
+.radio-mini-grip:active {
+  cursor: grabbing;
+}
+.radio-minibar--floating {
+  box-shadow: 0 0.3rem 1rem rgb(0 0 0 / 45%);
+}
+
+/* Склад: вердикт как textutil.verdict десктопа */
+.en-wh-score.tone-green, .en-wh-fb.tone-green, .muted.tone-green { color: #3ddc84; }
+.en-wh-score.tone-amber, .en-wh-fb.tone-amber, .muted.tone-amber { color: #ffb000; }
+.en-wh-score.tone-red, .en-wh-fb.tone-red, .muted.tone-red { color: #ff5c5c; }
+.muted.tone-cyan { color: #4fd1ff; }
+.en-wh-line-wrap { display: flex; gap: 0.4rem; align-items: center; flex: 1; }
+.en-wh-line.ok strong { opacity: 0.85; }
+.en-wh-score { margin-left: 0.5rem; font-variant-numeric: tabular-nums; }
