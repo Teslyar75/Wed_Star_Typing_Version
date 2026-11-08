@@ -1,7 +1,10 @@
 # Star Typing Web — статус (Excellence / Parity / Surpass)
 
+**Актуальная очередь агента (S0–S7):** [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md), [WEB_PARITY_STAGES.md](./WEB_PARITY_STAGES.md), [PROGRESS.md](./PROGRESS.md).  
+«S1» Горбов и «S7 skins» в таблице ниже — **другие** исторические эпики, не этапы очереди 08.11.
+
 Репозиторий: [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)  
-Планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md); UI ← десктоп: монорепо `docs/web/UI_DESKTOP_PARITY.md`
+Исторические планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md).
 
 ## Готово
 
@@ -33,7 +36,8 @@
 | Дата | Что |
 | --- | --- |
 | 2026-11-08 | CI e2e на `a6142bf` красный: 3 fail + 1 flaky. Диагноз: overlay перехват клика «Экипаж»; гид G1 ловит Enter; вкладка English — `button` не `tab`; «Из книги» strict-mode (nav + обзор); карта миссий в `MissionsPanel`; sqlite 2 worker + honor top-10. S0: [SESSION_2026-11-08](./SESSION_2026-11-08.md). |
-| 2026-11-08 | S1 (зоны/EN/lifecycle, не эпик Горбова): хоткеи 1–7 по `ZONE_ORDER`; abort/epoch/observeBox; скрытый EN уже размонтировался — покрыто тестами. Docs/Comm не добавлялись. |
+| 2026-11-08 | S1 (зоны/EN/lifecycle, не эпик Горбова): хоткеи 1–7 по `ZONE_ORDER`; abort/epoch/observeBox; скрытый EN уже размонтировался — покрыто тестами. Docs/Comm тогда не добавлялись. |
+| 2026-11-08 | S2 Документы MVP (ветка `cursor/s2-docs-mvp-2598`, не merge): зона docs перед Орионом; `/api/docs` cookie-изоляция; autosave/rev/409; версии 10 мин/20; print CSS. |
 | 2026-10-13 | Битый `index.css` (`truncated oversized` + вложенные `*/`) ломал стекло → белые окна; почищено; SW `st-shell-v38`. Docker: данные на D:, логи на C: — Disk full валил демон. Журнал: [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
 
 ## На будущее
