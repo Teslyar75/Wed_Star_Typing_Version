@@ -10,7 +10,13 @@
 {$DOMAIN::80} {
 	encode gzip
 	handle /api/* {
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			transport http {
+				read_timeout 300s
+				write_timeout 300s
+				dial_timeout 10s
+			}
+		}
 	}
 	handle {
 		root * /srv/frontend

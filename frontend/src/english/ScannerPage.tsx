@@ -1,9 +1,10 @@
 /** СКАНЕР ОБЪЕКТА — порт stamina/english/pages_main.ScannerPage. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import MatchReadout from "./MatchReadout";
 import MicTransmit, { type MatchInfo } from "./MicTransmit";
 import SpeakButton from "./SpeakButton";
+import { passed, scheduleAdvance } from "./speechStd";
 import type { EnPage, EnWord } from "./types";
 
 type Props = {
@@ -77,6 +78,10 @@ export default function ScannerPage({
   const [hint, setHint] = useState(false);
   const [ptab, setPtab] = useState<"ipa" | "syl" | "guide" | "notes">("ipa");
   const [match, setMatch] = useState<MatchInfo | null>(null);
+  const siRef = useRef(0);
+  const wordRef = useRef("");
+  siRef.current = si;
+  wordRef.current = word?.word || "";
 
   const load = useCallback(async (query: string, opts?: { silentEmpty?: boolean; remember?: boolean }) => {
     const needle = query.trim();
@@ -86,7 +91,7 @@ export default function ScannerPage({
     setHint(false);
     setSi(0);
     setMatch(null);
-    const r = await fetch(`/api/english/lookup?q=${encodeURIComponent(needle)}`, { credentials: "include" });
+    const r = await fetch(`/api/english/lookup?q=${encodeURIComponent(needle)}&set_id=${encodeURIComponent(currentSet)}`, { credentials: "include" });
     if (!r.ok) {
       setWord(null);
       if (!opts?.silentEmpty) setMsg(t("en_word_not_found"));
@@ -99,7 +104,7 @@ export default function ScannerPage({
     // remember только для fallback / явного запроса — не зацикливать scanSeed
     if (opts?.remember) onNeighborWord?.(w.word);
     return true;
-  }, [onNeighborWord]);
+  }, [onNeighborWord, currentSet]);
 
   /** рабочая зона: last session → слово дня → первое из набора */
   useEffect(() => {
@@ -500,6 +505,14 @@ export default function ScannerPage({
                         score,
                       }),
                     });
+                    if (passed(score) && sents.length > 1) {
+                      const hereWord = word.word;
+                      const hereSi = si;
+                      scheduleAdvance(() => {
+                        setSi((x) => x + 1);
+                        setMatch(null);
+                      }, () => wordRef.current === hereWord && siRef.current === hereSi);
+                    }
                   }}
                 />
               </div>

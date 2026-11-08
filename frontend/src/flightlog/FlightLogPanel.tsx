@@ -4,6 +4,7 @@ import Heatmap, { type KeyRate } from "../bridge/Heatmap";
 import { colorFor } from "../bridge/heatmapColor";
 import { t, getLang } from "../i18n";
 import { skinRank } from "../theme/voice";
+import MonkeytypePanel from "./MonkeytypePanel";
 
 type Summary = {
   flights: number;
@@ -93,6 +94,7 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
   const [keys, setKeys] = useState<KeyRate[]>([]);
   const [heatLang, setHeatLang] = useState<"en" | "de" | "ru" | "uk">("en");
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState<"stats" | "mt">("stats");
 
   const refresh = useCallback(async () => {
     const [sRes, kRes] = await Promise.all([
@@ -198,11 +200,28 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
     <section className="flog">
       <header className="flog-head">
         <h2 className="route-title">{t("flog_title")}</h2>
+        <nav className="flog-subtabs" aria-label={t("flog_title")}>
+          {([
+            ["stats", t("flog_tab_stats")],
+            ["mt", t("flog_tab_mt")],
+          ] as const).map(([id, lab]) => (
+            <button
+              key={id}
+              type="button"
+              className={`hud-btn ${page === id ? "amber" : ""}`}
+              onClick={() => setPage(id)}
+            >
+              {lab}
+            </button>
+          ))}
+        </nav>
         <button type="button" className="hud-btn amber" onClick={() => onOpenHonor?.()}>
           ★ {t("honor")}
         </button>
       </header>
 
+      {page === "stats" ? (
+      <div className="flog-pane flog-pane-stats">
       <div className="flog-cards">
         {cards.map((c) => (
           <aside key={c.cap} className={`inst-panel flog-card tone-${c.tone}`}>
@@ -217,7 +236,6 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
         <h3>{t("flog_dynamics")}</h3>
         <DynamicsChart runs={sum?.runs ?? []} />
       </section>
-
       <div className="flog-bottom">
         <section className="inst-panel flog-heat tone-amber">
           <h3>{t("flog_heatmap")}</h3>
@@ -288,6 +306,14 @@ export default function FlightLogPanel({ onOpenBridge, onOpenHonor }: Props) {
           </button>
         </aside>
       </div>
+      </div>
+      ) : null}
+
+      {page === "mt" ? (
+        <div className="flog-pane flog-pane-mt">
+          <MonkeytypePanel />
+        </div>
+      ) : null}
     </section>
   );
 }

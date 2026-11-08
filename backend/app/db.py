@@ -45,6 +45,7 @@ def init_db() -> None:
     from app import api_radio as _radio  # noqa: F401
     from app import api_lounge as _lounge  # noqa: F401
     from app import api_import as _imp  # noqa: F401
+    from app import api_monkeytype as _mt  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
@@ -68,7 +69,11 @@ def _ensure_columns() -> None:
         ("card_progress", "wh_runs", "INTEGER DEFAULT 0"),
         ("card_progress", "wh_goal", "INTEGER DEFAULT 2"),
         ("card_progress", "wh_stars", "INTEGER DEFAULT 0"),
+        ("orion_prefs", "active_agent", "VARCHAR(40) DEFAULT ''"),
+        ("orion_agents", "note", "VARCHAR(200) DEFAULT ''"),
+        ("orion_agents", "voice", "VARCHAR(16) DEFAULT 'ship'"),
         ("card_progress", "wh_avg", "DOUBLE PRECISION DEFAULT 0" if not _engine_url().startswith("sqlite") else "FLOAT DEFAULT 0"),
+        ("card_progress", "wh_q", "TEXT DEFAULT ''"),
     ]
     url = _engine_url()
     with engine.begin() as conn:

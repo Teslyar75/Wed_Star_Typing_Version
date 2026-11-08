@@ -97,6 +97,10 @@ export default function EnglishOverview({
   onScanWord,
 }: Props) {
   const [wod, setWod] = useState<Wod | null>(null);
+  const [hub, setHub] = useState<{
+    cefr: { total: number; known: number; ready: boolean };
+    verbs: { total: number; known: number; ready: boolean };
+  } | null>(null);
   const goal = prog.daily_goal ?? 30;
   const xpToday = prog.xp_today ?? 0;
   const pct = goal > 0 ? Math.min(100, (100 * xpToday) / goal) : 0;
@@ -107,6 +111,13 @@ export default function EnglishOverview({
   const lo = prog.level_lo ?? 0;
   const hi = prog.level_hi ?? 40;
   const levelFrac = (prog.xp - lo) / Math.max(1, hi - lo);
+
+  useEffect(() => {
+    void fetch("/api/english/hub-stats", { credentials: "include" })
+      .then((r) => r.json())
+      .then((j) => setHub(j))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -170,6 +181,23 @@ export default function EnglishOverview({
 
         <section className="en-sectors-wrap">
           <h3 className="en-sec-title">{t("en_sectors")}</h3>
+          <div className="en-groups">
+            <button type="button" className="en-sector tone-ready" onClick={() => onOpenSet("cefr")}>
+              <div className="ens-top"><span className="ens-code">S-CEFR</span><span className="ens-sub">CEFR</span></div>
+              <div className="ens-name">{t("en_group_cefr")}</div>
+              <div className="ens-meta muted">{hub?.cefr.ready ? t("en_know").replace("{0}", String(hub.cefr.known)).replace("{1}", String(hub.cefr.total)) : t("en_cefr_preparing")}</div>
+            </button>
+            <button type="button" className="en-sector tone-ready" onClick={() => onOpenSet("verbs")}>
+              <div className="ens-top"><span className="ens-code">S-VRB</span><span className="ens-sub">{t("en_sets_verbs")}</span></div>
+              <div className="ens-name">{t("en_group_verbs")}</div>
+              <div className="ens-meta muted">{hub?.verbs.ready ? t("en_know").replace("{0}", String(hub.verbs.known)).replace("{1}", String(hub.verbs.total)) : t("en_cefr_preparing")}</div>
+            </button>
+            <button type="button" className="en-sector tone-idle" onClick={() => onOpenSet("book")}>
+              <div className="ens-top"><span className="ens-code">S-BOOK</span><span className="ens-sub">{t("en_sets_book")}</span></div>
+              <div className="ens-name">{t("en_group_book")}</div>
+              <div className="ens-meta muted">{t("en_from_book_tab")}</div>
+            </button>
+          </div>
           <div className="en-sectors">
             {sectors.map((s) => {
               const lim = s.lim > 0 ? s.lim : 1;

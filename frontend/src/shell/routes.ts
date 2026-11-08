@@ -71,7 +71,7 @@ export const LOUNGE_PAGES = ["lobby", "tetris", "snake", "breakout"] as const;
 
 export const RADIO_PAGES = ["air", "rx"] as const;
 
-export const ORION_PAGES = ["chat", "tasks", "archive", "settings"] as const;
+export const ORION_PAGES = ["chat", "agents", "archive"] as const;
 
 export const SETTINGS_PAGES = ["cabin", "cabinMore", "skins", "crew"] as const;
 

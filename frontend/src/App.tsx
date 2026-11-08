@@ -31,6 +31,7 @@ import { WALLPAPER_DIM, wallpaperUrl } from "./shell/altWallpaper";
 import FullscreenButton from "./shell/FullscreenButton";
 import SlideshowButton from "./idle/SlideshowButton";
 import OrionCallButton from "./guide/OrionCallButton";
+import MarksCapture from "./orion/MarksCapture";
 import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
 import RadioMinibar from "./radio/RadioMinibar";
@@ -38,6 +39,8 @@ import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
 import { installStageFit } from "./shell/stageFit";
 import TabErrorBoundary from "./shell/TabErrorBoundary";
+import ZenOverlay from "./zen/ZenOverlay";
+import { useZen } from "./zen/zenStore";
 import UpdateBanner from "./update/UpdateBanner";
 
 const CockpitEntry = lazy(() => import("./auth/CockpitEntry"));
@@ -99,6 +102,7 @@ export default function App() {
   const crewRef = useRef(crewOpen);
   const topBarScrollRef = useRef<HTMLDivElement | null>(null);
   tabRef.current = tab;
+  const zenOn = useZen((s) => s.on);
   helpRef.current = helpOpen;
   cmdRef.current = cmdOpen;
   crewRef.current = crewOpen;
@@ -161,6 +165,7 @@ export default function App() {
 
   useEffect(() => {
     window.dispatchEvent(new Event("st-cabin-change"));
+    useZen.getState().setOnBridge(tab === "bridge");
   }, [tab]);
 
   // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
@@ -289,6 +294,20 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [goPrevWindow, setTab]);
 
+  useEffect(() => {
+    const onZen = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.code === "KeyM") {
+        if (tabRef.current === "bridge" || useZen.getState().on) {
+          e.preventDefault();
+          e.stopPropagation();
+          useZen.getState().toggle();
+        }
+      }
+    };
+    window.addEventListener("keydown", onZen, true);
+    return () => window.removeEventListener("keydown", onZen, true);
+  }, []);
+
   const switchLang = (code: string) => {
     setLang(code);
     setLangState(code);
@@ -322,6 +341,7 @@ export default function App() {
 
   return (
     <div className="cockpit cockpit-desktop" data-skin={skin.id}>
+      <MarksCapture tab={tab} />
       {starsOn && (
         <div
           className={`space-bg space-bg-${spaceProfile} skin-bg skin-bg-${bgEngineOf(skin)}`}
@@ -528,6 +548,7 @@ export default function App() {
         onFullHelp={() => setTab("settings")}
       />
       <IdleSlideshow />
+      {zenOn ? <ZenOverlay /> : null}
       <GuideDialog />
       <GuideEvents />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} onJump={(x) => setTab(x as Tab)} />

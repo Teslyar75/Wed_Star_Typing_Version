@@ -36,6 +36,14 @@ export type EnWord = {
   wh_goal?: number;
   wh_stars?: number;
   wh_avg?: number;
+  q_filled?: number;
+  q_goal?: number;
+  q_hint?: string;
+  n_sents?: number;
+  left_today?: number;
+  q_by?: Record<string, number[]>;
+  q_done_keys?: string[];
+  difficulty_n?: number;
 };
 
 export type EnProgress = {
@@ -69,6 +77,8 @@ export type EnSettings = {
   reverse_cards: boolean;
   xp_to_rank: boolean;
   warehouse_passes: number;
+  quality_goal?: number;
+  quality_daily_cap?: number;
 };
 
 export type MissionTask = {

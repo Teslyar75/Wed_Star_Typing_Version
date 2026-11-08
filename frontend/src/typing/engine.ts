@@ -132,6 +132,19 @@ export class TypingEngine {
     return ERROR;
   }
 
+  advanceTo(index: number, extra: { typed?: number; errors?: number; elapsed?: number } = {}, now?: number) {
+    const idx = Math.max(this.index, Math.min(Math.floor(index), this.text.length));
+    const moved = idx - this.index;
+    if (moved <= 0 && !(extra.typed || extra.errors || extra.elapsed)) return false;
+    this.index = idx;
+    this.typed += extra.typed ?? moved;
+    this.errors += extra.errors ?? 0;
+    const el = extra.elapsed ?? 0;
+    if (el > 0) this._elapsed += el;
+    if (now != null && this._last !== null) this._last = now;
+    return true;
+  }
+
   segment(now: number) {
     const chars = this.index - this.startIndex;
     const typed = this.typed - this.startTyped;

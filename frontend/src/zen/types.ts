@@ -1,0 +1,30 @@
+export type Pb = { mode: string; mode2: string | number; wpm: number | null; acc: number | null; language?: string; src?: string };
+export type Lb = { mode: string; mode2: string | number; rank: number; count?: number };
+export type PortalSummary = {
+  name?: string;
+  joined?: number | null;
+  tests?: number;
+  started?: number;
+  hours?: number;
+  seconds?: number;
+  streak?: number;
+  pbs?: Pb[];
+  lbs?: Lb[];
+  activity?: [string, number][];
+  both?: Record<string, [number, number]>;
+  xp?: number;
+  level?: number;
+  level_have?: number;
+  level_need?: number;
+};
+export type PortalPack = {
+  username: string;
+  has_key: boolean;
+  src: "all" | "st" | "mt";
+  fetched_at: number;
+  warning: string;
+  summary: PortalSummary | null;
+  pace: number | null;
+  status?: string;
+  retry_in?: number;
+};

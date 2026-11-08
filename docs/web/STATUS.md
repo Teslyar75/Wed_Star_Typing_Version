@@ -26,12 +26,15 @@
 | **G1** | Tetris + Breakout + `lounge_scores` + touch |
 | **H1** | Help drawer, welcome-тур, Ctrl+K, space profiles frost/light/full |
 | **S7 skins** | Per-skin FX + hard-reset при смене; эталон Звездолёт; image-сцены отложены |
+| **O1** | Орион: Чат/Агенты/Архив, OpenCode-мост :8765, голос, метки ПКМ · [SESSION_2026-11-08](./SESSION_2026-11-08.md) |
+| **J1** | Журнал Обзор+Monkeytype, дзен Ctrl+M, EN-склад CEFR/глаголы/наборы |
 | **W-fast** | Lazy-вкладки, auto frost на слабых CPU, ContinueHub + 7d-сводка на мостике |
 
 ## Инциденты / фиксации
 
 | Дата | Что |
 | --- | --- |
+| 2026-11-08 | Орион+журнал+дзен+OpenCode влиты в веб. Голос: start() в click. Caddy 300s. Журнал: [SESSION_2026-11-08](./SESSION_2026-11-08.md) |
 | 2026-10-13 | Битый `index.css` (`truncated oversized` + вложенные `*/`) ломал стекло → белые окна; почищено; SW `st-shell-v38`. Docker: данные на D:, логи на C: — Disk full валил демон. Журнал: [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
 
 ## На будущее

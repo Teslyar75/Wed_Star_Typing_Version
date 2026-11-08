@@ -1,5 +1,5 @@
 /* PWA: оболочка offline; JS/CSS всегда с сети — иначе после docker-пересборки чёрный экран */
-const CACHE = "st-shell-v65";
+const CACHE = "st-shell-v78";
 const SHELL = [
   "/",
   "/index.html",

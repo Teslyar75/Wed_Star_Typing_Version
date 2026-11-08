@@ -14,13 +14,13 @@ import MissionsPage from "./MissionsPage";
 import ReviewPage from "./ReviewPage";
 import ScannerPage from "./ScannerPage";
 import SettingsPage from "./SettingsPage";
-import StarMapsPage from "./StarMapsPage";
+import SetsHubPage from "./SetsHubPage";
 import WarehousePage from "./WarehousePage";
 import type { EnPage, EnProgress, EnSettings } from "./types";
 
 const PAGES: { id: EnPage; labelKey: string }[] = [
   { id: "overview", labelKey: "en_overview" },
-  { id: "sets", labelKey: "en_star_maps" },
+  { id: "sets", labelKey: "en_sets_hub" },
   { id: "scanner", labelKey: "en_scanner" },
   { id: "practice", labelKey: "en_missions" },
   { id: "review", labelKey: "en_systems_check" },
@@ -88,6 +88,7 @@ export default function EnglishPanel() {
   /** последнее слово в зоне сканера — вкладка «Сканер» всегда открывает его */
   const [scanSeed, setScanSeed] = useState(() => readLastScan());
   const [scanBack, setScanBack] = useState<EnPage>("sets");
+  const [hubTab, setHubTab] = useState<"std" | "cefr" | "verbs" | "book">("std");
   const [missionLaunch, setMissionLaunch] = useState<MissionLaunch>({});
   const [missionKey, setMissionKey] = useState(0);
   const [prog, setProg] = useState<EnProgress>(STUB_PROG);
@@ -180,8 +181,12 @@ export default function EnglishPanel() {
     try {
       const wh = await fetch("/api/english/warehouse/cards?state=shelf", { credentials: "include" });
       if (wh.ok) {
-        const rows = (await wh.json()) as unknown[];
-        setWhCount(Array.isArray(rows) ? rows.length : 0);
+        const payload: unknown = await wh.json();
+        if (Array.isArray(payload)) setWhCount(payload.length);
+        else {
+          const o = payload as { cards?: unknown[]; counts?: { shelf?: number } };
+          setWhCount(Number(o?.counts?.shelf ?? o?.cards?.length ?? 0));
+        }
       }
     } catch {
       /* ignore */
@@ -269,7 +274,12 @@ export default function EnglishPanel() {
   }, [page, scanSeed, scanQ, scanBack]);
 
   const openSets = (setId: string) => {
-    setMissionSet(setId);
+    if (setId === "cefr" || setId === "verbs" || setId === "book") {
+      setHubTab(setId);
+    } else {
+      setHubTab("std");
+      setMissionSet(setId);
+    }
     setPage("sets");
   };
 
@@ -370,7 +380,8 @@ export default function EnglishPanel() {
       )}
 
       {page === "sets" && (
-        <StarMapsPage
+        <SetsHubPage
+          initialTab={hubTab}
           currentSet={missionSet}
           onOpenScanner={(w) => openScanner(w, "sets")}
           onStartMission={(id) => startMission({ mode: "random", source: "set", setId: id })}
@@ -379,6 +390,9 @@ export default function EnglishPanel() {
             startReview();
           }}
           onSetChange={setMissionSet}
+          onDuck={onDuck}
+          ttsRate={settings?.tts_rate ?? 1}
+          onPracticeBook={() => startMission({ mode: "speaking", source: "book", autoStart: true })}
         />
       )}
 
@@ -425,7 +439,7 @@ export default function EnglishPanel() {
         <WarehousePage
           onDuck={onDuck}
           ttsRate={settings?.tts_rate ?? 1}
-          defaultGoal={settings?.warehouse_passes ?? 2}
+          defaultGoal={settings?.quality_goal ?? 20}
           onOpenScanner={() => go("scanner")}
         />
       )}

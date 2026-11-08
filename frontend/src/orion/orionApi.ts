@@ -14,13 +14,18 @@ export type OrionConfig = {
   pilot: string;
   max_images: number;
   max_image_bytes: number;
+  opencode?: { available: boolean; cli: string; model: string; reason: string };
 };
 export type ChatMsg = { id: number; role: "user" | "orion"; text: string; mode?: string; images?: string[] | number };
 export type Step = { title: string; weight: number; status: string };
 export type Task = { id: number; title: string; state: string; steps: Step[]; percent: number; color: string; stale: boolean };
-export type Hit = { id: number; role: string; before: string; match: string; after: string; at: string };
+export type Hit = { id: number; role: string; before: string; match: string; after: string; at: string; text?: string };
 export type Proposal = { id: number; title: string; description: string; status: string; branch: string; task_id: number | null };
 export type Byo = { provider: "openai" | "anthropic"; base_url: string; model: string; vision: boolean; key: string };
+export type CrewAgent = {
+  id: number; agent_id: string; name: string; kind: string; access: string; enabled: boolean;
+  provider: "openai" | "anthropic"; base_url: string; model: string; vision: boolean; manners: string; note: string; voice: string; needs_key: boolean;
+};
 
 async function j<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { credentials: "include", ...init });
@@ -31,6 +36,7 @@ async function j<T>(url: string, init?: RequestInit): Promise<T> {
     } catch {
       /* пусто */
     }
+    if (r.status === 502 || r.status === 504) throw new Error("opencode_timeout");
     throw new Error(d || `http_${r.status}`);
   }
   return (await r.json()) as T;
@@ -41,17 +47,29 @@ export const orionApi = {
   config: () => j<OrionConfig>("/api/orion/config"),
   setMode: (mode: ModeId) => j<{ mode: ModeId }>("/api/orion/mode", { method: "PUT", headers: JSONH, body: JSON.stringify({ mode }) }),
   messages: (offset = 0, limit = 50) => j<{ total: number; items: ChatMsg[] }>(`/api/orion/messages?offset=${offset}&limit=${limit}`),
-  chat: (text: string, images: string[], byo: Byo | null) =>
-    j<{ reply: string; mode_used: string; fallback: boolean; reason: string }>("/api/orion/chat", {
+  agents: () => j<{ active: string; items: CrewAgent[] }>("/api/orion/agents"),
+  createAgent: (body: Partial<CrewAgent>) =>
+    j<CrewAgent>("/api/orion/agents", { method: "POST", headers: JSONH, body: JSON.stringify(body) }),
+  updateAgent: (id: string, body: Partial<CrewAgent>) =>
+    j<CrewAgent>(`/api/orion/agents/${id}`, { method: "PUT", headers: JSONH, body: JSON.stringify(body) }),
+  activateAgent: (id: string) =>
+    j<{ active: string }>(`/api/orion/agents/${id}/activate`, { method: "POST", headers: JSONH, body: "{}" }),
+  deleteAgent: (id: string) => j<{ ok: boolean }>(`/api/orion/agents/${id}`, { method: "DELETE" }),
+  chat: (text: string, images: string[], byo: Byo | null, agentId = "", extra?: { quotes?: string[]; context?: string }) =>
+    j<{ reply: string; mode_used: string; fallback: boolean; reason: string; agent?: string }>("/api/orion/chat", {
       method: "POST",
       headers: byo?.key ? { ...JSONH, "X-Orion-Key": byo.key } : JSONH,
       body: JSON.stringify({
+        agent_id: agentId,
         text,
         images,
+        quotes: extra?.quotes || [],
+        context: extra?.context || "",
         byo: byo ? { provider: byo.provider, base_url: byo.base_url, model: byo.model, vision: byo.vision } : null,
       }),
     }),
-  archive: (q: string) => j<{ items: Hit[] }>(`/api/orion/archive?q=${encodeURIComponent(q)}&limit=50`),
+  clearMessages: () => j<{ ok: boolean; deleted: number }>("/api/orion/messages", { method: "DELETE" }),
+  archive: (q: string) => j<{ items: Hit[]; found?: number }>(`/api/orion/archive?q=${encodeURIComponent(q)}&limit=400`),
   tasks: () => j<{ items: Task[] }>("/api/orion/tasks"),
   plan: (title: string, steps: { title: string; weight: number }[]) =>
     j<Task>("/api/orion/tasks", { method: "POST", headers: JSONH, body: JSON.stringify({ title, steps }) }),
@@ -109,4 +127,15 @@ export function pageOf<T>(items: T[], page: number, size: number): { rows: T[]; 
   const pages = Math.max(1, Math.ceil(items.length / s));
   const p = Math.max(0, Math.min(page, pages - 1));
   return { rows: items.slice(p * s, p * s + s), pages, page: p };
+}
+
+const AGENT_KEY = (pilot: string, id: string) => `st_orion_agent:${pilot}:${id}`;
+export function loadAgentKey(pilot: string, id: string): string {
+  try { return localStorage.getItem(AGENT_KEY(pilot, id)) || ""; } catch { return ""; }
+}
+export function saveAgentKey(pilot: string, id: string, key: string) {
+  try {
+    if (key) localStorage.setItem(AGENT_KEY(pilot, id), key);
+    else localStorage.removeItem(AGENT_KEY(pilot, id));
+  } catch { /* quota */ }
 }

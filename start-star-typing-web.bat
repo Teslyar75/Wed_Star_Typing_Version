@@ -44,6 +44,8 @@ exit /b 1
 
 :docker_ok
 echo [1/5] Docker ready.
+echo       OpenCode bridge on :8765
+start "Orion OpenCode" /min py -3 "%~dp0tools\opencode_bridge.py"
 
 set "DO_BUILD=0"
 if /I "%~1"=="/rebuild" set "DO_BUILD=1"

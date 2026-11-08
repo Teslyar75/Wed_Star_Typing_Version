@@ -27,6 +27,7 @@ MAX_FILES = 6000
 MAX_FILE = 40 * 1024 * 1024
 SKIP_DIRS = {"backups", "cache", "logs"}
 KNOWN = ("profile.json", "settings.json", "stats.json", "session.json", "cargo.txt", "cargo_original.txt",
+         "monkeytype_cache.json", "portal_stats.json",
          "english.json", "speedread.json", "radio.json", "achievements.json", "avatar.png")
 DESKTOP_SKIN = {"spaceship", "bathyscaphe", "steampunk", "scriptorium", "neon_city", "zen_garden"}
 
@@ -559,6 +560,14 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
                            "errors": int(sess.get("errors") or 0), "elapsed": float(sess.get("elapsed") or 0)}
     if rd:
         client["radio"] = {k: rd[k] for k in ("volume", "autoplay", "duck_typing") if k in rd}
+
+    # -- Monkeytype / дзен-портал
+    try:
+        from app.api_monkeytype import apply_import
+        apply_import(db, pilot.id, settings or {}, pkg.json("monkeytype_cache.json") or None,
+                     pkg.json("portal_stats.json") or None)
+    except Exception:
+        pass
 
     # -- библиотека (последней: импорт текста сам делает commit)
     rep["_library"] = pkg.library_texts()

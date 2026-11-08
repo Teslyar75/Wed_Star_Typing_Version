@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import MicTransmit from "./MicTransmit";
 import SpeakButton from "./SpeakButton";
+import { passed, scheduleAdvance } from "./speechStd";
 import type { MissionTask } from "./types";
 
 type Props = {
@@ -112,6 +113,8 @@ export default function MissionsPage({
   }, [autoStart]);
 
   const task = tasks[i];
+  const iRef = useRef(0);
+  iRef.current = i;
   const advance = (pass: boolean) => {
     if (pass) setOk((x) => x + 1);
     else setFail((x) => x + 1);
@@ -303,7 +306,9 @@ export default function MissionsPage({
                 enabled={asr}
                 onDuck={onDuck}
                 onResult={(sc) => {
-                  if (sc >= 60) advance(sc >= 60);
+                  if (!passed(sc)) return;
+                  const here = i;
+                  scheduleAdvance(() => advance(true), () => iRef.current === here);
                 }}
               />
             </div>
