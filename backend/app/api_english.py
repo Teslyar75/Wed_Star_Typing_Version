@@ -1561,53 +1561,6 @@ def warehouse_goal(
     return {"ok": True, "goal": g, "filled": int(cnt["filled"]), "total": int(cnt["total"])}
 
 
-@router.post("/warehouse/run")
-def warehouse_run(
-    body: WarehouseRunIn,
-    db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
-) -> dict:
-    """Засчитать прогон склада (ср. ≥ 85%). Авто → done при достижении goal."""
-    PASS_QUALITY = 85.0
-    w = db.get(VocabWord, body.word_id)
-    if w is None:
-        raise HTTPException(404, "word not found")
-    pid = pilot.id if pilot else 0
-    card = _card(db, pid, body.word_id)
-    if body.goal:
-        card.wh_goal = body.goal
-    settings = _settings(db, pid)
-    goal = card.wh_goal or int(settings.get("warehouse_passes") or 2)
-    card.wh_goal = goal
-    if body.avg < PASS_QUALITY:
-        return {"ok": False, "accepted": False, "runs": card.wh_runs, "goal": goal, "avg": body.avg}
-    card.wh_runs = (card.wh_runs or 0) + 1
-    card.wh_avg = body.avg
-    # звёзды по точности
-    stars = 1 if body.avg >= 60 else 0
-    if body.avg >= 80:
-        stars = 2
-    if body.avg >= 95:
-        stars = 3
-    card.wh_stars = max(card.wh_stars or 0, stars)
-    card.english_xp = (card.english_xp or 0) + (5 if stars >= 2 else 2)
-    done = False
-    if card.wh_runs >= goal:
-        card.wh_state = "done"
-        done = True
-    elif not card.wh_state:
-        card.wh_state = "shelf"
-    db.commit()
-    return {
-        "ok": True,
-        "accepted": True,
-        "runs": card.wh_runs,
-        "goal": goal,
-        "stars": card.wh_stars,
-        "done": done,
-        "avg": body.avg,
-    }
-
 
 @router.post("/missions/start")
 def mission_start(

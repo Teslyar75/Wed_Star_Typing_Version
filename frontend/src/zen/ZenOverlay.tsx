@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { t, getLang } from "../i18n";
-import { COUNTS, PortalTest, prepareWords, quoteSlice, type ZenMode } from "./zenEngine";
+import { COUNTS, PortalTest, prepareWords, quoteSlice } from "./zenEngine";
 import { useZen, type ZenMode } from "./zenStore";
 import AccountView from "./AccountView";
 import type { PortalPack } from "./types";
@@ -379,15 +379,7 @@ export default function ZenOverlay() {
               esc — {t("zen_back_test")}
             </button>
           </div>
-          <AccountView
-            summary={acct?.summary}
-            empty={t("mt_empty")}
-            pal={{ bg: pal.bg, sub: pal.sub, subalt: pal.subalt, text: pal.text, main: pal.main }}
-            onNameClick={() => {
-              const name = (acct?.username || "").trim();
-              if (name) window.open("https://monkeytype.com/profile/" + encodeURIComponent(name), "_blank", "noopener");
-            }}
-          />
+          <AccountView onClose={() => setShowAcct(false)} />
         </div>
       ) : (
         <>
