@@ -26,11 +26,14 @@ for (const skin of ["spaceship", "steampunk"]) {
       await page.setViewportSize(vp);
       await boot(page, skin);
       await page.locator('.nav-tab[data-zone="english"]').click();
+      await expect(page.locator(".english")).toBeVisible();
       await page.getByTestId("cmp-overview").click();
       const item = page.locator('.cmp-menu [data-screen="sets"]').first();
       await expect(item).toBeVisible({ timeout: 60000 });
       await item.click();
+      await expect(page.locator(".en-starmaps")).toBeVisible();
       const grid = page.getByTestId("en-sm-grid");
+      await expect(grid).toBeVisible();
       await expect(grid.locator(".en-sm-tile").first()).toBeVisible({ timeout: 30000 });
       await page.waitForTimeout(600);
       const m = await grid.evaluate((el) => ({

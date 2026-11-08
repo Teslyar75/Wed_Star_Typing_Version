@@ -180,10 +180,19 @@ export default function StarMapsPage({
       if (q.trim()) params.set("q", q.trim());
       if (pos) params.set("pos", pos);
       if (diff !== "all") params.set("difficulty", diff);
-      const r = await fetch(`/api/english/set/${encodeURIComponent(setId)}?${params}`, { credentials: "include" });
+      const url = `/api/english/set/${encodeURIComponent(setId)}?${params}`;
+      let r = await fetch(url, { credentials: "include" });
       if (!r.ok) return;
-      const j = (await r.json()) as { items: EnWord[]; total: number };
+      let j = (await r.json()) as { items: EnWord[]; total: number };
       if (my !== reqRef.current) return; // устаревший ответ (сменился размер страницы)
+      if (!(j.items || []).length && !(j.total || 0)) {
+        await fetch("/api/english/seed?limit=3000&batch=400", { method: "POST", credentials: "include" });
+        if (my !== reqRef.current) return;
+        r = await fetch(url, { credentials: "include" });
+        if (!r.ok) return;
+        j = (await r.json()) as { items: EnWord[]; total: number };
+        if (my !== reqRef.current) return;
+      }
       setItems(j.items || []);
       setTotal(j.total || 0);
     } finally {

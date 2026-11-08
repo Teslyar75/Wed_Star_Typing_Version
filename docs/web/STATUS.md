@@ -8,7 +8,7 @@
 | Эпик | Что в проде |
 | --- | --- |
 | W0 | Онбординг кабины, адаптив шапки, фокус мостика |
-| P1 | Drill-миссии ★★★, ремонт клавиш, heatmap, карта на мостике |
+| P1 | Drill-миссии ★★★, ремонт клавиш, heatmap, карта в `MissionsPanel` (не на BridgeScreen) |
 | P2 | Библиотека: полка+паспорт, PDF/TXT/вставка, rename/delete, Gutenberg+CEFR, bilinguis EN↔RU/UK · хвосты — [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
 | P3 | English: отсеки due/inbox/favorite/learned, из книги, ранг/XP |
 | P4 | Тахистоскоп, E-Pyr, журнал результатов с фильтром режима |
@@ -32,6 +32,7 @@
 
 | Дата | Что |
 | --- | --- |
+| 2026-11-08 | CI e2e на `a6142bf` красный: 3 fail + 1 flaky. Диагноз: overlay перехват клика «Экипаж»; гид G1 ловит Enter; вкладка English — `button` не `tab`; «Из книги» strict-mode (nav + обзор); карта миссий в `MissionsPanel`; sqlite 2 worker + honor top-10. S0: [SESSION_2026-11-08](./SESSION_2026-11-08.md). |
 | 2026-10-13 | Битый `index.css` (`truncated oversized` + вложенные `*/`) ломал стекло → белые окна; почищено; SW `st-shell-v38`. Docker: данные на D:, логи на C: — Disk full валил демон. Журнал: [SESSION_2026-10-13](./SESSION_2026-10-13.md) |
 
 ## На будущее

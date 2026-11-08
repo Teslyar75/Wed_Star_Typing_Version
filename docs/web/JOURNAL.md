@@ -12,6 +12,7 @@
 
 | День | Тема | Журнал сессии |
 | --- | --- | --- |
+| **2026-11-08** | S0: e2e CI (crew / english-hub / mission-drill / starmaps) | [SESSION_2026-11-08.md](./SESSION_2026-11-08.md) |
 | **2026-10-15** | Настройки мостика · ЭКРАН/крошки · библиотека→печать · мигание буквы | [SESSION_2026-10-15.md](./SESSION_2026-10-15.md) |
 | **2026-10-14** | Зоны IA · бортжурнал · сканер · настройки · атлас/карты | [SESSION_2026-10-14.md](./SESSION_2026-10-14.md) |
 | **2026-10-13** | Библиотека (полка/Gutenberg) · Docker/диск · починка CSS-стекла | [SESSION_2026-10-13.md](./SESSION_2026-10-13.md) |
@@ -25,10 +26,9 @@
 | Файл | Зачем |
 | --- | --- |
 | [STATUS.md](./STATUS.md) | что уже в проде (сводка, не по дням) |
-| [WEB_NEXT.md](./WEB_NEXT.md) | **очередь** следующих задач |
-| [WEB_PLAN.md](./WEB_PLAN.md) | фазы 0–8, стек |
-| [NAV_ZONES.md](./NAV_ZONES.md) | карта зон / slug |
-| [ENGLISH_PARITY_GAPS.md](./ENGLISH_PARITY_GAPS.md) | сверка EN web↔desktop |
+| WEB_NEXT.md | **нет в этом репо** (копия в My_Stamina `docs/web/WEB_NEXT.md`, снимок 14.10 — устарел для S0) |
+| [WEB_PLAN.md](./WEB_PLAN.md) | фазы 0–8, стек (октябрь; стек совпадает с package.json, очередь нет) |
+| NAV_ZONES.md / ENGLISH_PARITY_GAPS.md | **нет в этом репо** — канон зон: `frontend/src/shell/zones.ts` |
 
 ---
 
