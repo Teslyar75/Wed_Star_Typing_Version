@@ -65,6 +65,7 @@ class CardProgress(Base):
     wh_stars: Mapped[int] = mapped_column(Integer, default=0)
     wh_avg: Mapped[float] = mapped_column(Float, default=0.0)
     wh_q: Mapped[str] = mapped_column(Text, default="")
+    wh_run: Mapped[str] = mapped_column(Text, default="")
 
 
 class EnglishList(Base):
@@ -388,7 +389,7 @@ class WarehouseQualityIn(BaseModel):
 
 class WarehouseGoalIn(BaseModel):
     word_id: int
-    goal: int = Field(ge=5, le=20)
+    goal: int = Field(ge=1, le=20)
 
 
 class ListCreateIn(BaseModel):

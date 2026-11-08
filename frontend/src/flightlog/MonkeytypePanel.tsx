@@ -140,12 +140,6 @@ export default function MonkeytypePanel() {
     await saveCreds(src);
   };
 
-  const openProfile = () => {
-    const name = user.trim();
-    if (!name) return;
-    window.open("https://monkeytype.com/profile/" + encodeURIComponent(name), "_blank", "noopener");
-  };
-
   const src = pack?.src || "all";
 
   return (
@@ -202,11 +196,7 @@ export default function MonkeytypePanel() {
           </button>
         ))}
       </div>
-      <AccountView
-        summary={pack?.summary}
-        empty={pack?.username ? t("mt_empty") : t("mt_hint")}
-        onNameClick={openProfile}
-      />
+      <AccountView />
     </section>
   );
 }

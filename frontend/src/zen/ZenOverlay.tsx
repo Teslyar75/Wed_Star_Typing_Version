@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { t, getLang } from "../i18n";
-import { COUNTS, PortalTest, prepareWords, quoteSlice } from "./zenEngine";
+import { COUNTS, PortalTest, prepareWords, quoteSlice, type ZenMode } from "./zenEngine";
 import { useZen, type ZenMode } from "./zenStore";
 import AccountView from "./AccountView";
 import type { PortalPack } from "./types";
@@ -23,7 +23,7 @@ function loadSrc(text: string, index: number, punct: boolean, numbers: boolean):
   const re = /\S+/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(raw))) {
-    const w = prepareWords(m[0]!, punct, numbers);
+    const w = prepareWords(m[0]!, 0, { punctuation: punct, numbers }).map((s) => s.word);
     if (w.length) {
       words.push(w[0]!);
       ends.push(m.index + m[0]!.length);
@@ -103,7 +103,7 @@ export default function ZenOverlay() {
       limit = 0;
     }
     const words = take(n);
-    const te = new PortalTest(words, m === "time" || m === "words" ? m : "words", limit);
+    const te = new PortalTest(words, (m === "time" || m === "words" ? m : "words") as ZenMode, limit);
     (te as PortalTest & { ui_mode?: string }).ui_mode = m;
     testRef.current = te;
     setResult(null);
@@ -145,7 +145,7 @@ export default function ZenOverlay() {
     if (!te.finished) te.finish();
     const res = te.result();
     const ui = (te as PortalTest & { ui_mode?: string }).ui_mode || te.mode;
-    res.mode = ui;
+    res.mode = ui as ZenMode;
     const lang = LANGS[useZen.getState().bridge?.getLang() || getLang()] || "english";
     void fetch("/api/portal/result", {
       method: "POST",
