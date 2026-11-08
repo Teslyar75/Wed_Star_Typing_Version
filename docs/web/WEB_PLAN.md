@@ -1,6 +1,8 @@
 # Star Typing — браузерная версия: план и промпты для Cursor
 
-> **Паритет с десктопом (пробелы после MVP):** см. [`PARITY_PLAN.md`](./PARITY_PLAN.md) — эпики P1–P8.
+> **Исторический документ.** Фазы 0–8 ниже уже в коде. Текущая очередь агента: [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md) → [WEB_PARITY_STAGES.md](./WEB_PARITY_STAGES.md). Не брать промпты 1–9 как новые задачи.
+
+> **Паритет P1–P8 (тоже исторический, сделано):** [`PARITY_PLAN.md`](./PARITY_PLAN.md).
 
 ## 1. Стек
 - **Фронтенд:** TypeScript + React + Vite, Zustand (состояние), i18next (переиспользуем словари `stamina/i18n` → JSON).

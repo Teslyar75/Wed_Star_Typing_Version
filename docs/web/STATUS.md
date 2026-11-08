@@ -1,7 +1,10 @@
 # Star Typing Web — статус (Excellence / Parity / Surpass)
 
+**Актуальная очередь агента (S0–S7):** [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md), [WEB_PARITY_STAGES.md](./WEB_PARITY_STAGES.md), [PROGRESS.md](./PROGRESS.md).  
+«S1» Горбов и «S7 skins» в таблице ниже — **другие** исторические эпики, не этапы очереди 08.11.
+
 Репозиторий: [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version)  
-Планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md); UI ← десктоп: монорепо `docs/web/UI_DESKTOP_PARITY.md`
+Исторические планы: [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md).
 
 ## Готово
 
