@@ -54,7 +54,7 @@ fi
 
 
 # Автообновление с GitHub (origin/master, только ff-only). WEB_NO_AUTOUPDATE=1 — выключить.
-if [ "${WEB_NO_AUTOUPDATE:-0}" != "1" ] && [ -d .git ]; then
+if [ -z "${CI:-}" ] && [ "${WEB_NO_AUTOUPDATE:-0}" != "1" ] && [ -d .git ]; then
   say "Проверяю GitHub на обновления…"
   PY=python3
   command -v python3 >/dev/null 2>&1 || PY=python
@@ -63,10 +63,10 @@ if [ "${WEB_NO_AUTOUPDATE:-0}" != "1" ] && [ -d .git ]; then
     REBUILD=1
   fi
 fi
-# Мост кнопки «Обновить сейчас» в Настройках
-if command -v python3 >/dev/null 2>&1; then
+# Мост кнопки «Обновить сейчас» в Настройках (не в CI)
+if [ -z "${CI:-}" ] && command -v python3 >/dev/null 2>&1; then
   python3 tools/web_updater.py >/dev/null 2>&1 &
-elif command -v python >/dev/null 2>&1; then
+elif [ -z "${CI:-}" ] && command -v python >/dev/null 2>&1; then
   python tools/web_updater.py >/dev/null 2>&1 &
 fi
 
@@ -94,6 +94,7 @@ start() {
 if ! start; then
   if grep -qiE "port is already allocated|address already in use" "$LOG"; then
     warn "Порт $PORT занят — перехожу на 8080 (вместо 443 — 8443)."
+    docker compose rm -f caddy >/dev/null 2>&1 || true
     PORT=8080
     HTTPS_PORT=8443
     if ! start; then

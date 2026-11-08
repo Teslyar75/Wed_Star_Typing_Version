@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import os
 import random
+import threading
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import Date, DateTime, Float, Integer, String, Text, UniqueConstraint, and_, case, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from app.auth_deps import get_optional_pilot
@@ -65,6 +68,7 @@ class CardProgress(Base):
     wh_stars: Mapped[int] = mapped_column(Integer, default=0)
     wh_avg: Mapped[float] = mapped_column(Float, default=0.0)
     wh_q: Mapped[str] = mapped_column(Text, default="")
+    wh_run: Mapped[str] = mapped_column(Text, default="")
 
 
 class EnglishList(Base):
@@ -388,7 +392,7 @@ class WarehouseQualityIn(BaseModel):
 
 class WarehouseGoalIn(BaseModel):
     word_id: int
-    goal: int = Field(ge=5, le=20)
+    goal: int = Field(ge=1, le=20)
 
 
 class ListCreateIn(BaseModel):
@@ -432,6 +436,7 @@ class FromBookIn(BaseModel):
 
 
 _SEED_ROWS_CACHE: dict[int, list[dict]] = {}
+_SEED_LOCK = threading.RLock()
 
 
 def _iter_seed_rows(limit: int) -> list[dict]:
@@ -492,9 +497,46 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
     """
     limit = max(1, min(int(limit), 20580))
     batch = max(1, min(int(batch), 2000))
-    total = db.query(VocabWord).count()
-    target = max(limit, 20000)
+    import sys
+
+    # Playwright e2e (CI, не pytest): не грузить 29MB vocab.json на каждый POST /seed.
+    e2e = bool(os.environ.get("CI")) and "pytest" not in sys.modules
+    with _SEED_LOCK:
+        return _seed_vocab_body(db, limit, batch, e2e)
+
+
+def _seed_vocab_body(db: Session, limit: int, batch: int, e2e: bool) -> dict[str, int | bool]:
+    if e2e:
+        total = db.query(VocabWord).count()
+        if total == 0:
+            for i, (w, tr, ex) in enumerate(FALLBACK_SEED):
+                db.add(
+                    VocabWord(
+                        word=w,
+                        translation=tr,
+                        example=ex,
+                        slug=w.lower(),
+                        rank=i + 1,
+                        meta="{}",
+                    )
+                )
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+            total = db.query(VocabWord).count()
+        return {
+            "added": 0,
+            "updated": 0,
+            "total": total,
+            "done": True,
+            "target": total,
+            "zero_rank": 0,
+        }
+    # JSON без открытой транзакции — иначе UI съедает QueuePool.
     rows = _iter_seed_rows(20000)
+    target = max(limit, 20000)
+    total = db.query(VocabWord).count()
     by_src = {r["word"].lower(): r for r in rows}
 
     n_add = 0
@@ -553,7 +595,10 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
             have.add(key)
 
     if n_add or n_upd:
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
         total = db.query(VocabWord).count()
 
     zero_left = (
@@ -573,11 +618,41 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
     }
 
 
+
+def _ensure_seeded_for(db: Session, need_rank: int, max_rounds: int = 40, *, need_dev: bool = False) -> None:
+    """Досеять словарь, пока набор с лимитом need_rank не заполнен целиком."""
+    if os.environ.get("CI"):
+        return
+    _iter_seed_rows(20000)
+
+    def _full() -> bool:
+        have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
+        dev_ok = not need_dev or db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() > 0
+        return have >= need_rank and dev_ok
+
+    if _full():
+        return
+    with _SEED_LOCK:
+        db.expire_all()
+        _ensure_seeded_locked(db, need_rank, max_rounds, need_dev)
+
+
+def _ensure_seeded_locked(db: Session, need_rank: int, max_rounds: int, need_dev: bool) -> None:
+    for _ in range(max_rounds):
+        have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
+        dev_ok = not need_dev or db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() > 0
+        if have >= need_rank and dev_ok:
+            return
+        res = _seed_vocab(db, 20000, 2000)
+        if res.get("done") or not (res.get("added") or res.get("updated")):
+            return
+
+
 def start_seed_worker() -> None:
     """Фоновый досев полного словаря при старте сервера (свежая БД сразу полная)."""
     import sys
 
-    if "pytest" in sys.modules:
+    if "pytest" in sys.modules or os.environ.get("CI"):
         return
 
     def _run() -> None:
@@ -606,8 +681,7 @@ def seed_vocab(
 
 @router.get("/words", response_model=list[WordOut])
 def list_words(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)) -> list[VocabWord]:
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db)
+    _ensure_seeded_for(db, 1000)
     return (
         db.query(VocabWord)
         .order_by(VocabWord.id)
@@ -625,8 +699,7 @@ def warehouse_due(
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> list[VocabWord]:
     """Склад: due | favorite | learned | inbox."""
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db)
+    _ensure_seeded_for(db, 1000)
     pid = pilot.id if pilot else 0
     limit = max(1, min(limit, 100))
 
@@ -826,8 +899,7 @@ def english_progress(
 
 @router.get("/word-of-day")
 def word_of_day(db: Session = Depends(get_db)) -> dict:
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db)
+    _ensure_seeded_for(db, 1000)
     rows = db.query(VocabWord).order_by(VocabWord.id).limit(500).all()
     if not rows:
         return {"id": 0, "word": "—", "translation": "", "example": "", "rank": 0, "pos": "—"}
@@ -1015,6 +1087,7 @@ def _settings(db: Session, pid: int) -> dict:
 def list_sets(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> list[dict]:
     from app.english_vocab import SET_LIMIT, THEMATIC_SETS, in_set, sets_catalog
 
+    _ensure_seeded_for(db, max(SET_LIMIT.values()), need_dev=True)
     pid = pilot.id if pilot else 0
     cards = {c.word_id: c for c in db.query(CardProgress).filter_by(pilot_id=pid).all()}
     known_ids = {wid for wid, c in cards.items() if c.known or c.bin == "learned" or c.interval >= 21}
@@ -1056,8 +1129,7 @@ def lookup_word(
     """Обычный английский case != SQL CASE из S-DEV (slug dev:case)."""
     from app.english_vocab import THEMATIC_SETS
 
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db, 500, 500)
+    _ensure_seeded_for(db, 500)
     needle = q.strip().lower()
     want_dev = (set_id in THEMATIC_SETS) or needle.startswith("dev:") or needle.startswith("dev-")
     w = None
@@ -1220,8 +1292,13 @@ def words_in_set(
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
     """Фильтры как desktop vocab.filtered — до пагинации, страница в SQL."""
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db, 2000, 500)
+    from app.english_vocab import SET_LIMIT, THEMATIC_SETS
+
+    if set_id in THEMATIC_SETS:
+        if db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).count() == 0:
+            _ensure_seeded_for(db, 20000, need_dev=True)
+    else:
+        _ensure_seeded_for(db, SET_LIMIT.get(set_id, 3000))
     limit = max(1, min(limit, 120))
     offset = max(0, offset)
     status_n = (status or "all").lower()
@@ -1545,67 +1622,17 @@ def warehouse_goal(
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
-    w = db.get(VocabWord, body.word_id)
-    if w is None:
-        raise HTTPException(404, "word not found")
+    """set_run_goal: число прогонов 1/2/3/5."""
+    from app import english_warehouse as whm
+
+    if body.goal not in whm.PASS_CHOICES:
+        raise HTTPException(400, "goal must be one of 1,2,3,5")
     pid = pilot.id if pilot else 0
     card = _card(db, pid, body.word_id)
-    sents = _card_sents(w)
-    settings = _settings(db, pid)
-    qp, slug = _qp_from_card(card, settings)
-    g = qeng.set_goal(qp, slug, body.goal, n_sents=len(sents) or 1)
-    _q_flush(card, qp, slug)
+    card.wh_goal = max(1, min(5, body.goal))
     db.commit()
-    cnt = qeng.counts(qp, slug, n_sents=len(sents) or 1)
-    return {"ok": True, "goal": g, "filled": int(cnt["filled"]), "total": int(cnt["total"])}
+    return {"goal": card.wh_goal}
 
-
-@router.post("/warehouse/run")
-def warehouse_run(
-    body: WarehouseRunIn,
-    db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
-) -> dict:
-    """Засчитать прогон склада (ср. ≥ 85%). Авто → done при достижении goal."""
-    PASS_QUALITY = 85.0
-    w = db.get(VocabWord, body.word_id)
-    if w is None:
-        raise HTTPException(404, "word not found")
-    pid = pilot.id if pilot else 0
-    card = _card(db, pid, body.word_id)
-    if body.goal:
-        card.wh_goal = body.goal
-    settings = _settings(db, pid)
-    goal = card.wh_goal or int(settings.get("warehouse_passes") or 2)
-    card.wh_goal = goal
-    if body.avg < PASS_QUALITY:
-        return {"ok": False, "accepted": False, "runs": card.wh_runs, "goal": goal, "avg": body.avg}
-    card.wh_runs = (card.wh_runs or 0) + 1
-    card.wh_avg = body.avg
-    # звёзды по точности
-    stars = 1 if body.avg >= 60 else 0
-    if body.avg >= 80:
-        stars = 2
-    if body.avg >= 95:
-        stars = 3
-    card.wh_stars = max(card.wh_stars or 0, stars)
-    card.english_xp = (card.english_xp or 0) + (5 if stars >= 2 else 2)
-    done = False
-    if card.wh_runs >= goal:
-        card.wh_state = "done"
-        done = True
-    elif not card.wh_state:
-        card.wh_state = "shelf"
-    db.commit()
-    return {
-        "ok": True,
-        "accepted": True,
-        "runs": card.wh_runs,
-        "goal": goal,
-        "stars": card.wh_stars,
-        "done": done,
-        "avg": body.avg,
-    }
 
 
 @router.post("/missions/start")
@@ -1617,8 +1644,7 @@ def mission_start(
     from app.english_tasks import MODES, TaskFactory
     from app.english_vocab import SET_LIMIT, THEMATIC_SETS
 
-    if db.query(VocabWord).count() < 20:
-        _seed_vocab(db, 500, 500)
+    _ensure_seeded_for(db, 500)
     pid = pilot.id if pilot else 0
     words_orm: list[VocabWord] = []
     if body.single:

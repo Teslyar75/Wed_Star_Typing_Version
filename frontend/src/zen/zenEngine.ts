@@ -58,6 +58,10 @@ export function quoteLen(text: string, from: number, min = 12, max = 80): number
   return Math.min(words.length, max);
 }
 
+export function quoteSlice(text: string, startWord = 0, minWords = 12, maxWords = 80): number {
+  return quoteLen(text, startWord, minWords, maxWords);
+}
+
 export function kogasa(cov: number): number {
   return 100 * (1 - Math.tanh(cov + cov ** 3 / 3 + cov ** 5 / 5));
 }
