@@ -34,6 +34,7 @@ import SlideshowButton from "./idle/SlideshowButton";
 import OrionCallButton from "./guide/OrionCallButton";
 import { useElementFullscreen } from "./shell/useElementFullscreen";
 import { clearDeepRoute } from "./shell/routeStore";
+import { COMM_UNREAD_EVENT } from "./comm/commApi";
 import RadioMinibar from "./radio/RadioMinibar";
 import RadioAudioHost from "./radio/RadioAudioHost";
 import { useCabin } from "./settings/cabinStore";
@@ -57,6 +58,7 @@ const BridgeSettingsPage = lazy(() => import("./bridge/BridgeSettingsPage"));
 const LoungePanel = lazy(() => import("./lounge/LoungePanel"));
 const RadioPanel = lazy(() => import("./radio/RadioPanel"));
 const DocsPanel = lazy(() => import("./docs/DocsPanel"));
+const CommPanel = lazy(() => import("./comm/CommPanel"));
 const OrionPanel = lazy(() => import("./orion/OrionPanel"));
 
 function TabFallback() {
@@ -86,6 +88,7 @@ export default function App() {
   );
   const [muted, setMuted] = useState(() => soundsMuted());
   const [pilot, setPilot] = useState<PilotChip | null>(null);
+  const [commUnread, setCommUnread] = useState(0);
   const [crewOpen, setCrewOpen] = useState(false);
   const [, bump] = useState(0);
   const skin = useSkin((s) => s.skin);
@@ -172,6 +175,39 @@ export default function App() {
 
   // гид: первый запуск — после входа в кабину (ждёт паузы в наборе)
   const pilotName = pilot?.callsign;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("st-pilot", { detail: { callsign: pilotName || "guest" } }));
+  }, [pilotName]);
+
+  useEffect(() => {
+    if (!pilotName) {
+      setCommUnread(0);
+      return;
+    }
+    let stop = false;
+    const tick = () => {
+      void fetch("/api/comm/unread", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : { unread: 0 }))
+        .then((d: { unread?: number }) => {
+          if (!stop) setCommUnread(Number(d.unread) || 0);
+        })
+        .catch(() => {
+          /* гость / сеть — бейдж молчит */
+        });
+    };
+    const onEvt = (e: Event) => {
+      const n = Number((e as CustomEvent).detail);
+      if (!stop && Number.isFinite(n)) setCommUnread(n);
+    };
+    tick();
+    const id = window.setInterval(tick, 15000);
+    window.addEventListener(COMM_UNREAD_EVENT, onEvt);
+    return () => {
+      stop = true;
+      window.clearInterval(id);
+      window.removeEventListener(COMM_UNREAD_EVENT, onEvt);
+    };
+  }, [pilotName]);
   const bindPilot = useUiVariant((s) => s.bindPilot);
   useEffect(() => bindPilot(pilotName ?? null), [pilotName, bindPilot]);
   const pilotRankRef = useRef<string | undefined>(undefined);
@@ -253,7 +289,7 @@ export default function App() {
         e.preventDefault();
         setCmdOpen((v) => !v);
       }
-      /* Ctrl+1…N — существующие зоны (ZONE_ORDER), без Comm */
+      /* Ctrl+1…N — существующие зоны (ZONE_ORDER) */
       if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-9]$/.test(e.key)) {
         const next = zoneFromDigit(e.key);
         if (!next) return;
@@ -383,7 +419,8 @@ export default function App() {
                   data-tab={x.id}
                   data-nav-menu="1"
                   aria-selected={activeZone === x.id}
-                  className={`nav-tab ${activeZone === x.id ? "on" : ""}`}
+                  className={`nav-tab ${activeZone === x.id ? "on" : ""} ${x.id === "comm" && commUnread > 0 && activeZone !== "comm" ? "unread" : ""}`}
+                  data-comm-unread={x.id === "comm" ? String(commUnread) : undefined}
                   onClick={() => setZone(x.id)}
                 >
                   {x.label}
@@ -508,6 +545,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "radio"}>
           <RadioPanel />
+        </LazyTab>
+        <LazyTab when={tab === "comm"}>
+          <CommPanel />
         </LazyTab>
         <LazyTab when={tab === "docs"}>
           <DocsPanel />

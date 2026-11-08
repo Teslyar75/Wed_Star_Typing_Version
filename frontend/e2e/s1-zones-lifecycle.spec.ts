@@ -1,25 +1,27 @@
 import { expect, test } from "@playwright/test";
 import { skipCrewAsk } from "./helpers";
 
-const ZONES = ["bridge", "english", "speed", "lounge", "radio", "docs", "orion", "settings"] as const;
+const ZONES = ["bridge", "english", "speed", "lounge", "radio", "comm", "docs", "orion", "settings"] as const;
 
-test("S2 зоны: 8 вкладок, Документы перед Орионом, без Comm, Ctrl+8 → настройки", async ({ page }) => {
+test("S3 зоны: 9 вкладок, Эфир после радио, Документы перед Орионом, Ctrl+9 → настройки", async ({ page }) => {
   await skipCrewAsk(page);
   await page.goto("/");
   const tabs = page.locator(".top-nav .nav-tab");
-  await expect(tabs).toHaveCount(8);
+  await expect(tabs).toHaveCount(9);
   for (const z of ZONES) {
     await expect(page.locator(`.nav-tab[data-zone="${z}"]`)).toBeVisible();
   }
   const order = await tabs.evaluateAll((els) => els.map((e) => e.getAttribute("data-zone")));
-  expect(order.indexOf("docs")).toBeGreaterThan(-1);
+  expect(order.indexOf("comm")).toBeGreaterThan(order.indexOf("radio"));
+  expect(order.indexOf("comm")).toBeLessThan(order.indexOf("docs"));
   expect(order.indexOf("docs")).toBeLessThan(order.indexOf("orion"));
-  await expect(page.locator('.nav-tab[data-zone="comm"]')).toHaveCount(0);
 
   await page.locator(".brand-title").click();
   await page.keyboard.press("Control+6");
+  await expect(page.locator('.nav-tab[data-zone="comm"]')).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Control+7");
   await expect(page.locator('.nav-tab[data-zone="docs"]')).toHaveAttribute("aria-selected", "true");
-  await page.keyboard.press("Control+8");
+  await page.keyboard.press("Control+9");
   await expect(page.locator('.nav-tab[data-zone="settings"]')).toHaveAttribute("aria-selected", "true");
 });
 

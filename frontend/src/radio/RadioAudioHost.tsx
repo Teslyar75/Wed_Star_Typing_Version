@@ -2,21 +2,40 @@
 import { useEffect, useRef } from "react";
 import { useRadio } from "./radioStore";
 
+export const PILOT_EVENT = "st-pilot";
+
 export default function RadioAudioHost() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const setAudio = useRadio((s) => s.setAudio);
   const tryAutoplayLast = useRadio((s) => s.tryAutoplayLast);
-  const syncFavsFromServer = useRadio((s) => s.syncFavsFromServer);
+  const bindPilot = useRadio((s) => s.bindPilot);
 
   useEffect(() => {
     setAudio(audioRef.current);
-    const tmr = window.setTimeout(() => tryAutoplayLast(), 500);
-    void syncFavsFromServer();
-    return () => {
-      clearTimeout(tmr);
-      /* не обнуляем audio при HMR/размонтировании App — иначе срывается эфир */
+    let alive = true;
+    const bind = async (callsign: string) => {
+      await bindPilot(callsign);
+      if (alive) window.setTimeout(() => tryAutoplayLast(), 400);
     };
-  }, [setAudio, tryAutoplayLast, syncFavsFromServer]);
+    void (async () => {
+      try {
+        const me = await fetch("/api/pilots/me", { credentials: "include" });
+        const cs = me.ok ? String(((await me.json()) as { callsign?: string }).callsign || "guest") : "guest";
+        if (alive) await bind(cs);
+      } catch {
+        if (alive) await bind("guest");
+      }
+    })();
+    const onPilot = (e: Event) => {
+      const cs = String((e as CustomEvent<{ callsign?: string }>).detail?.callsign || "guest");
+      void bind(cs);
+    };
+    window.addEventListener(PILOT_EVENT, onPilot);
+    return () => {
+      alive = false;
+      window.removeEventListener(PILOT_EVENT, onPilot);
+    };
+  }, [setAudio, tryAutoplayLast, bindPilot]);
 
   return <audio ref={audioRef} className="radio-audio" crossOrigin="anonymous" preload="none" />;
 }

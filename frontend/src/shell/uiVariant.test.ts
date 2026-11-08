@@ -21,7 +21,7 @@ describe("compartment screens (ОБЗОР ▾)", () => {
     ]);
   });
   it("every zone has at least one screen", () => {
-    for (const t of ["english", "speed", "lounge", "radio", "docs", "orion", "settings"] as const) {
+    for (const t of ["english", "speed", "lounge", "radio", "comm", "docs", "orion", "settings"] as const) {
       expect(screensForTab(t).length).toBeGreaterThanOrEqual(1);
     }
   });

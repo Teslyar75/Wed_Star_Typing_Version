@@ -2966,6 +2966,10 @@ html[data-ui-scale="XXL"] .bridge-set-note {
   box-shadow: 0 0 12px color-mix(in srgb, var(--st-cyan) 30%, transparent);
 }
 
+.nav-tab.unread {
+  color: var(--st-amber, #e6c45c);
+}
+
 .top-right {
   display: flex;
   flex-wrap: nowrap;

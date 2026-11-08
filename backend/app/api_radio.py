@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import DateTime, Integer, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
@@ -36,6 +36,8 @@ class PilotRadioFav(Base):
 
 
 class FavIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     stationuuid: str = ""
     name: str = ""
     url_resolved: str = Field(..., min_length=8)

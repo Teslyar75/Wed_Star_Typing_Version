@@ -12,6 +12,7 @@ export const ZONE_NAME_KEY: Record<string, string> = {
   speed: "speed",
   lounge: "lounge",
   radio: "radio",
+  comm: "comm",
   docs: "docs",
   settings: "settings",
 };

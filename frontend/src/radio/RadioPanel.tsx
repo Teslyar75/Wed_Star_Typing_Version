@@ -14,6 +14,7 @@ import {
 import { useRadio } from "./radioStore";
 import { cacheStations, loadCachedStations } from "./stationCache";
 import { registerGoHandler, setDeepRoute, setZoneScreens } from "../shell/routeStore";
+import { createEpoch, isAbortError } from "../shell/requestEpoch";
 
 type Tab = "air" | "rx";
 /** Источник списка частот — отдельные вкладки вместо длинной прокрутки. */
@@ -166,6 +167,8 @@ export default function RadioPanel() {
   const [stations, setStations] = useState<Station[]>([]);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const epoch = useRef(createEpoch());
+  const acRef = useRef<AbortController | null>(null);
   const {
     station,
     playing,
@@ -250,64 +253,92 @@ export default function RadioPanel() {
     setFreqPage(0);
   }, []);
 
-  const loadMeta = useCallback(async () => {
-    const [c, l, tg] = await Promise.all([fetchCountries(), fetchLanguages(), fetchTags()]);
+  const beginFetch = () => {
+    acRef.current?.abort();
+    const ac = new AbortController();
+    acRef.current = ac;
+    return { ac, n: epoch.current.next() };
+  };
+
+  const loadMeta = useCallback(async (signal: AbortSignal, n: number) => {
+    const [c, l, tg] = await Promise.all([fetchCountries(signal), fetchLanguages(signal), fetchTags(signal)]);
+    if (!epoch.current.is(n)) return;
     setCountries(c);
     setLangs(l);
     setTags(tg);
   }, []);
 
-  const loadTop = useCallback(async () => {
+  const runTop = useCallback(async (signal: AbortSignal, n: number) => {
     setBusy(true);
     setFreqMode("top");
     setStatus(t("radio_loading"));
     const cacheKey = `top:${FREQ_TOTAL}`;
     try {
-      const data = await topStations(FREQ_TOTAL);
+      const data = await topStations(FREQ_TOTAL, signal);
+      if (!epoch.current.is(n)) return;
       applyList(data, t("radio_status_top"));
       void cacheStations(cacheKey, data);
-    } catch {
+    } catch (e) {
+      if (!epoch.current.is(n) || isAbortError(e)) return;
       const cached = (await loadCachedStations(cacheKey)) as Station[] | null;
+      if (!epoch.current.is(n)) return;
       if (cached?.length) applyList(cached, t("radio_cache"));
       else {
         setStations([]);
         setStatus(t("radio_err_net"));
       }
     } finally {
-      setBusy(false);
+      if (epoch.current.is(n)) setBusy(false);
     }
   }, [applyList]);
 
+  const loadTop = useCallback(() => {
+    const { ac, n } = beginFetch();
+    void runTop(ac.signal, n);
+  }, [runTop]);
+
   useEffect(() => {
-    void loadMeta();
-    void loadTop();
-  }, [loadMeta, loadTop]);
+    const { ac, n } = beginFetch();
+    void loadMeta(ac.signal, n);
+    void runTop(ac.signal, n);
+    return () => {
+      acRef.current?.abort();
+      epoch.current.invalidate();
+    };
+  }, [loadMeta, runTop]);
 
   const search = async () => {
+    const { ac, n } = beginFetch();
     setBusy(true);
     setFreqMode("search");
     setStatus(t("radio_searching"));
     const cacheKey = `q:${q}|t:${tag}|c:${country}|l:${lang}`;
     try {
-      const data = await searchStations({
-        name: q || undefined,
-        tag: tag || undefined,
-        country: country || undefined,
-        language: lang || undefined,
-        limit: FREQ_TOTAL,
-      });
+      const data = await searchStations(
+        {
+          name: q || undefined,
+          tag: tag || undefined,
+          country: country || undefined,
+          language: lang || undefined,
+          limit: FREQ_TOTAL,
+        },
+        ac.signal,
+      );
+      if (!epoch.current.is(n)) return;
       applyList(data, t("radio_found").replace("{0}", String(data.length)));
       void cacheStations(cacheKey, data);
       if (!data.length) setStatus(t("radio_empty"));
-    } catch {
+    } catch (e) {
+      if (!epoch.current.is(n) || isAbortError(e)) return;
       const cached = (await loadCachedStations(cacheKey)) as Station[] | null;
+      if (!epoch.current.is(n)) return;
       if (cached?.length) applyList(cached, t("radio_cache"));
       else {
         setStations([]);
         setStatus(t("radio_err_net"));
       }
     } finally {
-      setBusy(false);
+      if (epoch.current.is(n)) setBusy(false);
     }
   };
 
@@ -336,7 +367,7 @@ export default function RadioPanel() {
   const playingUuid = station?.stationuuid || station?.url_resolved;
 
   return (
-    <section className="radio">
+    <section className="radio" data-testid="radio-panel" data-radio-tab={tab}>
       <header className="radio-head">
         <h2 className="route-title radio-title">{t("radio")}</h2>
         <div className="radio-tabs">
