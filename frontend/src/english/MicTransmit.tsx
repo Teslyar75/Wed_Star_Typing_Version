@@ -90,22 +90,28 @@ export default function MicTransmit({
   const [engine, setEngine] = useState<Engine>("checking");
   const asrOk = engine === "server" || engine === "browser";
   const stopRef = useRef<(() => void) | null>(null);
+  const liveRef = useRef(true);
+  const onDuckRef = useRef(onDuck);
+  onDuckRef.current = onDuck;
 
   useEffect(() => {
+    liveRef.current = true;
     let dead = false;
     void (async () => {
       const a = await serverAsrAvailable();
-      if (dead) return;
+      if (dead || !liveRef.current) return;
       if (a.ok) {
         setEngine("server");
         return;
       }
       const b = await asrAvailable().catch(() => ({ ok: false }));
-      if (!dead) setEngine(b.ok ? "browser" : "none");
+      if (!dead && liveRef.current) setEngine(b.ok ? "browser" : "none");
     })();
     return () => {
       dead = true;
+      liveRef.current = false;
       stopRef.current?.();
+      onDuckRef.current?.(false);
     };
   }, []);
 
@@ -154,10 +160,12 @@ export default function MicTransmit({
           stopRef.current = stop;
         },
         onStarted: () => {
+          if (!liveRef.current) return;
           setLiveHint(t("en_mic_speak_hint"));
           setLedHot(true);
         },
         onProcessing: () => {
+          if (!liveRef.current) return;
           setListening(false);
           setProcessing(true);
           setLedHot(false);
@@ -166,6 +174,7 @@ export default function MicTransmit({
           stopRef.current = null;
         },
         onInterim: (text: string) => {
+          if (!liveRef.current) return;
           setHeard(text);
           setLiveHint(`«${text}»`);
           setLedHot(true);
@@ -178,11 +187,13 @@ export default function MicTransmit({
           });
         },
         onLevel: (rms: number) => {
+          if (!liveRef.current) return;
           setLevelFrac((prev) => Math.max(rmsToFrac(rms), prev * 0.55));
           if (rms >= 0.004) setLedHot(true);
         },
         onSounding: (on: boolean) => {
-          if (on) setLedHot(true);
+          if (!liveRef.current || !on) return;
+          setLedHot(true);
         },
       };
       let res: { transcript: string; alternatives: string[]; score: number; marks: [string, boolean][]; error?: string };
@@ -203,6 +214,8 @@ export default function MicTransmit({
           res = { ...r, alternatives: alts, transcript: best.heard || r.transcript, score: Math.max(0, best.score), marks: best.marks };
         }
       }
+
+      if (!liveRef.current) return;
 
       setListening(false);
       setLedHot(false);
@@ -263,16 +276,20 @@ export default function MicTransmit({
       });
       onResult?.(res.score, res.transcript, res.alternatives || []);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "asr-error");
-      setLiveHint("");
-      publish({ score: 0, heard: "", selfScore: false, missed: [], error: "asr-error" });
+      if (liveRef.current) {
+        setErr(e instanceof Error ? e.message : "asr-error");
+        setLiveHint("");
+        publish({ score: 0, heard: "", selfScore: false, missed: [], error: "asr-error" });
+      }
     } finally {
-      setListening(false);
-      setProcessing(false);
-      setLedHot(false);
-      setLevelFrac(0);
-      stopRef.current = null;
-      onListening?.(false);
+      if (liveRef.current) {
+        setListening(false);
+        setProcessing(false);
+        setLedHot(false);
+        setLevelFrac(0);
+        stopRef.current = null;
+        onListening?.(false);
+      }
       onDuck?.(false);
     }
   };

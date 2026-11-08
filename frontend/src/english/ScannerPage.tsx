@@ -1,6 +1,7 @@
 /** СКАНЕР ОБЪЕКТА — порт stamina/english/pages_main.ScannerPage. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
+import { isAbortError } from "../shell/requestEpoch";
 import MatchReadout from "./MatchReadout";
 import MicTransmit, { type MatchInfo } from "./MicTransmit";
 import SpeakButton from "./SpeakButton";
@@ -77,91 +78,114 @@ export default function ScannerPage({
   const [hint, setHint] = useState(false);
   const [ptab, setPtab] = useState<"ipa" | "syl" | "guide" | "notes">("ipa");
   const [match, setMatch] = useState<MatchInfo | null>(null);
+  const liveRef = useRef(true);
 
-  const load = useCallback(async (query: string, opts?: { silentEmpty?: boolean; remember?: boolean }) => {
+  useEffect(() => {
+    liveRef.current = true;
+    return () => {
+      liveRef.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async (query: string, opts?: { silentEmpty?: boolean; remember?: boolean; signal?: AbortSignal }) => {
     const needle = query.trim();
     if (!needle) return false;
+    if (!liveRef.current) return false;
     setMsg("");
     setShowTr(false);
     setHint(false);
     setSi(0);
     setMatch(null);
-    const r = await fetch(`/api/english/lookup?q=${encodeURIComponent(needle)}`, { credentials: "include" });
-    if (!r.ok) {
-      setWord(null);
-      if (!opts?.silentEmpty) setMsg(t("en_word_not_found"));
+    try {
+      const r = await fetch(`/api/english/lookup?q=${encodeURIComponent(needle)}`, {
+        credentials: "include",
+        signal: opts?.signal,
+      });
+      if (!liveRef.current || opts?.signal?.aborted) return false;
+      if (!r.ok) {
+        setWord(null);
+        if (!opts?.silentEmpty) setMsg(t("en_word_not_found"));
+        return false;
+      }
+      const w = (await r.json()) as EnWord;
+      if (!liveRef.current) return false;
+      setWord(w);
+      setMyTr(w.my_tr || w.translation || "");
+      setQ(w.word);
+      // remember только для fallback / явного запроса — не зацикливать scanSeed
+      if (opts?.remember) onNeighborWord?.(w.word);
+      return true;
+    } catch (e) {
+      if (isAbortError(e) || !liveRef.current) return false;
       return false;
     }
-    const w = (await r.json()) as EnWord;
-    setWord(w);
-    setMyTr(w.my_tr || w.translation || "");
-    setQ(w.word);
-    // remember только для fallback / явного запроса — не зацикливать scanSeed
-    if (opts?.remember) onNeighborWord?.(w.word);
-    return true;
   }, [onNeighborWord]);
 
   /** рабочая зона: last session → слово дня → первое из набора */
   useEffect(() => {
-    let cancelled = false;
+    const ac = new AbortController();
     void (async () => {
       const seed = initialQuery.trim();
       if (seed) {
-        if (!cancelled) await load(seed);
+        if (!ac.signal.aborted) await load(seed, { signal: ac.signal });
         return;
       }
       try {
-        const wod = await fetch("/api/english/word-of-day", { credentials: "include" });
+        const wod = await fetch("/api/english/word-of-day", { credentials: "include", signal: ac.signal });
         if (wod.ok) {
           const j = (await wod.json()) as { word?: string };
-          if (!cancelled && j.word && (await load(j.word, { silentEmpty: true, remember: true }))) return;
+          if (!ac.signal.aborted && j.word && (await load(j.word, { silentEmpty: true, remember: true, signal: ac.signal }))) return;
         }
-      } catch {
-        /* */
+      } catch (e) {
+        if (isAbortError(e)) return;
       }
       try {
         const r = await fetch(
           `/api/english/set/${encodeURIComponent(currentSet)}?limit=1&offset=0&sort=freq`,
-          { credentials: "include" },
+          { credentials: "include", signal: ac.signal },
         );
         if (r.ok) {
           const j = (await r.json()) as { items?: EnWord[] };
           const first = j.items?.[0]?.word;
-          if (!cancelled && first) await load(first, { silentEmpty: true, remember: true });
+          if (!ac.signal.aborted && first) await load(first, { silentEmpty: true, remember: true, signal: ac.signal });
         }
-      } catch {
-        /* */
+      } catch (e) {
+        if (isAbortError(e)) return;
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
   }, [initialQuery, currentSet, load]);
 
   useEffect(() => {
+    const ac = new AbortController();
     void (async () => {
       try {
-        const rows = await (await fetch("/api/english/lists", { credentials: "include" })).json();
-        if (Array.isArray(rows)) setLists(rows.map((x: { id: number; name: string }) => ({ id: x.id, name: x.name })));
-      } catch {
+        const rows = await (await fetch("/api/english/lists", { credentials: "include", signal: ac.signal })).json();
+        if (liveRef.current && Array.isArray(rows)) setLists(rows.map((x: { id: number; name: string }) => ({ id: x.id, name: x.name })));
+      } catch (e) {
+        if (isAbortError(e)) return;
         /* guest */
       }
     })();
+    return () => ac.abort();
   }, []);
 
   useEffect(() => {
+    const ac = new AbortController();
     void (async () => {
       try {
         const r = await fetch(`/api/english/set/${encodeURIComponent(currentSet)}?limit=120&offset=0&sort=freq`, {
           credentials: "include",
+          signal: ac.signal,
         });
-        if (!r.ok) return;
+        if (!r.ok || !liveRef.current) return;
         const j = (await r.json()) as { items: EnWord[] };
-        setNeighbors((j.items || []).map((x) => x.word));
-      } catch {
-        /* ignore */
+        if (liveRef.current) setNeighbors((j.items || []).map((x) => x.word));
+      } catch (e) {
+        if (isAbortError(e)) return;
       }
     })();
+    return () => ac.abort();
   }, [currentSet]);
 
   const markKnown = async (known: boolean) => {

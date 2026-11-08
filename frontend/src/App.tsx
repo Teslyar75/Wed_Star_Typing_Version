@@ -23,7 +23,7 @@ import {
   handleTabNav,
   isTextEditTarget,
 } from "./shell/keyboardNav";
-import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneOf, type ZoneId } from "./shell/zones";
+import { ZONE_ORDER, homeTabForZone, isBridgeZone, zoneFromDigit, zoneOf, type ZoneId } from "./shell/zones";
 import PathCrumbs from "./shell/PathCrumbs";
 import CompartmentHeader from "./shell/CompartmentHeader";
 import { useUiVariant } from "./shell/uiVariant";
@@ -252,18 +252,17 @@ export default function App() {
         e.preventDefault();
         setCmdOpen((v) => !v);
       }
-      /* Ctrl+1…6 — зоны (см. docs/web/NAV_ZONES.md) */
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-6]$/.test(e.key)) {
+      /* Ctrl+1…N — существующие зоны (ZONE_ORDER), без Docs/Comm */
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-9]$/.test(e.key)) {
+        const next = zoneFromDigit(e.key);
+        if (!next) return;
         if (isTextEditTarget(e.target)) return;
-        const next = ZONE_ORDER[Number(e.key) - 1];
-        if (next) {
-          e.preventDefault();
-          setZone(next);
-          window.requestAnimationFrame(() => {
-            const tab = document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`);
-            if (tab) focusNav(tab);
-          });
-        }
+        e.preventDefault();
+        setZone(next);
+        window.requestAnimationFrame(() => {
+          const tabEl = document.querySelector<HTMLElement>(`.nav-tab[data-zone="${next}"]`);
+          if (tabEl) focusNav(tabEl);
+        });
         return;
       }
       /* F6 — цикл шапка ↔ контент */
@@ -306,15 +305,14 @@ export default function App() {
     localStorage.setItem("st_space_profile", p);
   };
 
-  const zoneTabs: { id: ZoneId; label: string }[] = [
-    { id: "bridge", label: t("bridge") },
-    { id: "english", label: t("english") },
-    { id: "speed", label: t("speed") },
-    { id: "lounge", label: t("lounge") },
-    { id: "radio", label: t("radio") },
-    { id: "orion", label: ot("zone") },
-    { id: "settings", label: t("settings") },
-  ];
+  const zoneLabel = (id: ZoneId): string => {
+    if (id === "orion") return ot("zone");
+    return t(id);
+  };
+  const zoneTabs: { id: ZoneId; label: string }[] = ZONE_ORDER.map((id) => ({
+    id,
+    label: zoneLabel(id),
+  }));
 
   const bridgeSubs: { id: Tab; label: string }[] = [
     { id: "missions", label: t("missions") },
