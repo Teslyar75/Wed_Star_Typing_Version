@@ -14,7 +14,7 @@ vi.stubGlobal("localStorage", {
   length: 0,
 });
 
-import { useRadio } from "./radioStore";
+import { icyTitleApplies, radioLsKeys, useRadio } from "./radioStore";
 import type { Station } from "./api";
 
 const s1: Station = { name: "A", url_resolved: "https://a.example/stream", stationuuid: "1" };
@@ -39,10 +39,29 @@ describe("radio favs navigation", () => {
     expect(useRadio.getState().isFav(s1)).toBe(false);
   });
 
-  it("stores duck-on-type preference", () => {
+  it("stores duck-on-type preference per pilot namespace", () => {
+    useRadio.setState({ pilotId: "guest" });
     useRadio.getState().setDuckOnType(true);
     expect(useRadio.getState().duckOnType).toBe(true);
-    expect(storeMem.get("st_radio_duck_type")).toBe("1");
+    expect(storeMem.get(radioLsKeys("guest").duck)).toBe("1");
+  });
+
+  it("bindPilot does not keep previous pilot favs", async () => {
+    useRadio.setState({ pilotId: "Alpha", favs: [s1], station: s1, playing: false, audio: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } })),
+    );
+    await useRadio.getState().bindPilot("Bravo");
+    expect(useRadio.getState().pilotId).toBe("Bravo");
+    expect(useRadio.getState().favs).toEqual([]);
+    expect(useRadio.getState().station).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it("icy title of another station is ignored", () => {
+    expect(icyTitleApplies("https://a.example/stream", "https://b.example/stream")).toBe(false);
+    expect(icyTitleApplies("https://a.example/stream", "https://a.example/stream")).toBe(true);
   });
 
   it("holdDuck/releaseDuck: гид и набор не срывают друг друга", () => {

@@ -29,55 +29,58 @@ function mapStation(raw: Record<string, unknown>): Station | null {
   };
 }
 
-async function getJson(url: string): Promise<unknown> {
-  const r = await fetch(url, { credentials: "include" });
+async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
+  const r = await fetch(url, { credentials: "include", signal });
   if (!r.ok) throw new Error(String(r.status));
   return r.json();
 }
 
-export async function searchStations(opts: {
-  name?: string;
-  country?: string;
-  tag?: string;
-  language?: string;
-  limit?: number;
-}): Promise<Station[]> {
+export async function searchStations(
+  opts: {
+    name?: string;
+    country?: string;
+    tag?: string;
+    language?: string;
+    limit?: number;
+  },
+  signal?: AbortSignal,
+): Promise<Station[]> {
   const q = new URLSearchParams();
   if (opts.name?.trim()) q.set("name", opts.name.trim());
   if (opts.country?.trim()) q.set("country", opts.country.trim());
   if (opts.tag?.trim()) q.set("tag", opts.tag.trim());
   if (opts.language?.trim()) q.set("language", opts.language.trim());
   q.set("limit", String(opts.limit ?? 120));
-  const data = (await getJson(`/api/radio/stations/search?${q}`)) as Record<string, unknown>[];
+  const data = (await getJson(`/api/radio/stations/search?${q}`, signal)) as Record<string, unknown>[];
   return (Array.isArray(data) ? data : []).map(mapStation).filter((s): s is Station => !!s);
 }
 
-export async function topStations(limit = 120): Promise<Station[]> {
-  const data = (await getJson(`/api/radio/stations/top?limit=${limit}`)) as Record<string, unknown>[];
+export async function topStations(limit = 120, signal?: AbortSignal): Promise<Station[]> {
+  const data = (await getJson(`/api/radio/stations/top?limit=${limit}`, signal)) as Record<string, unknown>[];
   return (Array.isArray(data) ? data : []).map(mapStation).filter((s): s is Station => !!s);
 }
 
-export async function fetchCountries(): Promise<CountryOpt[]> {
+export async function fetchCountries(signal?: AbortSignal): Promise<CountryOpt[]> {
   try {
-    const data = (await getJson("/api/radio/meta/countries")) as CountryOpt[];
+    const data = (await getJson("/api/radio/meta/countries", signal)) as CountryOpt[];
     return Array.isArray(data) ? data.filter((d) => d?.name && d?.code) : [];
   } catch {
     return [];
   }
 }
 
-export async function fetchLanguages(): Promise<string[]> {
+export async function fetchLanguages(signal?: AbortSignal): Promise<string[]> {
   try {
-    const data = (await getJson("/api/radio/meta/languages")) as string[];
+    const data = (await getJson("/api/radio/meta/languages", signal)) as string[];
     return Array.isArray(data) ? data.filter(Boolean) : [];
   } catch {
     return [];
   }
 }
 
-export async function fetchTags(): Promise<string[]> {
+export async function fetchTags(signal?: AbortSignal): Promise<string[]> {
   try {
-    const data = (await getJson("/api/radio/meta/tags")) as string[];
+    const data = (await getJson("/api/radio/meta/tags", signal)) as string[];
     return Array.isArray(data) ? data.filter(Boolean) : [];
   } catch {
     return [];

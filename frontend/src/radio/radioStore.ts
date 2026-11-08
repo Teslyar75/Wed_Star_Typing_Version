@@ -6,21 +6,66 @@ const VOL_KEY = "st_radio_vol";
 const LAST_KEY = "st_radio_last";
 const AUTO_KEY = "st_radio_auto";
 const DUCK_TYPE_KEY = "st_radio_duck_type";
+const GUEST = "guest";
 
-function loadFavs(): Station[] {
+/** Как desktop radio.json в каталоге активного пилота. Гость — отдельное пространство; чужой не читаем. */
+export function radioLsKeys(pilot: string) {
+  const p = pilot || GUEST;
+  return {
+    favs: `${FAV_KEY}:${p}`,
+    vol: `${VOL_KEY}:${p}`,
+    last: `${LAST_KEY}:${p}`,
+    auto: `${AUTO_KEY}:${p}`,
+    duck: `${DUCK_TYPE_KEY}:${p}`,
+  };
+}
+
+export function icyTitleApplies(openUrl: string | null | undefined, fetchedUrl: string): boolean {
+  return !!openUrl && openUrl === fetchedUrl;
+}
+
+function readJson<T>(key: string, fallback: T): T {
   try {
-    return JSON.parse(localStorage.getItem(FAV_KEY) || "[]") as Station[];
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 }
 
-function loadLast(): Station | null {
-  try {
-    return JSON.parse(localStorage.getItem(LAST_KEY) || "null") as Station | null;
-  } catch {
-    return null;
-  }
+function loadFavs(pilot: string): Station[] {
+  const namespaced = readJson<Station[]>(radioLsKeys(pilot).favs, []);
+  if (namespaced.length) return namespaced;
+  if (pilot === GUEST) return readJson<Station[]>(FAV_KEY, []);
+  return [];
+}
+
+function loadLast(pilot: string): Station | null {
+  const n = readJson<Station | null>(radioLsKeys(pilot).last, null);
+  if (n) return n;
+  if (pilot === GUEST) return readJson<Station | null>(LAST_KEY, null);
+  return null;
+}
+
+function loadVol(pilot: string): number {
+  const n = localStorage.getItem(radioLsKeys(pilot).vol);
+  if (n != null) return Number(n);
+  if (pilot === GUEST) return Number(localStorage.getItem(VOL_KEY) || "0.7");
+  return 0.7;
+}
+
+function loadDuck(pilot: string): boolean {
+  const n = localStorage.getItem(radioLsKeys(pilot).duck);
+  if (n != null) return n === "1";
+  if (pilot === GUEST) return localStorage.getItem(DUCK_TYPE_KEY) === "1";
+  return false;
+}
+
+function loadAuto(pilot: string): boolean {
+  const n = localStorage.getItem(radioLsKeys(pilot).auto);
+  if (n != null) return n !== "0";
+  if (pilot === GUEST) return localStorage.getItem(AUTO_KEY) !== "0";
+  return true;
 }
 
 function stationId(s: Station) {
@@ -43,7 +88,9 @@ type RadioState = {
   nowPlaying: string | null;
   history: string[];
   audio: HTMLAudioElement | null;
+  pilotId: string;
   setAudio: (el: HTMLAudioElement | null) => void;
+  bindPilot: (id: string) => Promise<void>;
   play: (s: Station) => void;
   pause: () => void;
   stop: () => void;
@@ -99,6 +146,7 @@ async function pollIcy(get: () => RadioState) {
     const j = (await r.json()) as { title?: string | null };
     const title = (j.title || "").trim();
     if (!title) return;
+    if (!icyTitleApplies(get().station?.url_resolved, s.url_resolved)) return;
     if (title !== get().nowPlaying) {
       get().setNowPlaying(title);
       get().pushHistory(title);
@@ -146,19 +194,40 @@ function applyAudioVolume(get: () => RadioState) {
 }
 
 export const useRadio = create<RadioState>((set, get) => ({
-  station: hasLS ? loadLast() : null,
+  station: hasLS ? loadLast(GUEST) : null,
   playing: false,
-  volume: hasLS ? Number(localStorage.getItem(VOL_KEY) || "0.7") : 0.7,
+  volume: hasLS ? loadVol(GUEST) : 0.7,
   duck: false,
   duckHolders: [],
   muteHolders: [],
   muted: false,
-  duckOnType: hasLS ? localStorage.getItem(DUCK_TYPE_KEY) === "1" : false,
-  autoLast: hasLS ? localStorage.getItem(AUTO_KEY) !== "0" : true,
-  favs: hasLS ? loadFavs() : [],
+  duckOnType: hasLS ? loadDuck(GUEST) : false,
+  autoLast: hasLS ? loadAuto(GUEST) : true,
+  favs: hasLS ? loadFavs(GUEST) : [],
   nowPlaying: null,
   history: [],
   audio: null,
+  pilotId: GUEST,
+
+  bindPilot: async (id) => {
+    const next = id.trim() || GUEST;
+    if (get().pilotId !== next) {
+      get().pause();
+      set({
+        pilotId: next,
+        favs: hasLS ? loadFavs(next) : [],
+        volume: hasLS ? loadVol(next) : 0.7,
+        station: hasLS ? loadLast(next) : null,
+        playing: false,
+        duckOnType: hasLS ? loadDuck(next) : false,
+        autoLast: hasLS ? loadAuto(next) : true,
+        nowPlaying: null,
+        history: [],
+      });
+      applyAudioVolume(get);
+    }
+    await get().syncFavsFromServer();
+  },
 
   setAudio: (el) => {
     /* не затираем живой элемент null-ом при смене вкладок */
@@ -173,7 +242,7 @@ export const useRadio = create<RadioState>((set, get) => ({
     a.src = s.url_resolved;
     applyAudioVolume(get);
     void a.play().then(() => {
-      localStorage.setItem(LAST_KEY, JSON.stringify(s));
+      localStorage.setItem(radioLsKeys(get().pilotId).last, JSON.stringify(s));
       set({ station: s, playing: true, nowPlaying: null });
       applyMediaSession(s, null, {
         play: () => get().resume(),
@@ -229,7 +298,7 @@ export const useRadio = create<RadioState>((set, get) => ({
 
   setVolume: (v) => {
     const vol = Math.max(0, Math.min(1, v));
-    localStorage.setItem(VOL_KEY, String(vol));
+    localStorage.setItem(radioLsKeys(get().pilotId).vol, String(vol));
     set({ volume: vol });
     applyAudioVolume(get);
   },
@@ -275,12 +344,12 @@ export const useRadio = create<RadioState>((set, get) => ({
   },
 
   setDuckOnType: (v) => {
-    localStorage.setItem(DUCK_TYPE_KEY, v ? "1" : "0");
+    localStorage.setItem(radioLsKeys(get().pilotId).duck, v ? "1" : "0");
     set({ duckOnType: v });
   },
 
   setAutoLast: (v) => {
-    localStorage.setItem(AUTO_KEY, v ? "1" : "0");
+    localStorage.setItem(radioLsKeys(get().pilotId).auto, v ? "1" : "0");
     set({ autoLast: v });
   },
 
@@ -290,7 +359,7 @@ export const useRadio = create<RadioState>((set, get) => ({
     const next = cur.some((x) => stationId(x) === id)
       ? cur.filter((x) => stationId(x) !== id)
       : [...cur, s];
-    localStorage.setItem(FAV_KEY, JSON.stringify(next));
+    localStorage.setItem(radioLsKeys(get().pilotId).favs, JSON.stringify(next));
     set({ favs: next });
     void fetch("/api/radio/favs", {
       method: "PUT",
@@ -341,7 +410,7 @@ export const useRadio = create<RadioState>((set, get) => ({
 
   tryAutoplayLast: () => {
     if (!get().autoLast) return;
-    const last = loadLast();
+    const last = loadLast(get().pilotId);
     if (!last || get().playing) return;
     if (!get().audio) return;
     get().play(last);
@@ -352,8 +421,10 @@ export const useRadio = create<RadioState>((set, get) => ({
       const r = await fetch("/api/radio/favs", { credentials: "include" });
       if (!r.ok) return;
       const remote = (await r.json()) as Station[];
-      if (!Array.isArray(remote) || !remote.length) return;
-      localStorage.setItem(FAV_KEY, JSON.stringify(remote));
+      if (!Array.isArray(remote)) return;
+      const loggedIn = get().pilotId !== GUEST;
+      if (!loggedIn) return;
+      localStorage.setItem(radioLsKeys(get().pilotId).favs, JSON.stringify(remote));
       set({ favs: remote });
     } catch {
       /* offline */
