@@ -12,7 +12,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | master (не вливать очередь сюда) | `a6142bf` | `master` | — | — | — | база до S0 |
 | S0 | `462bc08` | `cursor/s0-e2e-ci-2598` | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | был green на этом SHA (проверить latest) | по PR | merge **не** делали |
 | S1 | `7c9a276` | `cursor/s1-zones-en-lifecycle-2598` | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | был green на этом SHA | по PR | base = S0 ветка; merge **не** делали |
-| S2 | см. git log ветки (после push) | `cursor/s2-docs-mvp-2598` | PR откроется этим проходом | **локально** pytest 166, vitest 206, e2e 36, build ok. GitHub CI — после PR, не путать | Docker-демон в этой среде нет; проверка — Actions `docker-smoke` на PR | база S1 `7c9a276`. Docs checkpoint `f9748f4`. Merge не делать |
+| S2 | `8083125` | `cursor/s2-docs-mvp-2598` | PR этим проходом | **локально** pytest 166 / vitest 206 / e2e 36 / build ok. GitHub CI смотреть Actions, не путать с локальным | Docker-демон здесь нет; на PR — workflow docker-smoke | база S1 `7c9a276`. Handoff `f9748f4`. Merge не делать |
 | S3–S7 | — | — | — | — | — | не начаты |
 
 Проверять remote перед зависимостью:
