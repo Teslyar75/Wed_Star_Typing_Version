@@ -26,8 +26,13 @@ def test_start_sh_drops_caddy_before_8080_retry() -> None:
     assert busy < rm < retry
 
 
-def test_engine_pool_pre_ping() -> None:
-    assert engine.pool._pre_ping is True  # noqa: SLF001
+def test_sqlite_uses_null_pool() -> None:
+    from sqlalchemy.pool import NullPool
+
+    if str(engine.url).startswith("sqlite"):
+        assert isinstance(engine.pool, NullPool)
+    else:
+        assert engine.pool._pre_ping is True  # noqa: SLF001
 
 
 def test_ensure_seeded_skips_when_ci(monkeypatch) -> None:

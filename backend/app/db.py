@@ -6,6 +6,7 @@ from collections.abc import Generator
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.config import settings
 
@@ -23,8 +24,12 @@ def _is_sqlite() -> bool:
 
 
 # timeout — sqlite3 busy wait (сек): фон-досев словаря не должен ронять register/login.
+# NullPool: sqlite + QueuePool(5+10) в e2e/UI держит JSON-досев и съедает пул.
 _connect_args = {"check_same_thread": False, "timeout": 30} if _is_sqlite() else {}
-engine = create_engine(_engine_url(), connect_args=_connect_args, pool_pre_ping=True)
+_engine_kwargs: dict = {"connect_args": _connect_args, "pool_pre_ping": True}
+if _is_sqlite():
+    _engine_kwargs["poolclass"] = NullPool
+engine = create_engine(_engine_url(), **_engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 if _is_sqlite():

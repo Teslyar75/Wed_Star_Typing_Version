@@ -643,8 +643,7 @@ def seed_vocab(
 
 @router.get("/words", response_model=list[WordOut])
 def list_words(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)) -> list[VocabWord]:
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db)
+    _ensure_seeded_for(db, 1000)
     return (
         db.query(VocabWord)
         .order_by(VocabWord.id)
@@ -662,8 +661,7 @@ def warehouse_due(
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> list[VocabWord]:
     """Склад: due | favorite | learned | inbox."""
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db)
+    _ensure_seeded_for(db, 1000)
     pid = pilot.id if pilot else 0
     limit = max(1, min(limit, 100))
 
@@ -863,8 +861,7 @@ def english_progress(
 
 @router.get("/word-of-day")
 def word_of_day(db: Session = Depends(get_db)) -> dict:
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db)
+    _ensure_seeded_for(db, 1000)
     rows = db.query(VocabWord).order_by(VocabWord.id).limit(500).all()
     if not rows:
         return {"id": 0, "word": "—", "translation": "", "example": "", "rank": 0, "pos": "—"}
@@ -1094,8 +1091,7 @@ def lookup_word(
     """Обычный английский case != SQL CASE из S-DEV (slug dev:case)."""
     from app.english_vocab import THEMATIC_SETS
 
-    if db.query(VocabWord).count() == 0:
-        _seed_vocab(db, 500, 500)
+    _ensure_seeded_for(db, 500)
     needle = q.strip().lower()
     want_dev = (set_id in THEMATIC_SETS) or needle.startswith("dev:") or needle.startswith("dev-")
     w = None
@@ -1610,8 +1606,7 @@ def mission_start(
     from app.english_tasks import MODES, TaskFactory
     from app.english_vocab import SET_LIMIT, THEMATIC_SETS
 
-    if db.query(VocabWord).count() < 20:
-        _seed_vocab(db, 500, 500)
+    _ensure_seeded_for(db, 500)
     pid = pilot.id if pilot else 0
     words_orm: list[VocabWord] = []
     if body.single:
