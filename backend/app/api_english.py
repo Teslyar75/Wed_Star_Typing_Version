@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import threading
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -1546,19 +1547,16 @@ def warehouse_goal(
     db: Session = Depends(get_db),
     pilot: Pilot | None = Depends(get_optional_pilot),
 ) -> dict:
-    w = db.get(VocabWord, body.word_id)
-    if w is None:
-        raise HTTPException(404, "word not found")
+    """set_run_goal: число прогонов 1/2/3/5."""
+    from app import english_warehouse as whm
+
+    if body.goal not in whm.PASS_CHOICES:
+        raise HTTPException(400, "goal must be one of 1,2,3,5")
     pid = pilot.id if pilot else 0
     card = _card(db, pid, body.word_id)
-    sents = _card_sents(w)
-    settings = _settings(db, pid)
-    qp, slug = _qp_from_card(card, settings)
-    g = qeng.set_goal(qp, slug, body.goal, n_sents=len(sents) or 1)
-    _q_flush(card, qp, slug)
+    card.wh_goal = max(1, min(5, body.goal))
     db.commit()
-    cnt = qeng.counts(qp, slug, n_sents=len(sents) or 1)
-    return {"ok": True, "goal": g, "filled": int(cnt["filled"]), "total": int(cnt["total"])}
+    return {"goal": card.wh_goal}
 
 
 
