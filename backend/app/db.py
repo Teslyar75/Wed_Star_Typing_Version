@@ -24,7 +24,7 @@ def _is_sqlite() -> bool:
 
 # timeout — sqlite3 busy wait (сек): фон-досев словаря не должен ронять register/login.
 _connect_args = {"check_same_thread": False, "timeout": 30} if _is_sqlite() else {}
-engine = create_engine(_engine_url(), connect_args=_connect_args)
+engine = create_engine(_engine_url(), connect_args=_connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 if _is_sqlite():

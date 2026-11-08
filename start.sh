@@ -94,6 +94,7 @@ start() {
 if ! start; then
   if grep -qiE "port is already allocated|address already in use" "$LOG"; then
     warn "Порт $PORT занят — перехожу на 8080 (вместо 443 — 8443)."
+    docker compose rm -f caddy >/dev/null 2>&1 || true
     PORT=8080
     HTTPS_PORT=8443
     if ! start; then
