@@ -11,6 +11,7 @@ from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import Date, DateTime, Float, Integer, String, Text, UniqueConstraint, and_, case, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from app.auth_deps import get_optional_pilot
@@ -435,6 +436,7 @@ class FromBookIn(BaseModel):
 
 
 _SEED_ROWS_CACHE: dict[int, list[dict]] = {}
+_SEED_LOCK = threading.RLock()
 
 
 def _iter_seed_rows(limit: int) -> list[dict]:
@@ -495,7 +497,43 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
     """
     limit = max(1, min(int(limit), 20580))
     batch = max(1, min(int(batch), 2000))
-    # JSON без открытой транзакции — иначе e2e/UI съедают QueuePool.
+    import sys
+
+    # Playwright e2e (CI, не pytest): не грузить 29MB vocab.json на каждый POST /seed.
+    e2e = bool(os.environ.get("CI")) and "pytest" not in sys.modules
+    with _SEED_LOCK:
+        return _seed_vocab_body(db, limit, batch, e2e)
+
+
+def _seed_vocab_body(db: Session, limit: int, batch: int, e2e: bool) -> dict[str, int | bool]:
+    if e2e:
+        total = db.query(VocabWord).count()
+        if total == 0:
+            for i, (w, tr, ex) in enumerate(FALLBACK_SEED):
+                db.add(
+                    VocabWord(
+                        word=w,
+                        translation=tr,
+                        example=ex,
+                        slug=w.lower(),
+                        rank=i + 1,
+                        meta="{}",
+                    )
+                )
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+            total = db.query(VocabWord).count()
+        return {
+            "added": 0,
+            "updated": 0,
+            "total": total,
+            "done": True,
+            "target": total,
+            "zero_rank": 0,
+        }
+    # JSON без открытой транзакции — иначе UI съедает QueuePool.
     rows = _iter_seed_rows(20000)
     target = max(limit, 20000)
     total = db.query(VocabWord).count()
@@ -557,7 +595,10 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
             have.add(key)
 
     if n_add or n_upd:
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
         total = db.query(VocabWord).count()
 
     zero_left = (
@@ -576,9 +617,6 @@ def _seed_vocab(db: Session, limit: int = 20000, batch: int = 400) -> dict[str, 
         "zero_rank": zero_left,
     }
 
-
-
-_SEED_LOCK = threading.Lock()
 
 
 def _ensure_seeded_for(db: Session, need_rank: int, max_rounds: int = 40, *, need_dev: bool = False) -> None:

@@ -44,3 +44,20 @@ def test_ensure_seeded_skips_when_ci(monkeypatch) -> None:
         _ensure_seeded_for(db, 1000, need_dev=True)
     finally:
         db.close()
+
+
+def test_e2e_seed_is_tiny_and_done() -> None:
+    from app.api_english import FALLBACK_SEED, VocabWord, _seed_vocab_body
+    from app.db import SessionLocal, engine
+
+    VocabWord.__table__.create(bind=engine, checkfirst=True)
+    db = SessionLocal()
+    try:
+        first = _seed_vocab_body(db, 20000, 400, e2e=True)
+        assert first["done"] is True
+        assert 1 <= first["total"] <= len(FALLBACK_SEED)
+        second = _seed_vocab_body(db, 20580, 200, e2e=True)
+        assert second["done"] is True
+        assert second["total"] == first["total"]
+    finally:
+        db.close()
