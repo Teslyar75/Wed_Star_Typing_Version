@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useRadio } from "../radio/radioStore";
 import { useReadingPos } from "../reading/positionStore";
+import { EN_PAGES } from "../shell/routes";
 import { registerGoHandler, setDeepRoute, setZoneScreens } from "../shell/routeStore";
+import { isAbortError } from "../shell/requestEpoch";
 import EnglishOverview from "./EnglishOverview";
 import FromBookPage from "./FromBookPage";
 import ListsPage from "./ListsPage";
@@ -18,18 +20,37 @@ import StarMapsPage from "./StarMapsPage";
 import WarehousePage from "./WarehousePage";
 import type { EnPage, EnProgress, EnSettings } from "./types";
 
-const PAGES: { id: EnPage; labelKey: string }[] = [
-  { id: "overview", labelKey: "en_overview" },
-  { id: "sets", labelKey: "en_star_maps" },
-  { id: "scanner", labelKey: "en_scanner" },
-  { id: "practice", labelKey: "en_missions" },
-  { id: "review", labelKey: "en_systems_check" },
-  { id: "warehouse", labelKey: "en_warehouse" },
-  { id: "book", labelKey: "en_from_book_tab" },
-  { id: "lists", labelKey: "en_lists" },
-  { id: "log", labelKey: "en_log" },
-  { id: "settings", labelKey: "en_settings" },
-];
+const EN_LABEL: Record<EnPage, string> = {
+  overview: "en_overview",
+  sets: "en_star_maps",
+  scanner: "en_scanner",
+  practice: "en_missions",
+  review: "en_systems_check",
+  warehouse: "en_warehouse",
+  book: "en_from_book_tab",
+  lists: "en_lists",
+  log: "en_log",
+  settings: "en_settings",
+};
+
+const PAGES: { id: EnPage; labelKey: string }[] = EN_PAGES.map((id) => ({
+  id,
+  labelKey: EN_LABEL[id],
+}));
+
+/** Корневые селекторы активной EN-поверхности — скрытая подстраница не должна оставаться в DOM. */
+export const EN_SURFACE: Record<EnPage, string> = {
+  overview: ".en-overview-grid",
+  sets: ".en-starmaps",
+  scanner: ".en-scanner",
+  practice: ".en-missions, .en-mission-flight, .en-mission-debrief",
+  review: ".en-review",
+  warehouse: ".en-warehouse",
+  book: ".en-from-book",
+  lists: ".en-lists",
+  log: ".en-log",
+  settings: ".en-settings",
+};
 
 export type MissionLaunch = {
   mode?: "random" | "speaking" | "reading" | "questions";
@@ -114,6 +135,8 @@ export default function EnglishPanel() {
   // Фон: досев словаря мелкими пачками (не блокируем вкладку).
   useEffect(() => {
     let cancelled = false;
+    let waitTimer: number | undefined;
+    const ac = new AbortController();
     const pump = async () => {
       if (seedBusy.current) return;
       seedBusy.current = true;
@@ -122,9 +145,12 @@ export default function EnglishPanel() {
         const first = await fetch("/api/english/seed?limit=3000&batch=250", {
           method: "POST",
           credentials: "include",
+          signal: ac.signal,
         });
+        if (cancelled) return;
         if (first.ok) {
           const j = (await first.json()) as { done?: boolean; total?: number };
+          if (cancelled) return;
           if (!j.done) {
             setSeedHint(t("en_seed_bg").replace("{0}", String(j.total ?? 0)));
           } else {
@@ -133,22 +159,26 @@ export default function EnglishPanel() {
         }
         // дальше — редко и по чуть-чуть, пока вкладка открыта
         while (!cancelled) {
-          await new Promise((res) => setTimeout(res, 2500));
+          await new Promise<void>((res) => {
+            waitTimer = window.setTimeout(res, 2500);
+          });
           if (cancelled) break;
           const r = await fetch("/api/english/seed?limit=20580&batch=200", {
             method: "POST",
             credentials: "include",
+            signal: ac.signal,
           });
-          if (!r.ok) break;
+          if (!r.ok || cancelled) break;
           const j = (await r.json()) as { done?: boolean; total?: number };
+          if (cancelled) break;
           if (j.done) {
             setSeedHint("");
             break;
           }
           setSeedHint(t("en_seed_bg").replace("{0}", String(j.total ?? 0)));
         }
-      } catch {
-        /* ignore */
+      } catch (e) {
+        if (isAbortError(e)) return;
       } finally {
         seedBusy.current = false;
       }
@@ -156,51 +186,60 @@ export default function EnglishPanel() {
     void pump();
     return () => {
       cancelled = true;
+      ac.abort();
+      if (waitTimer != null) window.clearTimeout(waitTimer);
     };
   }, []);
 
-  const reloadMeta = async () => {
+  const reloadMeta = async (signal?: AbortSignal) => {
+    const alive = () => !signal?.aborted;
     // прогресс — первым и отдельно: UI не ждёт склад/книги
     try {
-      const p = await fetch("/api/english/progress", { credentials: "include" });
-      if (p.ok) setProg(await p.json());
-    } catch {
+      const p = await fetch("/api/english/progress", { credentials: "include", signal });
+      if (alive() && p.ok) setProg(await p.json());
+    } catch (e) {
+      if (isAbortError(e) || !alive()) return;
       /* stub уже на экране */
     }
+    if (!alive()) return;
     try {
-      const s = await fetch("/api/english/settings", { credentials: "include" });
-      if (s.ok) {
+      const s = await fetch("/api/english/settings", { credentials: "include", signal });
+      if (alive() && s.ok) {
         const j = (await s.json()) as EnSettings;
         setSettings(j);
         if (j.current_set) setMissionSet(j.current_set);
       }
-    } catch {
-      /* ignore */
+    } catch (e) {
+      if (isAbortError(e) || !alive()) return;
     }
+    if (!alive()) return;
     try {
-      const wh = await fetch("/api/english/warehouse/cards?state=shelf", { credentials: "include" });
-      if (wh.ok) {
+      const wh = await fetch("/api/english/warehouse/cards?state=shelf", { credentials: "include", signal });
+      if (alive() && wh.ok) {
         const rows = (await wh.json()) as unknown[];
         setWhCount(Array.isArray(rows) ? rows.length : 0);
       }
-    } catch {
-      /* ignore */
+    } catch (e) {
+      if (isAbortError(e) || !alive()) return;
     }
+    if (!alive()) return;
     try {
-      const bk = await fetch("/api/english/book/hub", { credentials: "include" });
-      if (bk.ok) {
+      const bk = await fetch("/api/english/book/hub", { credentials: "include", signal });
+      if (alive() && bk.ok) {
         const rows = (await bk.json()) as { cards?: number; ready?: number; due?: number }[];
-        if (Array.isArray(rows)) {
+        if (Array.isArray(rows) && alive()) {
           setBookReady(rows.reduce((n, r) => n + (r.due || r.ready || r.cards || 0), 0));
         }
       }
-    } catch {
-      /* ignore */
+    } catch (e) {
+      if (isAbortError(e) || !alive()) return;
     }
   };
 
   useEffect(() => {
-    void reloadMeta();
+    const ac = new AbortController();
+    void reloadMeta(ac.signal);
+    return () => ac.abort();
   }, [page]);
 
   useEffect(() => {
@@ -305,13 +344,14 @@ export default function EnglishPanel() {
   };
 
   return (
-    <div className="english">
+    <div className="english" data-en-page={page} data-testid="en-panel">
       <div className="en-nav-row">
         <div className="bridge-actions en-nav">
           {PAGES.map((p) => (
             <button
               key={p.id}
               type="button"
+              data-en-nav={p.id}
               className={`hud-btn ${page === p.id ? "amber" : ""}`}
               onClick={() => go(p.id)}
             >

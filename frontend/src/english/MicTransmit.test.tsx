@@ -50,4 +50,44 @@ describe("MicTransmit — без самооценки (как десктоп: т
     expect(el.querySelectorAll("button").length).toBe(1);
     root.unmount();
   });
+
+  it("unmount во время listen снимает duck и переживает поздний ASR", async () => {
+    vi.mocked(asr.asrAvailable).mockResolvedValue({ ok: true, engine: "webspeech" });
+    let finish!: (v: asr.AsrResult) => void;
+    vi.mocked(asr.listenOnce).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const onDuck = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    await act(async () => {
+      root.render(<MicTransmit expected="hello world" onDuck={onDuck} />);
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const btn = el.querySelector("button") as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    await act(async () => {
+      btn.click();
+    });
+    expect(onDuck).toHaveBeenCalledWith(true);
+    await act(async () => {
+      root.unmount();
+    });
+    expect(onDuck).toHaveBeenCalledWith(false);
+    await act(async () => {
+      finish({
+        transcript: "hello world",
+        alternatives: ["hello world"],
+        score: 100,
+        marks: [],
+        engine: "webspeech",
+      });
+    });
+  });
 });

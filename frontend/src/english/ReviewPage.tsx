@@ -1,6 +1,7 @@
 /** ПРОВЕРКА СИСТЕМ — карточка по центру как tab_05. */
 import { useCallback, useEffect, useState } from "react";
 import { t } from "../i18n";
+import { isAbortError } from "../shell/requestEpoch";
 import SpeakButton from "./SpeakButton";
 import type { EnWord } from "./types";
 
@@ -17,16 +18,24 @@ export default function ReviewPage({ onDuck, ttsRate = 1, reverse = false }: Pro
   const [preview, setPreview] = useState<string>("");
   const [msg, setMsg] = useState("");
 
-  const reload = useCallback(async () => {
-    const r = await fetch("/api/english/warehouse?limit=40&bin=due", { credentials: "include" });
-    const rows = (await r.json()) as EnWord[];
-    setWords(Array.isArray(rows) ? rows : []);
-    setI(0);
-    setShow(false);
+  const reload = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const r = await fetch("/api/english/warehouse?limit=40&bin=due", { credentials: "include", signal });
+      if (signal?.aborted) return;
+      const rows = (await r.json()) as EnWord[];
+      if (signal?.aborted) return;
+      setWords(Array.isArray(rows) ? rows : []);
+      setI(0);
+      setShow(false);
+    } catch (e) {
+      if (isAbortError(e)) return;
+    }
   }, []);
 
   useEffect(() => {
-    void reload();
+    const ac = new AbortController();
+    void reload(ac.signal);
+    return () => ac.abort();
   }, [reload]);
 
   useEffect(() => {

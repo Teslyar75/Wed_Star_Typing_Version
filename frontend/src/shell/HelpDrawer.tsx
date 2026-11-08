@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { t, getLang } from "../i18n";
+import { ZONE_ORDER } from "./zones";
 import { voiceLookup } from "../theme/voice";
 import { ti } from "../idle/idleI18n";
 import { zt } from "../zen/zenI18n";
@@ -18,7 +19,7 @@ const KEYBOARD_NAV =
   "• Ctrl+Home / Ctrl+End — первая / последняя кнопка в группе.\n" +
   "• Enter / Пробел — нажать кнопку в фокусе.\n" +
   "• Home — Орион · Page Up — слайды · Page Down — экран.\n" +
-  "• Ctrl+1…6 — зона; F6 — цикл шапка ↔ содержимое.\n" +
+  `• Ctrl+1…${ZONE_ORDER.length} — зона; F6 — цикл шапка ↔ содержимое.\n` +
   "• Ctrl+K — палитра; F1 — справка; Backspace — предыдущий раздел.\n\n" +
   "Tab с мостика уводит к кнопкам (полёт ставится на паузу). Стрелки во время набора остаются в прицеле — сначала Tab.\n" +
   "В гипердрайве и играх отдыха стрелки остаются за управлением режима.";
