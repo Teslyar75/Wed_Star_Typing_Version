@@ -16,7 +16,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | S3 | — | — | [#20](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/20) | merged | — | Эфир = чат пилотов |
 | S4 (часть) | — | — | [#21](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/21), [#22](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/22) | merged | — | Орион вкладки, журнал, дзен, autoupdate; остаток — polish `task_progress` |
 | CEFR / settings / no-scroll / docs matrix | — | — | [#23](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/23) | merged | — | DOCUMENTS_PARITY.md на master |
-| Документы: закрытие пробелов parity | *(после push)* | `cursor/docs-parity-gaps-84c6` | открывается | смотреть Actions | смотреть | корзина, шаблоны, MD-лента, import/export, find/undo, TTS |
+| Документы: закрытие пробелов parity | `8f76652` | `cursor/docs-parity-gaps-84c6` | открывается | смотреть Actions | смотреть | корзина, шаблоны, MD-лента, import/export, find/undo, TTS |
 | S5–S7 | — | — | — | — | — | не начаты |
 
 `gh` — только чтение. Создавать/обновлять PR — `ManagePullRequest`.
