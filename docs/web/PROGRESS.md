@@ -18,7 +18,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | S4 (часть) | — | — | [#21](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/21), [#22](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/22) | merged | — | Орион вкладки, журнал, дзен, autoupdate; остаток — polish `task_progress` |
 | CEFR / settings / no-scroll / docs matrix | — | — | [#23](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/23) | merged | — | DOCUMENTS_PARITY.md на master |
 | Документы: закрытие пробелов parity | `f693ed1` | `cursor/docs-parity-gaps-84c6` | [#24](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/24) | **5/5 SUCCESS** | **SUCCESS** | корзина, шаблоны, MD-лента, import/export, find/undo, TTS |
-| Эфир HUD + chat reuse / Docs `.btn`→HUD | `02bd1a0` | `cursor/comm-hud-buttons-fd24` | [#29](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/29) | **CI pending** (локально e2e 14 ok) | — | пилот↔пилот; `.btn` alias `hud-btn`; вложения; см. COMM_ETHER_WEB.md |
+| Эфир HUD + chat reuse / Docs `.btn`→HUD | `89c0a21` | `cursor/comm-hud-buttons-fd24` | [#29](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/29) | **5/5 SUCCESS** | **SUCCESS** | пилот↔пилот; `.btn` alias `hud-btn`; вложения; см. COMM_ETHER_WEB.md |
 | S5–S7 | — | — | — | — | — | не начаты |
 
 `gh` — только чтение. Создавать/обновлять PR — `ManagePullRequest`.
