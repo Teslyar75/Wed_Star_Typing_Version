@@ -36,7 +36,9 @@ services:
       # Клонировали только веб-версию — папки нет, распознавание речи просто выключено.
       # Другое место:  MODELS_DIR=/путь/к/models ./start.sh
       - "${MODELS_DIR:-../models}:/models:ro"
-      - ../stamina/english/data:/english-data:ro
+      # CEFR/verbs vendored в репо (не требуют соседний My_Stamina).
+      # Переопределить: ENGLISH_DATA_HOST=/path/to/data ./start.sh
+      - "${ENGLISH_DATA_HOST:-./backend/app/data/english}:/english-data:ro"
       - backend_secrets:/secrets
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -72,22 +72,31 @@ const DEFAULTS: CabinSettings = {
 
 const CURSOR_BLINK: Record<CursorBlink, true> = { off: true, on: true, fast: true };
 
-/** Как desktop UI_PRESETS + XXL для больших мониторов. */
+/** Как desktop theme.UI_PRESETS (S–XL) + XXL для больших мониторов. */
 const UI_SCALE: Record<UiScale, string> = {
-  S: "0.90",
-  M: "1",
-  L: "1.18",
-  XL: "1.40",
-  XXL: "1.70",
+  S: "1.05",
+  M: "1.22",
+  L: "1.42",
+  XL: "1.65",
+  XXL: "1.90",
 };
 
-/** Размер букв в иллюминаторе / строке набора. */
+/** Размер букв в иллюминаторе / строке набора ≈ desktop typing_style.FONT_SIZES (pt→rem @16). */
 const FONT_PX: Record<FontSize, string> = {
-  S: "1.05rem",
-  M: "1.35rem",
-  L: "1.75rem",
-  XL: "2.2rem",
-  XXL: "2.75rem",
+  S: "1.25rem",
+  M: "1.625rem",
+  L: "2rem",
+  XL: "2.5rem",
+  XXL: "3rem",
+};
+
+/** Слово в окошке прицела ≈ desktop BOX_SIZES (меньше строки набора). */
+const BOX_PX: Record<FontSize, string> = {
+  S: "1rem",
+  M: "1.1875rem",
+  L: "1.375rem",
+  XL: "1.625rem",
+  XXL: "1.875rem",
 };
 
 const TYPING_FACE: Record<TypingFace, string> = {
@@ -209,7 +218,7 @@ function applyDom(s: CabinSettings) {
   root.style.setProperty("--st-sight-typed-color", s.typedColor);
   root.style.setProperty("--st-sight-ahead-color", s.aheadColor);
   root.style.setProperty("--st-sight-face", TYPING_FACE[s.typingFace]);
-  root.style.setProperty("--st-sight-box-size", FONT_PX[s.sightBoxFont]);
+  root.style.setProperty("--st-sight-box-size", BOX_PX[s.sightBoxFont]);
   root.style.setProperty("--st-sight-box-face", TYPING_FACE[s.sightBoxFace]);
   root.style.setProperty("--st-sight-on-color", s.sightOnColor);
   root.style.setProperty("--st-sight-cursor-size", FONT_PX[s.cursorFont]);
@@ -283,4 +292,4 @@ export const useCabin = create<CabinState>((set, get) => {
   };
 });
 
-export { FONT_PX, UI_SCALE, GLOW, TYPING_FACE, DEFAULTS };
+export { FONT_PX, BOX_PX, UI_SCALE, GLOW, TYPING_FACE, DEFAULTS };

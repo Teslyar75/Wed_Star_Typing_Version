@@ -9,14 +9,17 @@
 
 | Этап | Статус | База | Ветка / PR |
 | --- | --- | --- | --- |
-| S0 e2e CI | готов | `master` `a6142bf` | `cursor/s0-e2e-ci-2598` **462bc08** · [PR #17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) |
-| S1 зоны / EN / lifecycle | готов | S0 | `cursor/s1-zones-en-lifecycle-2598` **7c9a276** · [PR #18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) |
-| S2 Документы MVP | готов, GitHub 5/5 | S1 | `cursor/s2-docs-mvp-2598` **d45e1bd** · [PR #19](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/19) |
-| S3 Эфир | in progress, PR открыт | S2 | `cursor/s3-ether-2598` **b8b85c4** · [PR #20](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/20) |
-| S4 Орион поведение | не начат | S3 | отдельная ветка/PR |
-| S5 English плотность/сканер | не начат | S4 | отдельная ветка/PR |
+| S0 e2e CI | **merged** → master | `master` | [PR #17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) |
+| S1 зоны / EN / lifecycle | **merged** → master | S0 | [PR #18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) |
+| S2 Документы MVP | **merged** → master | S1 | [PR #19](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/19) |
+| S3 Эфир (чат пилотов) | **merged** → master | S2 | [PR #20](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/20) |
+| S4 Орион + журнал/дзен/autoupdate | **mostly** (PR #21/#22 в master) | S3 | [PR #21](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/21), [PR #22](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/22); остаток — polish `task_progress` |
+| CEFR self-contained + lazy + settings/no-scroll | in progress | master | текущий PR (`cursor/cefr-lazy-parity-acfe`) |
+| S5 English плотность/сканер | не начат | — | отдельная ветка/PR |
 | S6 стопор книги/главы | не начат | S5 | отдельная ветка/PR |
 | S7 browser/a11y/visibility | не начат | S6 | отдельная ветка/PR |
+
+Документы: сверка desktop↔web — [DOCUMENTS_PARITY.md](./DOCUMENTS_PARITY.md) (крупные пробелы не в этом PR).
 
 Статус обновлять в [PROGRESS.md](./PROGRESS.md) по факту, не заранее.
 
@@ -96,11 +99,15 @@ HEAD `d45e1bd` · [PR #19](https://github.com/Teslyar75/Wed_Star_Typing_Version/
 
 Регрессия: Документы и Орион не ломать. Радио-хост S1 сохранить.
 
+### Roadmap Эфира (после S3, не текущий scope)
+
+Эфир уже = **чат пилот↔пилот** (текст). Планируется рост в полноценный чат: скриншоты/картинки и другие типы сообщений.  
+Текущая архитектура (`comm_messages`: text + meta автора) должна оставаться **расширяемой** под вложения (например `kind` / `attachments` JSON / blob store) — **только заметка**, реализацию вложений сейчас не делать. Не ломать text-only API.
+
 ## S4 — Орион: поведение, задачи + архив
 
-Не новый GitHub-bridge / contributor runner. Зона Орион уже есть. Довести поведение задач и архива до эталона `task_progress` / archive (пагинация, зависание, цвет, поиск), без исполнения PR агентом. Hosted/BYO ключи не логировать. Не добавлять платежи.
-
-Сверять `frontend/src/orion/*`, `backend` orion API и desktop на старте.
+В master уже влиты [PR #21](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/21) / [#22](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/22): вкладки Ориона Chat/Agents/Archive, журнал, дзен, autoupdate.  
+Остаток S4: polish поведения `task_progress` / archive (пагинация, зависание, цвет, поиск) по desktop, без исполнения PR агентом. Hosted/BYO ключи не логировать. Не добавлять платежи.
 
 ## S5 — English: плотность / сканер
 

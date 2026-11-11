@@ -24,6 +24,8 @@ type CefrWord = {
   difficulty: string;
   rank: number;
   known: boolean;
+  has_examples?: boolean;
+  gaps?: string[];
 };
 
 type Props = {
@@ -119,6 +121,23 @@ export default function CefrPage({ onOpenScanner, onStartMission, onLearnCards }
       setTotalN(j.total || 0);
       setKnownN(j.known || 0);
       setFlipped({});
+      // prefetch следующей страницы — только одна порция, не весь уровень
+      const nb = j.block || 0;
+      const np = j.page || 0;
+      const nPages = Math.max(1, j.pages || 1);
+      const nBlocks = Math.max(1, j.blocks || 1);
+      let pb = nb;
+      let pp = np + 1;
+      if (pp >= nPages) {
+        pb = nb + 1;
+        pp = 0;
+      }
+      if (j.unlocked !== false && pb < nBlocks) {
+        void fetch(
+          "/api/english/cefr/" + encodeURIComponent(lv) + "?block=" + pb + "&page=" + pp + "&page_size=24",
+          { credentials: "include" },
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -126,6 +145,28 @@ export default function CefrPage({ onOpenScanner, onStartMission, onLearnCards }
 
   useEffect(() => {
     void loadLevels();
+    // счётчики уровней отдельно от контента страницы
+    void fetch("/api/english/cefr/counts", { credentials: "include" })
+      .then((r) => r.json())
+      .then((j: { levels?: { id: string; total: number }[] }) => {
+        if (!j.levels?.length) return;
+        setLevels((prev) => {
+          if (!prev.length) {
+            return j.levels!.map((lv) => ({
+              id: lv.id,
+              title: lv.id,
+              total: lv.total,
+              known: 0,
+              pct: 0,
+              unlocked: lv.id === "A1",
+              ready: true,
+            }));
+          }
+          const by = Object.fromEntries(j.levels!.map((x) => [x.id, x.total]));
+          return prev.map((lv) => (by[lv.id] != null ? { ...lv, total: by[lv.id] } : lv));
+        });
+      })
+      .catch(() => undefined);
   }, [loadLevels]);
 
   useEffect(() => {
@@ -244,8 +285,9 @@ export default function CefrPage({ onOpenScanner, onStartMission, onLearnCards }
               const back =
                 (w.ru || w.translation ? (w.ru || w.translation) + (w.definition ? " — " : "") : "") +
                   (w.definition || "") || "—";
+              const noEx = w.has_examples === false || (w.gaps || []).includes("sentences");
               return (
-                <article key={w.slug} className={"en-sm-tile" + (w.known ? " known" : "")}>
+                <article key={w.slug} className={"en-sm-tile" + (w.known ? " known" : "") + (noEx ? " bare" : "")}>
                   <button type="button" className="en-sm-tile-body" onClick={() => onOpenScanner(w.word)}>
                     <span className="en-sm-rank mono">#{w.rank || w.id || "—"}</span>
                     <span
@@ -266,6 +308,7 @@ export default function CefrPage({ onOpenScanner, onStartMission, onLearnCards }
                         <div className="en-sm-tags">
                           <span className="en-sm-tag">{posLabel}</span>
                           <span className={"en-sm-tag diff-" + d}>{diffLabel}</span>
+                          {noEx ? <span className="en-sm-tag muted">···</span> : null}
                         </div>
                       </>
                     )}

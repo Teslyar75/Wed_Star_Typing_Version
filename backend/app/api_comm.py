@@ -2,6 +2,10 @@
 
 Не ИИ и не радио. Автор только из cookie; поля author/pilot_id/callsign в теле игнор.
 Лента одна на инстанс (как comm.json на одном компьютере).
+
+Roadmap (не реализовывать здесь): рост в полный чат со скриншотами/картинками
+и другими типами сообщений. Схему держать расширяемой (kind / attachments),
+не ломая текущий text-only контракт. См. docs/web/WEB_PARITY_STAGES.md.
 """
 
 from __future__ import annotations

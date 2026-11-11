@@ -120,6 +120,19 @@ export default function DocsPanel() {
     }, 700);
   }, [flush]);
 
+  // Ctrl/Cmd+S — сохранить сейчас (desktop Ctrl+S); браузерный Save Page не трогаем.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "s") return;
+      if (screen !== "edit") return;
+      e.preventDefault();
+      window.clearTimeout(timer.current);
+      void flush();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [flush, screen]);
+
   const loadList = useCallback(async () => {
     listAc.current?.abort();
     const ac = new AbortController();
