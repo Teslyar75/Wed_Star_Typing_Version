@@ -4,6 +4,7 @@
 
 ### Исправлено
 - **Мост OpenCode:** автовыбор порта при WinError 10013/10048 (Hyper-V excluded ranges) и занятом порте; runtime-файл `.runtime/opencode_bridge.json` монтируется в backend — `/api/orion/config` видит `available=true` на нестандартном порту. `ORION_OPENCODE_PORT` остаётся предпочтительным. Второй экземпляр моста не стартует, если живой уже есть.
+- **Мост OpenCode:** CLI запускается с `ORION_SILENT_SAY=1`, чтобы не дублировать озвучку (локальный `say.py` / голос веба).
 
 ## 0.3.0 — 08.11.2026 — Орион как на десктопе, журнал, дзен, OpenCode
 

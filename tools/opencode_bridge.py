@@ -229,6 +229,13 @@ def parse_reply(stdout: str) -> str:
     return blob
 
 
+def cli_env() -> dict[str, str]:
+    """Окружение для OpenCode CLI: глушим локальный say.py (двойная озвучка с вебом)."""
+    env = dict(os.environ)
+    env["ORION_SILENT_SAY"] = "1"
+    return env
+
+
 def run_opencode(prompt: str, model: str, agent: str, timeout: float) -> dict:
     exe = find_cli()
     if not exe:
@@ -246,6 +253,7 @@ def run_opencode(prompt: str, model: str, agent: str, timeout: float) -> dict:
             capture_output=True,
             timeout=max(30.0, timeout),
             cwd=str(PROJECT_DIR),
+            env=cli_env(),
             creationflags=_NO_WINDOW,
         )
     except subprocess.TimeoutExpired:

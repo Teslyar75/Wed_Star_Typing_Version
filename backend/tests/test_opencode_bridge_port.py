@@ -135,6 +135,34 @@ def test_backend_falls_back_without_runtime(monkeypatch) -> None:
     assert api_orion.opencode_base_url() == "http://host.docker.internal:8765"
 
 
+def test_cli_env_sets_silent_say(monkeypatch) -> None:
+    monkeypatch.setenv("PATH", "/usr/bin")
+    monkeypatch.delenv("ORION_SILENT_SAY", raising=False)
+    env = bridge.cli_env()
+    assert env["ORION_SILENT_SAY"] == "1"
+    assert env["PATH"] == "/usr/bin"
+
+
+def test_run_opencode_passes_silent_say(monkeypatch) -> None:
+    seen: dict = {}
+
+    class _Proc:
+        returncode = 0
+        stdout = b'{"type":"text","part":{"messageID":"1","text":"ok"}}\n'
+        stderr = b""
+
+    def fake_run(cmd, **kwargs):
+        seen["env"] = kwargs.get("env") or {}
+        seen["cmd"] = cmd
+        return _Proc()
+
+    monkeypatch.setattr(bridge, "find_cli", lambda: "/fake/opencode")
+    monkeypatch.setattr(bridge.subprocess, "run", fake_run)
+    out = bridge.run_opencode("hi", "m", "orion-commander", 30.0)
+    assert out["reply"] == "ok"
+    assert seen["env"].get("ORION_SILENT_SAY") == "1"
+
+
 def test_opencode_status_uses_runtime_url(tmp_path, monkeypatch) -> None:
     path = tmp_path / "opencode_bridge.json"
     path.write_text(json.dumps({"port": 18765}), encoding="utf-8")
