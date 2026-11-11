@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     orion_opencode_token: str = ""
     orion_opencode_timeout: float = 180.0
     orion_opencode_model: str = "opencode/deepseek-v4.1-flash-free"
+    # Runtime-файл моста (порт после автовыбора). В Docker: /runtime/opencode_bridge.json
+    orion_opencode_runtime: str = "/runtime/opencode_bridge.json"
     web_update_url: str = "http://host.docker.internal:8766"
     web_update_token: str = ""
     web_update_timeout: float = 30.0
