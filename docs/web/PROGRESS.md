@@ -29,6 +29,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | 11.11 | master содержит PR17–22; следующий PR — от master |
 | 11.11 | CEFR: данные vendored в `backend/app/data/english`; карточки без примеров показываются; страница 24; `/cefr/counts` отдельно |
 | 11.11 | Документы: сверка → [DOCUMENTS_PARITY.md](./DOCUMENTS_PARITY.md); крупные пробелы не закрывать сейчас |
+| 11.11 CI | PR #23 `f56f022`: workflow runs CI/Docker создались (`queued`), но jobs не стартовали ~20+ мин (updated_at не менялся). Path/branch filters нет. Перезапуск обычным коммитом на ту же ветку. |
 | 11.11 | Эфир roadmap: рост до чата с картинками/вложениями — архитектура расширяема, реализация позже |
 
 ## Локальные прогоны vs CI
