@@ -2267,6 +2267,12 @@ def hub_stats(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_o
     }
 
 
+@router.get("/cefr/counts")
+def cefr_counts() -> dict:
+    """Счётчики A1–C2 без тела карточек. Отдельно от /cefr/{level} (страница 24)."""
+    return packs.level_counts()
+
+
 @router.get("/cefr/levels")
 def cefr_levels(db: Session = Depends(get_db), pilot: Pilot | None = Depends(get_optional_pilot)) -> dict:
     """Чипы уровней: без разбора холодных JSON (счётчики — когда набор уже в кэше)."""

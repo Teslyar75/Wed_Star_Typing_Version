@@ -1,0 +1,16 @@
+---
+description: Permanent rule — desktop My_Stamina is the reference when porting features to web; keep web solutions equal or better, never cut.
+alwaysApply: true
+---
+
+# Desktop → web port (permanent)
+
+When porting desktop features to web, the desktop version ([Teslyar75/My_Stamina](https://github.com/Teslyar75/My_Stamina), current release) is **ALWAYS** the reference for functions, content and behavior — **check it before implementing**.
+
+Where a better web-specific solution exists (e.g. tabs/pagination instead of page scrolling, lazy loading), apply it for web, keeping functionality **equal or better**, never cut.
+
+Preserve already successful web solutions (React 19 / TS / Vite / Zustand / FastAPI, PWA, radio host, skins, ContinueHub, Orion zone patterns, cookie-pilot isolation, no-scroll page rule).
+
+Do not copy Tk UI literally. Do not invent features absent from desktop without Sergey's explicit scope. Do not delete user data, force-push, or wipe DBs.
+
+Canonical copies of this rule: root `AGENTS.md`, `docs/web/CURSOR_HANDOFF.md`.

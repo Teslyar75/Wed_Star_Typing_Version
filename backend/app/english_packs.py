@@ -1,4 +1,8 @@
-"""Загрузка CEFR и глаголов из данных десктопа (stamina/english/data)."""
+"""Загрузка CEFR и глаголов: vendored backend/app/data/english (или ENGLISH_DATA_DIR).
+
+Один запрос = одна страница (PAGE_SIZE), не весь уровень и не весь архив.
+Индекс уровня кэшируется (stamp mtime/size) — без повторного parse JSON на каждый hit.
+"""
 from __future__ import annotations
 
 import json
@@ -23,7 +27,22 @@ LEVEL_TITLE = {lv: title for lv, title, _d in LEVELS}
 LEVEL_DIFF = {lv: diff for lv, _t, diff in LEVELS}
 BLOCK_SIZE = 50
 UNLOCK_PCT = 80
-MIN_SENTENCES = 1
+# Desktop prepared_view отбрасывает слова без примеров (MIN=1), но cefr_report
+# считает все слова уровня. Веб показывает все карточки; пустые sentences —
+# нормальны (сканер/плитка берут перевод/определение).
+MIN_SENTENCES = 0
+# Эталонные счётчики My_Stamina 3.8.3 cefr_report.json (одно слово = одна карточка).
+EXPECTED_LEVEL_COUNTS = {
+    "A1": 1063,
+    "A2": 1241,
+    "B1.1": 1070,
+    "B1.2": 1069,
+    "B2.1": 1209,
+    "B2.2": 1208,
+    "C1": 913,
+    "C2": 875,
+}
+EXPECTED_TOTAL = sum(EXPECTED_LEVEL_COUNTS.values())  # 8648
 
 VERB_TENSES = [
     ("present_simple", "Present Simple", "Настоящее простое", "регулярное действие"),
@@ -52,23 +71,38 @@ TENSE_FORM = {
 }
 
 
+def _has_sets(path: Path) -> bool:
+    try:
+        return path.is_dir() and (path / "sets").is_dir() and any((path / "sets").glob("cefr_*.json"))
+    except OSError:
+        return False
+
+
 def data_dir() -> Path:
+    """Каталог english data: env → vendored в репо → соседний десктоп → /english-data."""
     env = os.environ.get("ENGLISH_DATA_DIR") or getattr(settings, "english_data_dir", "")
     if env:
-        return Path(env)
+        p = Path(env)
+        if _has_sets(p):
+            return p
     here = Path(__file__).resolve()
     candidates = [
-        here.parents[3] / "stamina" / "english" / "data",  # My_New_Stamina/web_star_typing/backend/app
+        here.parent / "data" / "english",  # vendored: backend/app/data/english
+        here.parents[2] / "data" / "english",
+        here.parents[3] / "stamina" / "english" / "data",
         here.parents[2].parent / "My_New_Stamina" / "stamina" / "english" / "data",
+        here.parents[2].parent / "My_Stamina" / "stamina" / "english" / "data",
         settings.repo_root() / "stamina" / "english" / "data",
     ]
     for c in candidates:
         try:
-            if c.is_dir():
+            if _has_sets(c):
                 return c
         except (OSError, IndexError):
             continue
-    return Path("/english-data")
+    if env:
+        return Path(env)
+    return here.parent / "data" / "english"
 
 
 def cefr_path(level: str) -> Path:
@@ -122,6 +156,9 @@ def _cefr_words_cached(level: str, stamp: tuple) -> tuple:
         senses = raw.get("senses") or []
         definition = (senses[0].get("definition") if senses else "") or raw.get("definition", "")
         slug = str(raw.get("slug") or word.lower())
+        gaps = list(raw.get("gaps") or [])
+        if not sents and "sentences" not in gaps:
+            gaps = [*gaps, "sentences"]
         out.append({
             "word": word,
             "slug": slug,
@@ -134,6 +171,7 @@ def _cefr_words_cached(level: str, stamp: tuple) -> tuple:
             "level": level,
             "cefr_order": idx,
             "topic": raw.get("topic") or "",
+            "gaps": gaps,
         })
     _SLUGS[level] = tuple(w["slug"] for w in out)
     return tuple(out)
@@ -186,7 +224,7 @@ def cefr_page(level: str, block: int = 0, page: int = 0, page_size: int = PAGE_S
 
 
 def card_view(w: dict) -> dict:
-    """Сетка 6x4: без примеров (они в сканере)."""
+    """Сетка 6x4: без примеров (они в сканере). Пустые sentences — ok."""
     return {
         "id": int(w.get("id") or 0),
         "word": w.get("word") or "",
@@ -200,7 +238,23 @@ def card_view(w: dict) -> dict:
         "rank": int(w.get("cefr_order") or 0) + 1,
         "known": bool(w.get("known")),
         "topic": w.get("topic") or "",
+        "has_examples": bool(w.get("sentences")),
+        "gaps": list(w.get("gaps") or []),
     }
+
+
+def level_counts() -> dict:
+    """Только счётчики по уровням (без слов). Прогревает индекс при первом вызове."""
+    levels = []
+    total = 0
+    for lv, title, _d in LEVELS:
+        if not cefr_path(lv).exists():
+            levels.append({"id": lv, "title": title, "total": 0, "ready": False})
+            continue
+        n = len(cefr_slugs(lv))
+        total += n
+        levels.append({"id": lv, "title": title, "total": n, "ready": True})
+    return {"total": total, "levels": levels, "expected_total": EXPECTED_TOTAL}
 
 
 def find_cefr_word(needle: str) -> dict | None:

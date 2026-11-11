@@ -1,5 +1,13 @@
 # Cursor — входная точка (web-очередь S0–S7)
 
+## Правило порта desktop → web (постоянное)
+
+При переносе функций с десктопа на веб **десктоп** ([Teslyar75/My_Stamina](https://github.com/Teslyar75/My_Stamina), актуальный релиз) — **всегда** эталон функций, контента и поведения: сверяйся с ним **до** реализации. Где для веба есть лучшее решение (вкладки/пагинация вместо прокрутки страницы, ленивая загрузка и т.п.) — применяй его, сохраняя функциональность **равной или лучше**, ничего не урезать. Уже удачные web-решения сохранять.
+
+Дублируется в корневом [AGENTS.md](../../AGENTS.md) и `.cursor/rules/desktop-web-port.mdc` (`alwaysApply: true`).
+
+---
+
 Это долговечный комплект для исполнителя **без истории чата**.  
 Репозиторий: [Teslyar75/Wed_Star_Typing_Version](https://github.com/Teslyar75/Wed_Star_Typing_Version).  
 Владелец продукта: **Сергей**. Прямые указания Сергея в этом чате Cursor определяют направление в рамках прав и безопасности.
@@ -14,6 +22,7 @@
 6. Журнал дня: [SESSION_2026-11-08.md](./SESSION_2026-11-08.md), сводка [JOURNAL.md](./JOURNAL.md).
 7. Эталон поведения (только чтение): desktop **My_Stamina 3.8.3** `9622f3e` после PR34. Смысл переносить, Tk UI — нет.
 8. Исторические планы (не очередь): [WEB_PLAN.md](./WEB_PLAN.md), [PARITY_PLAN.md](./PARITY_PLAN.md), [../WEB_PORT_PLAN.md](../WEB_PORT_PLAN.md). Фазы 0–8 и P1–P8 уже в коде.
+9. Документы desktop↔web: [DOCUMENTS_PARITY.md](./DOCUMENTS_PARITY.md).
 
 Корень репо: [AGENTS.md](../../AGENTS.md) указывает сюда.
 
@@ -59,13 +68,13 @@ Desktop 3.8.3 — референс **поведения**. Удачные web-р
 ## Возобновление (коротко)
 
 ```text
-1. git fetch; сверить remote SHA веток cursor/s0… s1… и текущей рабочей.
+1. git fetch; сверить remote SHA master и текущей рабочей ветки.
 2. Не rebase / amend / force-push опубликованного.
 3. PROGRESS.md → какой этап in progress / HEAD / PR.
 4. BLOCKERS.md → нет ли блокера.
 5. Один этап из WEB_PARITY_STAGES.md. Не начинать следующий, пока текущий не зелёный на GitHub CI + Docker.
-6. Ветка cursor/<этап>-2598 от проверенной базы предыдущего этапа.
-7. ManagePullRequest: base_branch = ветка зависимости, в теле — ссылки на PR17/18/….
+6. Ветка cursor/<этап>-acfe от актуального master (S0–S3 и PR21/22 уже влиты).
+7. ManagePullRequest: base_branch = master; в теле — ссылки на контекст.
    GitHub — source of truth: Origin stack_on недоступен; не обходить через gh pr create.
 8. Нет merge / deploy / release, пока Сергей не скажет явно.
 ```
@@ -77,6 +86,7 @@ export CI=1 TRANSLATE_OFFLINE=1
 cd backend && python -m pytest -q
 cd ../frontend && npm test && npm run build && npx playwright test
 # Docker: см. .github/workflows/docker-smoke.yml (start.sh --no-open)
+# Локальный старт пользователю: ярлык / start-star-typing-web.bat /rebuild — без down -v
 ```
 
 ---
@@ -101,6 +111,11 @@ cd ../frontend && npm test && npm run build && npx playwright test
 
 ## Сейчас
 
-Смотри [PROGRESS.md](./PROGRESS.md). Ожидаемый порядок: S2 Документы → **S3 Эфир = чат пилотов (зона `comm`)**, не радиорубка → S4 Орион задачи/архив → S5 English плотность/сканер → S6 стопор книги/главы → S7 подтверждённые browser/a11y/visibility.
+Смотри [PROGRESS.md](./PROGRESS.md).
 
-S3 (Сергей 10:38): не клон Ориона/Документов. Только то, что нужно для активного общения пилотов в чате. Схема и права — раздел «Прямое взаимодействие с Сергеем» выше.
+**Факт на master:** S0–S3 merged (PR17–20); PR21/22 merged (Орион Chat/Agents/Archive, CEFR UI, журнал, дзен, autoupdate).  
+**S4** mostly done — остаток polish `task_progress`. **S5/S6/S7** не начаты.
+
+Текущая работа: CEFR self-contained (8648 lazy), settings UI scale, no-scroll audit, DOCUMENTS_PARITY, roadmap-заметка про Эфир+вложения.
+
+CEFR: не грузить весь архив на клиент — только страница (`page_size=24`) + `/cefr/counts`.

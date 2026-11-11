@@ -7894,6 +7894,7 @@ html {
   );
 }
 .en-sm-tile.known { border-color: var(--st-ok); border-width: 2px; }
+.en-sm-tile.bare { opacity: 0.92; }
 .en-sm-tile:hover { border-color: var(--st-cyan); background: color-mix(in srgb, var(--st-panel) 80%, #0a1520); }
 .en-sm-tile-body {
   position: relative;
