@@ -16,7 +16,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | S3 | — | — | [#20](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/20) | merged | — | Эфир = чат пилотов |
 | S4 (часть) | — | — | [#21](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/21), [#22](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/22) | merged | — | Орион вкладки, журнал, дзен, autoupdate; остаток — polish `task_progress` |
 | CEFR / settings / no-scroll / docs matrix | — | — | [#23](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/23) | merged | — | DOCUMENTS_PARITY.md на master |
-| Документы: закрытие пробелов parity | `67518a9` | `cursor/docs-parity-gaps-84c6` | [#24](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/24) | смотреть Actions | смотреть | корзина, шаблоны, MD-лента, import/export, find/undo, TTS |
+| Документы: закрытие пробелов parity | `f693ed1` | `cursor/docs-parity-gaps-84c6` | [#24](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/24) | **5/5 SUCCESS** | **SUCCESS** | корзина, шаблоны, MD-лента, import/export, find/undo, TTS |
 | S5–S7 | — | — | — | — | — | не начаты |
 
 `gh` — только чтение. Создавать/обновлять PR — `ManagePullRequest`.
@@ -33,6 +33,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | 11.11 CI | PR #23 HEAD `679e7e5`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). |
 | 11.11 | Эфир roadmap: рост до чата с картинками/вложениями — архитектура расширяема, реализация позже |
 | 11.11 | Документы: закрытие пробелов parity (корзина, шаблоны, MD-лента, import/export, find/undo, preview, TTS); PDF=Print; visual=preview-вкладка; LLM/почта — вне очереди |
+| 11.11 CI | PR #24 HEAD `f693ed1`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
 
 ## Локальные прогоны vs CI
 
