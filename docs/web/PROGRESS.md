@@ -9,7 +9,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| OpenCode автопорт (10013) | `f13fb20`+ | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | re-run | re-run | +`ORION_SILENT_SAY=1`; пилоту override больше не нужен |
+| OpenCode автопорт (10013) | `a0ab041` | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | pending | pending | автопорт + `ORION_SILENT_SAY=1`; пилоту override не нужен |
 | master | `e730cb1` | `master` | — | — | — | S0–S3 + PR21–26 влиты |
 | Орион Agents layout (no-scroll) | `202de6b` | `cursor/orion-agents-layout-15ea` | [#25](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/25) | **5/5 SUCCESS** | **SUCCESS** | **merged** Сергеем в `cc7afac` |
 | S0 | — | — | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | merged | — | e2e CI |
