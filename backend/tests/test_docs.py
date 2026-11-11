@@ -85,3 +85,53 @@ def test_docs_versions_snapshot_and_restore() -> None:
     foreign = _pilot()
     assert foreign.get(f"/api/docs/{doc['id']}/versions").status_code == 404
     assert foreign.post(f"/api/docs/{doc['id']}/restore", json={"version_id": vid}).status_code == 404
+
+
+def test_docs_templates() -> None:
+    a = _pilot()
+    r = a.get("/api/docs/templates?lang=ru")
+    assert r.status_code == 200
+    ids = {x["id"] for x in r.json()["items"]}
+    assert ids == {"meeting", "todo", "book", "diary", "table"}
+
+
+def test_docs_trash_restore_purge() -> None:
+    a = _pilot()
+    doc = a.post("/api/docs", json={"title": "gone", "body": "x"}).json()
+    assert a.delete(f"/api/docs/{doc['id']}").status_code == 200
+    assert a.get("/api/docs").json()["items"] == []
+    trash = a.get("/api/docs?trash=true").json()["items"]
+    assert trash[0]["id"] == doc["id"]
+    assert a.get(f"/api/docs/{doc['id']}").status_code == 404
+    restored = a.post(f"/api/docs/{doc['id']}/restore-trash").json()
+    assert restored["deleted_at"] is None
+    assert a.get("/api/docs").json()["items"][0]["id"] == doc["id"]
+    a.delete(f"/api/docs/{doc['id']}")
+    assert a.delete(f"/api/docs/{doc['id']}/purge").status_code == 200
+    assert a.get("/api/docs?trash=true").json()["items"] == []
+
+
+def test_docs_sort_and_search() -> None:
+    a = _pilot()
+    a.post("/api/docs", json={"title": "Alpha", "body": "cat dog"})
+    a.post("/api/docs", json={"title": "Beta", "body": "bird"})
+    titles = [x["title"] for x in a.get("/api/docs?sort=title").json()["items"]]
+    assert titles == sorted(titles, key=str.casefold)
+    found = a.get("/api/docs?q=cat").json()["items"]
+    assert len(found) == 1
+    assert found[0]["title"] == "Alpha"
+
+
+def test_docs_export_and_import(tmp_path=None) -> None:
+    a = _pilot()
+    doc = a.post("/api/docs", json={"title": "Expo", "body": "## Hi\n\n**bold**"}).json()
+    for fmt in ("txt", "md", "html", "docx", "stdoc", "pdf"):
+        r = a.get(f"/api/docs/{doc['id']}/export?fmt={fmt}")
+        assert r.status_code == 200, fmt
+        assert len(r.content) > 0
+    md = a.get(f"/api/docs/{doc['id']}/export?fmt=md").content
+    up = a.post("/api/docs/import", files={"file": ("note.md", md, "text/markdown")})
+    assert up.status_code == 200
+    assert up.json()["title"] == "Expo"
+    foreign = _pilot()
+    assert foreign.get(f"/api/docs/{doc['id']}/export?fmt=md").status_code == 404

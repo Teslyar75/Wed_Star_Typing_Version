@@ -45,7 +45,7 @@ describe("DocsPanel", () => {
       "fetch",
       vi.fn(async (url: RequestInfo) => {
         if (String(url).includes("/api/docs")) return json({ detail: "login required" }, 401);
-        return json({});
+        return json({ items: [] });
       }),
     );
     await act(async () => {
@@ -62,8 +62,10 @@ describe("DocsPanel", () => {
       "fetch",
       vi.fn(async (url: RequestInfo, init?: RequestInit) => {
         expect(init?.credentials ?? "include").toBe("include");
-        if (String(url) === "/api/docs") {
-          return json({ items: [{ id: 7, title: "бортжурнал", rev: 1, words: 2, updated_at: null }] });
+        const u = String(url);
+        if (u.startsWith("/api/docs/templates")) return json({ items: [] });
+        if (u.startsWith("/api/docs")) {
+          return json({ items: [{ id: 7, title: "бортжурнал", rev: 1, words: 2, updated_at: null }], sort: "updated", trash: false });
         }
         return json({});
       }),

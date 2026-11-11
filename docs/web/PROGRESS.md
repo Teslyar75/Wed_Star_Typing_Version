@@ -9,13 +9,14 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| master | `667df0f` | `master` | — | — | — | S0–S3 + PR21/22 влиты |
+| master | `f41486d` | `master` | — | — | — | S0–S3 + PR21–23 влиты |
 | S0 | — | — | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | merged | — | e2e CI |
 | S1 | — | — | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | merged | — | зоны / EN lifecycle |
 | S2 | — | — | [#19](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/19) | merged | — | Документы MVP |
 | S3 | — | — | [#20](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/20) | merged | — | Эфир = чат пилотов |
 | S4 (часть) | — | — | [#21](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/21), [#22](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/22) | merged | — | Орион вкладки, журнал, дзен, autoupdate; остаток — polish `task_progress` |
-| CEFR / settings / no-scroll / docs parity | `679e7e5` | `cursor/cefr-lazy-parity-acfe` | открывается | смотреть Actions | смотреть | **GitHub 5/5 SUCCESS**; outage на f56f022
+| CEFR / settings / no-scroll / docs matrix | — | — | [#23](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/23) | merged | — | DOCUMENTS_PARITY.md на master |
+| Документы: закрытие пробелов parity | *(после push)* | `cursor/docs-parity-gaps-84c6` | открывается | смотреть Actions | смотреть | корзина, шаблоны, MD-лента, import/export, find/undo, TTS |
 | S5–S7 | — | — | — | — | — | не начаты |
 
 `gh` — только чтение. Создавать/обновлять PR — `ManagePullRequest`.
@@ -28,9 +29,10 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | 08.11 10:38 | S3 Эфир = зона `comm`, не радио |
 | 11.11 | master содержит PR17–22; следующий PR — от master |
 | 11.11 | CEFR: данные vendored в `backend/app/data/english`; карточки без примеров показываются; страница 24; `/cefr/counts` отдельно |
-| 11.11 | Документы: сверка → [DOCUMENTS_PARITY.md](./DOCUMENTS_PARITY.md); крупные пробелы не закрывать сейчас |
-| 11.11 CI | PR #23 HEAD `679e7e5`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Первый `f56f022` застрял в `queued` из‑за GitHub Actions major outage (не filters/данные). |
+| 11.11 | Документы: сверка → [DOCUMENTS_PARITY.md](./DOCUMENTS_PARITY.md) (PR #23) |
+| 11.11 CI | PR #23 HEAD `679e7e5`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). |
 | 11.11 | Эфир roadmap: рост до чата с картинками/вложениями — архитектура расширяема, реализация позже |
+| 11.11 | Документы: закрытие пробелов parity (корзина, шаблоны, MD-лента, import/export, find/undo, preview, TTS); PDF=Print; visual=preview-вкладка; LLM/почта — вне очереди |
 
 ## Локальные прогоны vs CI
 

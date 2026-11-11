@@ -102,9 +102,42 @@ for (const vp of [
     await page.getByTestId("docs-new").click();
     await expect(page.getByTestId("docs-editor")).toBeVisible();
     expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
+    await expect(page.getByTestId("docs-fmtbar")).toBeVisible();
+    await page.getByTestId("docs-visual").click();
+    await expect(page.getByTestId("docs-preview")).toBeVisible();
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
+    await page.getByTestId("docs-back").click();
+    await page.getByTestId("docs-goto-trash").click();
+    await expect(page.getByTestId("docs-panel")).toHaveAttribute("data-docs-screen", "trash");
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
     await page.screenshot({ path: `test-results/s2-docs-${vp.width}.png` });
   });
 }
+
+test("S2 поиск, шаблон, корзина, экспорт md", async ({ page }) => {
+  const cs = `P${Date.now().toString(36).slice(-8)}`;
+  await enrollPilot(page, cs);
+  await page.locator('.nav-tab[data-zone="docs"]').click();
+  await page.getByTestId("docs-templates").click();
+  await page.getByTestId("docs-templates-menu").locator("button").first().click();
+  await expect(page.getByTestId("docs-editor")).toBeVisible();
+  await page.getByTestId("docs-fmt-b").click();
+  await expect(page.getByTestId("docs-status")).toHaveText(/Сохран/i, { timeout: 8000 });
+  const id = Number(await page.getByTestId("docs-editor").getAttribute("data-doc-id"));
+  const exp = await page.request.get(`/api/docs/${id}/export?fmt=md`);
+  expect(exp.ok()).toBeTruthy();
+  await page.getByTestId("docs-back").click();
+  await page.getByTestId("docs-search").fill("Встреч");
+  await expect(page.getByTestId("docs-row").first()).toBeVisible();
+  await page.getByTestId("docs-trash-one").click();
+  await expect(page.getByTestId("docs-row")).toHaveCount(0);
+  await page.getByTestId("docs-goto-trash").click();
+  await expect(page.getByTestId("docs-row").first()).toBeVisible();
+  await page.getByTestId("docs-restore-trash").click();
+  await page.getByTestId("docs-back-list").click();
+  await page.getByTestId("docs-search").fill("");
+  await expect(page.getByTestId("docs-row").first()).toBeVisible();
+});
 
 test("S2 classic и alt: зона docs в шапке", async ({ page }) => {
   await skipCrewAsk(page);
