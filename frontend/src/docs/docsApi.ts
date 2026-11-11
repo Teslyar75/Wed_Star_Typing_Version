@@ -5,6 +5,9 @@ export type DocListItem = {
   title: string;
   rev: number;
   words: number;
+  snippet?: string;
+  deleted_at?: string | null;
+  created_at?: string | null;
   updated_at: string | null;
 };
 
@@ -14,6 +17,7 @@ export type DocOut = {
   body: string;
   rev: number;
   words: number;
+  deleted_at?: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -25,6 +29,16 @@ export type DocVersion = {
   words: number;
   created_at: string | null;
 };
+
+export type DocTemplate = {
+  id: string;
+  label: string;
+  title: string;
+  body: string;
+};
+
+export type DocSort = "updated" | "created" | "title";
+export type ExportFmt = "txt" | "md" | "html" | "docx" | "stdoc" | "pdf";
 
 export class DocsHttpError extends Error {
   status: number;
@@ -61,7 +75,18 @@ async function j<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const docsApi = {
-  list: (signal?: AbortSignal) => j<{ items: DocListItem[] }>("/api/docs", { signal }),
+  list: (opts?: { trash?: boolean; sort?: DocSort; q?: string; signal?: AbortSignal }) => {
+    const sp = new URLSearchParams();
+    if (opts?.trash) sp.set("trash", "true");
+    if (opts?.sort) sp.set("sort", opts.sort);
+    if (opts?.q) sp.set("q", opts.q);
+    const qs = sp.toString();
+    return j<{ items: DocListItem[]; sort: string; trash: boolean }>(`/api/docs${qs ? `?${qs}` : ""}`, {
+      signal: opts?.signal,
+    });
+  },
+  templates: (lang: string, signal?: AbortSignal) =>
+    j<{ items: DocTemplate[] }>(`/api/docs/templates?lang=${encodeURIComponent(lang)}`, { signal }),
   create: (title = "", body = "") =>
     j<DocOut>("/api/docs", { method: "POST", headers: JSONH, body: JSON.stringify({ title, body }) }),
   get: (id: number, signal?: AbortSignal) => j<DocOut>(`/api/docs/${id}`, { signal }),
@@ -72,6 +97,26 @@ export const docsApi = {
       body: JSON.stringify({ title, body, rev }),
       ...init,
     }),
+  trash: (id: number) => j<{ ok: boolean; id: number }>(`/api/docs/${id}`, { method: "DELETE" }),
+  restoreTrash: (id: number) => j<DocOut>(`/api/docs/${id}/restore-trash`, { method: "POST", headers: JSONH, body: "{}" }),
+  purge: (id: number) => j<{ ok: boolean; id: number }>(`/api/docs/${id}/purge`, { method: "DELETE" }),
+  importFile: async (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    const r = await fetch("/api/docs/import", { method: "POST", credentials: "include", body: fd });
+    if (!r.ok) {
+      let msg = `http_${r.status}`;
+      try {
+        const d = await r.json();
+        if (typeof d?.detail === "string") msg = d.detail;
+      } catch {
+        /* ignore */
+      }
+      throw new DocsHttpError(r.status, msg);
+    }
+    return (await r.json()) as DocOut;
+  },
+  exportUrl: (id: number, fmt: ExportFmt) => `/api/docs/${id}/export?fmt=${encodeURIComponent(fmt)}`,
   versions: (id: number, signal?: AbortSignal) =>
     j<{ items: DocVersion[] }>(`/api/docs/${id}/versions`, { signal }),
   restore: (id: number, version_id: number) =>
@@ -96,4 +141,23 @@ export function pageOf<T>(items: T[], page: number, size: number): { rows: T[]; 
 
 export function wordCount(body: string): number {
   return body.trim() ? body.trim().split(/\s+/).length : 0;
+}
+
+export function filterItems(items: DocListItem[], query: string): DocListItem[] {
+  const list = items ?? [];
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return list;
+  return list.filter((it) => {
+    const hay = `${it.title}\n${it.snippet || ""}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+}
+
+export function sortItems(items: DocListItem[], sort: DocSort): DocListItem[] {
+  const xs = [...(items ?? [])];
+  if (sort === "title") return xs.sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
+  if (sort === "created") {
+    return xs.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")) || b.id - a.id);
+  }
+  return xs.sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")) || b.id - a.id);
 }
