@@ -9,8 +9,8 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| master | `b87f05d` | `master` | — | — | — | S0–S3 + PR21–24 влиты |
-| Орион Agents layout (no-scroll) | `dd9ddcc` | `cursor/orion-agents-layout-15ea` | [#25](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/25) | **5/5 SUCCESS** | **SUCCESS** | карточка‖привязка, узкий список, evo-strip; merge не делали |
+| master | `cc7afac` | `master` | — | — | — | S0–S3 + PR21–25 влиты |
+| Орион Agents layout (no-scroll) | `202de6b` | `cursor/orion-agents-layout-15ea` | [#25](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/25) | **5/5 SUCCESS** | **SUCCESS** | **merged** Сергеем в `cc7afac` |
 | S0 | — | — | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | merged | — | e2e CI |
 | S1 | — | — | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | merged | — | зоны / EN lifecycle |
 | S2 | — | — | [#19](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/19) | merged | — | Документы MVP |
@@ -36,7 +36,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | 11.11 | Документы: закрытие пробелов parity (корзина, шаблоны, MD-лента, import/export, find/undo, preview, TTS); PDF=Print; visual=preview-вкладка; LLM/почта — вне очереди |
 | 11.11 CI | PR #24 HEAD `f693ed1`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
 | 11.11 | Орион `agents`: карточка и привязка в две колонки, узкий список, evo-strip, манеры/режим во вкладках |
-| 11.11 CI | PR #25 HEAD `dd9ddcc`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
+| 11.11 CI | PR #25 HEAD `dd9ddcc`/`202de6b`: **GitHub 5/5 SUCCESS**; merge Сергеем → master `cc7afac`. |
 
 ## Локальные прогоны vs CI
 
