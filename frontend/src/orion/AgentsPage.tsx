@@ -67,6 +67,7 @@ export default function AgentsPage({ cfg, replicaCount = 0, onChange }: Props) {
   const [bind, setBind] = useState<Bind>({ oc: "", gh: "", code: "" });
   const [note, setNote] = useState("");
   const [modeErr, setModeErr] = useState("");
+  const [more, setMore] = useState<"manners" | "mode">("mode");
 
   const reload = useCallback(async () => {
     try {
@@ -182,141 +183,147 @@ export default function AgentsPage({ cfg, replicaCount = 0, onChange }: Props) {
         </aside>
 
         <div className="orion-card-col">
-          <section className="inst-panel">
-            <h3>{ot("card")}</h3>
-            <label className="orion-field">
-              {ot("fld_name")}
-              <input value={draft.name || ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-              <span className="hint">{ot("name_hint")}</span>
-            </label>
-            <label className="orion-field">
-              {ot("fld_model")}
-              <input value={draft.model || ""} onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
-              <span className="hint">{ot("model_hint")}</span>
-            </label>
-            <label className="orion-field">
-              {ot("fld_note")}
-              <input value={draft.note || ""} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
-              <span className="hint">{ot("note_hint")}</span>
-            </label>
-            <div className="orion-field">
-              {ot("rights")}
-              <div className="orion-rights">
-                {(["crew", "observer", "commander"] as const).map((k) => (
-                  <button key={k} type="button" className={"hud-btn" + (draft.access === k ? " amber" : "")} onClick={() => setDraft({ ...draft, access: k })}>
-                    {accLab(k)}
-                  </button>
-                ))}
+          <div className="orion-detail-pair" data-testid="orion-agents-pair">
+            <section className="inst-panel orion-card-panel">
+              <h3>{ot("card")}</h3>
+              <label className="orion-field">
+                {ot("fld_name")}
+                <input value={draft.name || ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+                <span className="hint">{ot("name_hint")}</span>
+              </label>
+              <label className="orion-field">
+                {ot("fld_model")}
+                <input value={draft.model || ""} onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
+                <span className="hint">{ot("model_hint")}</span>
+              </label>
+              <label className="orion-field">
+                {ot("fld_note")}
+                <input value={draft.note || ""} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+                <span className="hint">{ot("note_hint")}</span>
+              </label>
+              <div className="orion-field">
+                {ot("rights")}
+                <div className="orion-rights">
+                  {(["crew", "observer", "commander"] as const).map((k) => (
+                    <button key={k} type="button" className={"hud-btn" + (draft.access === k ? " amber" : "")} onClick={() => setDraft({ ...draft, access: k })}>
+                      {accLab(k)}
+                    </button>
+                  ))}
+                </div>
+                <span className="hint">{ot("rights_hint")}</span>
               </div>
-              <span className="hint">{ot("rights_hint")}</span>
-            </div>
-            <div className="orion-field">
-              {ot("fld_voice")}
-              <button type="button" className="hud-btn" onClick={() => {
-                const order = ["ship", "agent", "off"];
-                const i = order.indexOf(draft.voice || "ship");
-                setDraft({ ...draft, voice: order[(i + 1) % 3] });
-              }}>
-                {ot("fld_voice")}: {voiceLab(draft.voice || "ship")}
-              </button>
-            </div>
-            <div className="orion-field">
-              {ot("on_board")}
-              <button type="button" className={"hud-btn" + (draft.enabled ? " amber" : "")} onClick={() => setDraft({ ...draft, enabled: !draft.enabled })}>
-                {ot("on_board")}: {draft.enabled ? ot("on_yes") : ot("on_no")}
-              </button>
-            </div>
-            <div className="orion-card-actions">
-              <button type="button" className="hud-btn amber" onClick={() => void save()}>{ot("save")}</button>
-              <button type="button" className="hud-btn" disabled={isNew || !rec} onClick={() => void activate()}>{ot("make_active")}</button>
-              <button type="button" className="hud-btn danger" disabled={isNew || rec?.agent_id === "orion"} onClick={() => rec && void dismiss(rec.agent_id)}>{ot("remove")}</button>
-            </div>
-          </section>
+              <div className="orion-field orion-inline-toggles">
+                <button type="button" className="hud-btn" onClick={() => {
+                  const order = ["ship", "agent", "off"];
+                  const i = order.indexOf(draft.voice || "ship");
+                  setDraft({ ...draft, voice: order[(i + 1) % 3] });
+                }}>
+                  {ot("fld_voice")}: {voiceLab(draft.voice || "ship")}
+                </button>
+                <button type="button" className={"hud-btn" + (draft.enabled ? " amber" : "")} onClick={() => setDraft({ ...draft, enabled: !draft.enabled })}>
+                  {ot("on_board")}: {draft.enabled ? ot("on_yes") : ot("on_no")}
+                </button>
+              </div>
+              <div className="orion-card-actions">
+                <button type="button" className="hud-btn amber" onClick={() => void save()}>{ot("save")}</button>
+                <button type="button" className="hud-btn" disabled={isNew || !rec} onClick={() => void activate()}>{ot("make_active")}</button>
+                <button type="button" className="hud-btn danger" disabled={isNew || rec?.agent_id === "orion"} onClick={() => rec && void dismiss(rec.agent_id)}>{ot("remove")}</button>
+              </div>
+            </section>
 
-          <section className="inst-panel orion-bind">
-            <h3>{ot("bind")}</h3>
-            <div className="orion-field">
-              {ot("board_code")}
-              <div className="orion-code">{(bind.code || "————").split("").join(" ")}</div>
-              <span className="hint">{ot("board_code_hint")}</span>
-            </div>
-            <label className="orion-field">
-              {ot("oc_token")}
-              <input type="password" autoComplete="new-password" value={bind.oc} placeholder={hasKey ? maskKey(String(hasKey)) : ""} onChange={(e) => setBind({ ...bind, oc: e.target.value })} />
-            </label>
-            <label className="orion-field">
-              {ot("gh_token")}
-              <input type="password" autoComplete="new-password" value={bind.gh} onChange={(e) => setBind({ ...bind, gh: e.target.value })} />
-            </label>
-            <label className="orion-field">
-              {ot("byo_url")}
-              <input value={draft.base_url || ""} onChange={(e) => setDraft({ ...draft, base_url: e.target.value })} />
-            </label>
-            <label className="orion-field">
-              {ot("crew_kind")}
-              <select value={draft.kind || "openai_compat"} onChange={(e) => setDraft({ ...draft, kind: e.target.value })}>
-                {KINDS.map((k) => <option key={k} value={k}>{ot("k_" + k)}</option>)}
-              </select>
-            </label>
-            <label className="orion-field">
-              {ot("byo_provider")}
-              <select value={Object.keys(PRESETS).find((k) => PRESETS[k].base_url === draft.base_url) || "openai"} onChange={(e) => {
-                const p = PRESETS[e.target.value];
-                if (p) setDraft({ ...draft, provider: p.provider, base_url: p.base_url, model: p.model || draft.model });
-              }}>
-                {Object.keys(PRESETS).map((k) => <option key={k} value={k}>{k}</option>)}
-              </select>
-            </label>
-            <div className="orion-card-actions">
-              <button type="button" className="hud-btn" onClick={() => setNote(hasKey ? ot("bind_ok") : ot("bind_no"))}>{ot("check_bind")}</button>
-              <button type="button" className="hud-btn amber" onClick={() => void save()}>{ot("save_bind")}</button>
-              <button type="button" className="hud-btn danger" onClick={() => {
-                setBind({ oc: "", gh: "", code: bind.code });
-                if (rec) saveAgentKey(cfg.pilot, rec.agent_id, "");
-              }}>{ot("forget_bind")}</button>
-            </div>
-            <div className="hint muted">{ot("bind_local")}</div>
-            <div className={"orion-note" + (cfg.opencode?.available ? "" : "")} data-testid="orion-opencode">
-              {cfg.opencode?.available
-                ? `OpenCode: ${cfg.opencode.model || "opencode/deepseek-v4.1-flash-free"}`
-                : "OpenCode на хосте не найден — запустите start-star-typing-web.bat (мост :8765)."}
-            </div>
-            {note ? <div className="orion-note">{note}</div> : null}
-          </section>
+            <section className="inst-panel orion-bind">
+              <h3>{ot("bind")}</h3>
+              <div className="orion-field">
+                {ot("board_code")}
+                <div className="orion-code">{(bind.code || "————").split("").join(" ")}</div>
+                <span className="hint">{ot("board_code_hint")}</span>
+              </div>
+              <label className="orion-field">
+                {ot("oc_token")}
+                <input type="password" autoComplete="new-password" value={bind.oc} placeholder={hasKey ? maskKey(String(hasKey)) : ""} onChange={(e) => setBind({ ...bind, oc: e.target.value })} />
+              </label>
+              <label className="orion-field">
+                {ot("gh_token")}
+                <input type="password" autoComplete="new-password" value={bind.gh} onChange={(e) => setBind({ ...bind, gh: e.target.value })} />
+              </label>
+              <label className="orion-field">
+                {ot("byo_url")}
+                <input value={draft.base_url || ""} onChange={(e) => setDraft({ ...draft, base_url: e.target.value })} />
+              </label>
+              <div className="orion-bind-row">
+                <label className="orion-field">
+                  {ot("crew_kind")}
+                  <select value={draft.kind || "openai_compat"} onChange={(e) => setDraft({ ...draft, kind: e.target.value })}>
+                    {KINDS.map((k) => <option key={k} value={k}>{ot("k_" + k)}</option>)}
+                  </select>
+                </label>
+                <label className="orion-field">
+                  {ot("byo_provider")}
+                  <select value={Object.keys(PRESETS).find((k) => PRESETS[k].base_url === draft.base_url) || "openai"} onChange={(e) => {
+                    const p = PRESETS[e.target.value];
+                    if (p) setDraft({ ...draft, provider: p.provider, base_url: p.base_url, model: p.model || draft.model });
+                  }}>
+                    {Object.keys(PRESETS).map((k) => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="orion-card-actions">
+                <button type="button" className="hud-btn" onClick={() => setNote(hasKey ? ot("bind_ok") : ot("bind_no"))}>{ot("check_bind")}</button>
+                <button type="button" className="hud-btn amber" onClick={() => void save()}>{ot("save_bind")}</button>
+                <button type="button" className="hud-btn danger" onClick={() => {
+                  setBind({ oc: "", gh: "", code: bind.code });
+                  if (rec) saveAgentKey(cfg.pilot, rec.agent_id, "");
+                }}>{ot("forget_bind")}</button>
+              </div>
+              <div className="hint muted">{ot("bind_local")}</div>
+              <div className={"orion-note" + (cfg.opencode?.available ? "" : "")} data-testid="orion-opencode">
+                {cfg.opencode?.available
+                  ? `OpenCode: ${cfg.opencode.model || "opencode/deepseek-v4.1-flash-free"}`
+                  : "OpenCode на хосте не найден — запустите start-star-typing-web.bat (мост :8765)."}
+              </div>
+              {note ? <div className="orion-note">{note}</div> : null}
+            </section>
+          </div>
 
-          <section className="inst-panel">
+          <section className="inst-panel orion-evo-strip" data-testid="orion-evo">
             <h3>{ot("evo")}</h3>
             <div>{ot("evo_n", evo.lv, evo.name, replicaCount)}</div>
           </section>
 
-          <section className="inst-panel">
-            <h3>{ot("manners")}</h3>
-            <textarea rows={5} value={draft.manners || ""} onChange={(e) => setDraft({ ...draft, manners: e.target.value })} />
-            <button type="button" className="hud-btn amber" onClick={() => void save()}>{ot("save_manners")}</button>
-          </section>
-
-          <section className="inst-panel" data-testid="orion-settings">
-            <h3>{ot("mode")}</h3>
-            <div className="orion-modes">
-              {(["guide", "byo", "hosted", "contributor"] as const).map((id) => {
-                const m = cfg.modes.find((x) => x.id === id);
-                const on = cfg.mode === id;
-                const locked = !m?.available;
-                return (
-                  <div key={id} className={`orion-mode ${on ? "on" : ""} ${locked ? "locked" : ""}`} data-testid={`orion-mode-${id}`} data-locked={locked ? "1" : "0"}>
-                    <div className="orion-mode-head">
-                      <b>{locked ? "🔒 " : ""}{ot(`m_${id}`)}</b>
-                      {on ? <span className="orion-tag">{ot("active")}</span> : (
-                        <button type="button" className="hud-btn" disabled={locked} data-testid={`orion-choose-${id}`} onClick={() => orionApi.setMode(id).then(() => onChange?.()).catch((e: Error) => setModeErr(e.message))}>{ot("choose")}</button>
-                      )}
-                    </div>
-                    <div>{ot(`m_${id}_d`)}</div>
-                    {locked && m?.reason ? <div className="orion-mode-lock" data-testid={`orion-lock-${id}`}>{ot(`r_${m.reason}`)}</div> : null}
-                  </div>
-                );
-              })}
-            </div>
-            {modeErr ? <div className="orion-note">{ot("error", modeErr)}</div> : null}
+          <section className="inst-panel orion-agents-more" data-testid="orion-settings">
+            <nav className="orion-more-tabs" aria-label={ot("mode")}>
+              <button type="button" className={"hud-btn" + (more === "mode" ? " amber" : "")} data-testid="orion-more-mode" onClick={() => setMore("mode")}>{ot("mode")}</button>
+              <button type="button" className={"hud-btn" + (more === "manners" ? " amber" : "")} data-testid="orion-more-manners" onClick={() => setMore("manners")}>{ot("manners")}</button>
+            </nav>
+            {more === "manners" ? (
+              <div className="orion-more-body" data-testid="orion-manners">
+                <textarea rows={4} value={draft.manners || ""} onChange={(e) => setDraft({ ...draft, manners: e.target.value })} />
+                <button type="button" className="hud-btn amber" onClick={() => void save()}>{ot("save_manners")}</button>
+              </div>
+            ) : (
+              <div className="orion-more-body">
+                <div className="orion-modes">
+                  {(["guide", "byo", "hosted", "contributor"] as const).map((id) => {
+                    const m = cfg.modes.find((x) => x.id === id);
+                    const on = cfg.mode === id;
+                    const locked = !m?.available;
+                    return (
+                      <div key={id} className={`orion-mode ${on ? "on" : ""} ${locked ? "locked" : ""}`} data-testid={`orion-mode-${id}`} data-locked={locked ? "1" : "0"}>
+                        <div className="orion-mode-head">
+                          <b>{locked ? "🔒 " : ""}{ot(`m_${id}`)}</b>
+                          {on ? <span className="orion-tag">{ot("active")}</span> : (
+                            <button type="button" className="hud-btn" disabled={locked} data-testid={`orion-choose-${id}`} onClick={() => orionApi.setMode(id).then(() => onChange?.()).catch((e: Error) => setModeErr(e.message))}>{ot("choose")}</button>
+                          )}
+                        </div>
+                        <div>{ot(`m_${id}_d`)}</div>
+                        {locked && m?.reason ? <div className="orion-mode-lock" data-testid={`orion-lock-${id}`}>{ot(`r_${m.reason}`)}</div> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+                {modeErr ? <div className="orion-note">{ot("error", modeErr)}</div> : null}
+              </div>
+            )}
           </section>
         </div>
       </div>

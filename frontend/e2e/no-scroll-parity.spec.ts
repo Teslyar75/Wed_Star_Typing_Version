@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { enrollPilot } from "./helpers";
 
 /** Страница без прокрутки: scrollHeight - innerHeight ≤ 1 (WEB_PORT_PLAN). */
 async function pageOverflow(page: Page): Promise<number> {
@@ -36,6 +37,36 @@ for (const vp of VIEWS) {
         expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
       }
     }
+  });
+
+  test(`no-scroll orion agents layout ${vp.width}`, async ({ page }) => {
+    await page.setViewportSize(vp);
+    await page.addInitScript(() => {
+      localStorage.setItem("st_ask_crew_on_start", "0");
+    });
+    await enrollPilot(page, `Agents${vp.width}`);
+    await page.locator('.nav-tab[data-zone="orion"]').click();
+    await expect(page.getByTestId("orion-panel")).toBeVisible();
+    await page.getByTestId("orion-tab-agents").click();
+    await expect(page.getByTestId("orion-agents")).toBeVisible();
+    await expect(page.getByTestId("orion-agents-pair")).toBeVisible();
+    await expect(page.getByTestId("orion-evo")).toBeVisible();
+    const pair = page.getByTestId("orion-agents-pair");
+    const box = await pair.boundingBox();
+    expect(box).toBeTruthy();
+    if (vp.width >= 1100 && box) {
+      const kids = pair.locator(":scope > .inst-panel");
+      await expect(kids).toHaveCount(2);
+      const a = await kids.nth(0).boundingBox();
+      const b = await kids.nth(1).boundingBox();
+      expect(a && b).toBeTruthy();
+      if (a && b) {
+        expect(Math.abs(a.y - b.y)).toBeLessThan(24);
+        expect(b.x).toBeGreaterThan(a.x + a.width - 4);
+      }
+    }
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: `test-results/shots/orion-agents-${vp.width}.png` });
   });
 
   test(`no-scroll cefr + en journal ${vp.width}`, async ({ page }) => {

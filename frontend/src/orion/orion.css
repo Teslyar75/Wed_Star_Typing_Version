@@ -110,20 +110,109 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: minmax(148px, 176px) minmax(0, 1fr);
+  gap: 8px;
   overflow: hidden;
 }
+.orion-crew-col .hud-btn {
+  white-space: normal;
+  line-height: 1.2;
+  font-size: 0.72rem;
+  padding: 6px 8px;
+}
+.orion-agents-grid > .inst-panel,
+.orion-agents-grid .inst-panel {
+  min-height: 0;
+}
 .orion-crew-col, .orion-card-col {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.orion-crew-col {
+  overflow: auto;
+  padding: 0.4rem 0.45rem;
+}
+.orion-card-col {
+  min-width: 0;
+}
+.orion-detail-pair {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  overflow: hidden;
+}
+.orion-card-panel, .orion-bind {
+  min-height: 0;
+  overflow: auto;
+  gap: 4px;
+  margin: 0;
+}
+.orion-evo-strip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 0.35rem 0.55rem;
+  overflow: hidden;
+}
+.orion-evo-strip h3 {
+  margin: 0;
+  white-space: nowrap;
+}
+.orion-evo-strip > div {
+  font-size: 0.82rem;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.orion-agents-more {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 38%;
+  overflow: hidden;
+  gap: 4px;
+}
+.orion-more-tabs {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+.orion-more-body {
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
+.orion-more-body textarea {
+  flex: 1;
+  min-height: 64px;
+  resize: none;
+  font: inherit;
+  padding: 6px 8px;
+  background: color-mix(in srgb, #000 40%, transparent);
+  color: inherit;
+  border: 1px solid color-mix(in srgb, var(--st-cyan, #6ec8ff) 25%, transparent);
+  border-radius: 4px;
+}
+.orion-inline-toggles, .orion-bind-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.orion-bind-row > .orion-field { flex: 1 1 8rem; min-width: 0; }
 .orion-pass {
   text-align: left;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border: 1px solid color-mix(in srgb, var(--st-cyan, #6ec8ff) 25%, transparent);
   background: color-mix(in srgb, #000 35%, transparent);
   color: inherit;
@@ -133,27 +222,32 @@
   gap: 2px;
 }
 .orion-pass.on { border-color: var(--st-cyan, #6ec8ff); box-shadow: 0 0 0 1px var(--st-cyan, #6ec8ff) inset; }
-.orion-pass b { font-size: 0.92rem; }
-.orion-pass-sub { font-size: 0.72rem; opacity: 0.75; }
+.orion-pass b { font-size: 0.88rem; }
+.orion-pass-sub {
+  font-size: 0.68rem;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .orion-pass-x { margin-left: auto; }
 .orion-pass-row { display: flex; align-items: center; gap: 6px; width: 100%; }
-.orion-field { display: flex; flex-direction: column; gap: 2px; font-size: 0.75rem; letter-spacing: 0.06em; }
+.orion-field { display: flex; flex-direction: column; gap: 2px; font-size: 0.72rem; letter-spacing: 0.06em; }
 .orion-field input, .orion-field textarea, .orion-field select {
   font: inherit;
   letter-spacing: 0;
-  padding: 6px 8px;
+  padding: 5px 7px;
   background: color-mix(in srgb, #000 40%, transparent);
   color: inherit;
   border: 1px solid color-mix(in srgb, var(--st-cyan, #6ec8ff) 25%, transparent);
   border-radius: 4px;
 }
-.orion-field .hint { opacity: 0.6; font-size: 0.72rem; letter-spacing: 0; text-transform: none; }
+.orion-field .hint { opacity: 0.6; font-size: 0.68rem; letter-spacing: 0; text-transform: none; }
 .orion-rights, .orion-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.orion-bind { margin-top: 6px; }
 .orion-code {
   font-family: ui-monospace, Consolas, monospace;
-  font-size: 1.15rem;
-  letter-spacing: 0.18em;
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
   color: var(--st-cyan, #6ec8ff);
   font-weight: 700;
 }
@@ -204,12 +298,12 @@
 }
 .orion-hit-at { font-size: 11px; opacity: 0.7; }
 .orion-hit mark { background: #e6c45c; color: #111; padding: 0 2px; }
-.orion-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.orion-mode { padding: 8px; border: 1px solid color-mix(in srgb, var(--st-cyan, #6ec8ff) 25%, transparent); border-radius: 8px; font-size: 12px; }
+.orion-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.orion-mode { padding: 6px; border: 1px solid color-mix(in srgb, var(--st-cyan, #6ec8ff) 25%, transparent); border-radius: 8px; font-size: 11px; }
 .orion-mode.on { border-color: #6fbf73; }
 .orion-mode.locked { opacity: 0.85; }
 .orion-mode-head { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
-.orion-mode-lock { margin-top: 6px; color: #e6c45c; }
+.orion-mode-lock { margin-top: 4px; color: #e6c45c; }
 .orion-byo { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid color-mix(in srgb, var(--st-cyan, #6ec8ff) 20%, transparent); border-radius: 8px; }
 .orion-byo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .orion-viewer { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; }
@@ -218,8 +312,16 @@
 .orion-viewer-text { max-width: 80vw; max-height: 70vh; overflow: auto; white-space: pre-wrap; user-select: text; }
 .orion-task-strip { flex: 0 0 auto; display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; }
 @media (max-width: 1100px) {
-  .orion-agents-grid { grid-template-columns: 1fr; }
   .orion-modes { grid-template-columns: 1fr 1fr; }
+  .orion-agents-more { max-height: 42%; }
+}
+/* Узкие экраны: карточка/привязка стопкой; ещё уже — список сверху */
+@media (max-width: 900px) {
+  .orion-detail-pair { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .orion-agents-grid { grid-template-columns: 1fr; }
+  .orion-crew-col { max-height: 28%; }
 }
 .orion-field input:-webkit-autofill,
 .orion-field textarea:-webkit-autofill,
