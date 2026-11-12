@@ -10,7 +10,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
 | master | `e730cb1` | `master` | — | — | — | S0–S3 + PR21–26 влиты |
-| Security: texts ACL + upload limits + SSRF | _(после push)_ | `cursor/security-text-access-e31f` | _(открывается)_ | pending | pending | auth+pilot_texts/is_public; 413; SSRF |
+| Security: texts ACL + upload limits + SSRF | `6fd019b` | `cursor/security-text-access-e31f` | _(PR)_ | pending | pending | auth+pilot_texts/is_public; 413; SSRF |
 | Орион Agents layout (no-scroll) | `202de6b` | `cursor/orion-agents-layout-15ea` | [#25](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/25) | **5/5 SUCCESS** | **SUCCESS** | **merged** Сергеем |
 | S0 | — | — | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | merged | — | e2e CI |
 | S1 | — | — | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | merged | — | зоны / EN lifecycle |
