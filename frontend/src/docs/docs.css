@@ -23,14 +23,30 @@
 .docs-search, .docs-sort {
   font: inherit;
   font-size: 12px;
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(127, 200, 255, 0.25);
-  border-radius: 6px;
-  color: inherit;
+  padding: 0.35rem 0.65rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--st-cyan, #7ec8ff);
+  background: color-mix(in srgb, var(--st-panel, #0a1520) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--st-cyan, #7ec8ff) 45%, transparent);
+  border-radius: 0;
+  clip-path: var(--st-clip-btn, none);
   min-width: 0;
+  outline: none;
 }
-.docs-search { flex: 1; max-width: 220px; }
+.docs-search:focus, .docs-sort:focus {
+  border-color: var(--st-cyan, #7ec8ff);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--st-cyan, #7ec8ff) 22%, transparent);
+}
+.docs-search { flex: 1; max-width: 220px; text-transform: none; letter-spacing: 0; }
+.docs-sort option {
+  background: #0a1520;
+  color: var(--st-cyan, #7ec8ff);
+}
+.docs-toolbar .btn,
+.docs-toolbar .hud-btn {
+  text-transform: uppercase;
+}
 .docs-new-wrap { position: relative; display: inline-flex; gap: 2px; }
 .docs-menu {
   position: absolute;
