@@ -10,7 +10,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
 | master | `e730cb1` | `master` | — | — | — | S0–S3 + PR21–26 влиты |
-| Security: texts ACL + upload limits + SSRF | `373e301` | `cursor/security-text-access-e31f` | [#30](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/30) | pending | pending | auth+pilot_texts/is_public; 413; SSRF |
+| Security: texts ACL + upload limits + SSRF | `9f35b3e` | `cursor/security-text-access-e31f` | [#30](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/30) | **5/5 SUCCESS** | **SUCCESS** | auth+pilot_texts/is_public; 413; SSRF; merge не делали |
 | Орион Agents layout (no-scroll) | `202de6b` | `cursor/orion-agents-layout-15ea` | [#25](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/25) | **5/5 SUCCESS** | **SUCCESS** | **merged** Сергеем |
 | S0 | — | — | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | merged | — | e2e CI |
 | S1 | — | — | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | merged | — | зоны / EN lifecycle |
@@ -39,6 +39,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | 11.11 | Орион `agents`: карточка и привязка в две колонки, узкий список, evo-strip, манеры/режим во вкладках |
 | 11.11 CI | PR #25 HEAD `dd9ddcc`/`202de6b`: **GitHub 5/5 SUCCESS**; merge Сергеем → master `cc7afac`. |
 | 11.11 | Security backend: тексты только через cookie-пилот + `pilot_texts`; Gutenberg `is_public` (read-only без полки); upload limits + epub zip-bomb; SSRF (ICY/Gutenberg/BYO). |
+| 11.11 CI | PR #30 HEAD `9f35b3e`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
 
 ## Локальные прогоны vs CI
 
