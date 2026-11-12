@@ -9,7 +9,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| Орион guide jokes/facts full port | *(pending push)* | `cursor/orion-guide-content-648e` | pending | pending | pending | desktop guide_idle 60+60; remember kind; ONLINE ambient |
+| Орион guide jokes/facts full port | `b88dffa` | `cursor/orion-guide-content-648e` | [#32](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/32) | pending | pending | desktop guide_idle 60+60; remember kind; ONLINE ambient |
 | master | `6f5a902` | `master` | — | — | — | после PR #30/#31 |
 | OpenCode автопорт (10013) | `580e9b4` | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `33ec4cf`; автопорт + `ORION_SILENT_SAY=1` |
 | Орион индикатор связи | `ce190b1` | `cursor/orion-link-indicator-dc67` | [#28](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/28) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `72721c8`; health + индикатор |
