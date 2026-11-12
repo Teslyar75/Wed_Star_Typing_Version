@@ -6,6 +6,7 @@
 - **Орион — индикатор связи:** зелёный / жёлтый / красный / серый в шапке чата и на вкладке Агенты; опрос `/api/orion/config` и `/api/orion/health` (~20 с, только при видимой вкладке); клик по красному — повторная проверка и подсказка (мост, ключ, таймаут).
 
 ### Исправлено
+- **Мост OpenCode — runtime path:** `.runtime/opencode_bridge.json` всегда пишется в корень web-репо (каталог с `tools/`), а не в родительский `PROJECT_DIR` десктопа. Баг: проверка `docker-compose.yml` шла в `tools/` → fallback на `D:\My_New_Stamina\.runtime`, тогда как docker-compose монтирует `web_star_typing/.runtime`. Override `ORION_OPENCODE_RUNTIME` сохранён; `start-star-typing-web.bat` читает тот же путь.
 - **Безопасность:** изоляция texts (auth + pilot_texts / is_public), лимиты upload (413), SSRF для исходящих HTTP включая BYO Orion (`app/ssrf.py`).
 - **Мост OpenCode:** автовыбор порта при WinError 10013/10048 (Hyper-V excluded ranges) и занятом порте; runtime-файл `.runtime/opencode_bridge.json` монтируется в backend — `/api/orion/config` видит `available=true` на нестандартном порту. `ORION_OPENCODE_PORT` остаётся предпочтительным. Второй экземпляр моста не стартует, если живой уже есть.
 - **Мост OpenCode:** CLI запускается с `ORION_SILENT_SAY=1`, чтобы не дублировать озвучку (локальный `say.py` / голос веба).

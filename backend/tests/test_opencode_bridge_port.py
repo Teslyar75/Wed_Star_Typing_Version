@@ -119,6 +119,32 @@ def test_write_and_read_runtime(tmp_path) -> None:
     assert "19876" in data["url"]
 
 
+def test_runtime_path_is_web_repo_not_project_dir(tmp_path) -> None:
+    """Layout как на Windows: My_New_Stamina/web_star_typing/tools/bridge.py.
+
+    Runtime должен быть в web_star_typing/.runtime, а не в родительском PROJECT_DIR.
+    """
+    project = tmp_path / "My_New_Stamina"
+    web = project / "web_star_typing"
+    tools_dir = web / "tools"
+    tools_dir.mkdir(parents=True)
+    (project / "stamina").mkdir()
+    bridge_file = tools_dir / "opencode_bridge.py"
+    bridge_file.write_text("# stub\n", encoding="utf-8")
+
+    path = bridge.resolve_runtime_path(here=bridge_file.resolve(), env={})
+    assert path == web / ".runtime" / "opencode_bridge.json"
+    assert path != project / ".runtime" / "opencode_bridge.json"
+    assert bridge.WEB_REPO_ROOT == TOOLS.parent
+
+    override = tmp_path / "custom" / "opencode_bridge.json"
+    path2 = bridge.resolve_runtime_path(
+        here=bridge_file.resolve(),
+        env={"ORION_OPENCODE_RUNTIME": str(override)},
+    )
+    assert path2 == override
+
+
 def test_backend_reads_runtime_port(tmp_path, monkeypatch) -> None:
     path = tmp_path / "opencode_bridge.json"
     path.write_text(json.dumps({"port": 7865, "url": "http://127.0.0.1:7865"}), encoding="utf-8")

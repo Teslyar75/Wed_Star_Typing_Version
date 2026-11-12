@@ -30,13 +30,26 @@ DEFAULT_MODEL = "opencode/deepseek-v4.1-flash-free"
 TIMEOUT = float(os.environ.get("ORION_OPENCODE_TIMEOUT", "180"))
 TOKEN = os.environ.get("ORION_OPENCODE_TOKEN", "")
 HERE = Path(__file__).resolve()
-# tools/ → web_star_typing → My_New_Stamina
+# tools/ → web_star_typing → My_New_Stamina (desktop monorepo, if present)
 PROJECT_DIR = HERE.parents[2] if (HERE.parents[2] / "stamina").is_dir() else HERE.parents[1]
-REPO_ROOT = HERE.parent if (HERE.parent / "docker-compose.yml").is_file() else PROJECT_DIR
-RUNTIME_PATH = Path(
-    os.environ.get("ORION_OPENCODE_RUNTIME")
-    or str(REPO_ROOT / ".runtime" / "opencode_bridge.json")
-)
+# Web-репозиторий = каталог, содержащий tools/ (не PROJECT_DIR десктопа).
+# Было: HERE.parent (= tools/) + проверка docker-compose.yml → fallback на PROJECT_DIR,
+# из‑за чего runtime уезжал в D:\My_New_Stamina\.runtime вместо web_star_typing\.runtime.
+WEB_REPO_ROOT = HERE.parents[1]
+
+
+def resolve_runtime_path(here: Path | None = None, env: dict[str, str] | None = None) -> Path:
+    """Путь к runtime-файлу: ORION_OPENCODE_RUNTIME или <web_repo>/.runtime/opencode_bridge.json."""
+    environ = env if env is not None else os.environ
+    override = (environ.get("ORION_OPENCODE_RUNTIME") or "").strip()
+    if override:
+        return Path(override)
+    root = (here or HERE).resolve().parents[1]
+    return root / ".runtime" / "opencode_bridge.json"
+
+
+RUNTIME_PATH = resolve_runtime_path()
+REPO_ROOT = WEB_REPO_ROOT  # совместимость с прежним именем
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 # Кандидаты вне типичных Hyper-V excluded ranges (~5k–9k на Windows).
