@@ -1,12 +1,25 @@
 /** Зоны верхнего ряда и состав зоны «Мостик». Канон — этот файл (NAV_ZONES.md в web-репо нет). */
 import type { Tab } from "./tabs";
 
-export type ZoneId = "bridge" | "english" | "speed" | "lounge" | "radio" | "comm" | "docs" | "orion" | "settings";
+export type ZoneId =
+  | "bridge"
+  | "english"
+  | "speed"
+  | "lounge"
+  | "radio"
+  | "comm"
+  | "docs"
+  | "orion"
+  | "lab"
+  | "settings";
 
 /** Следующие этапы — не в шапке, не в хоткеях. */
 export const DEFERRED_ZONES = [] as const;
 
-/** Порядок зон в шапке. Ctrl+1…N. Desktop 3.8.3: radio → comm(Эфир) → docs → orion. */
+/**
+ * Порядок зон в шапке. Desktop: … orion → lab → settings.
+ * Ctrl+1…9 нумеруют зоны без FIXED_HOTKEYS; lab = Ctrl+0 (settings остаётся Ctrl+9).
+ */
 export const ZONE_ORDER: ZoneId[] = [
   "bridge",
   "english",
@@ -16,13 +29,19 @@ export const ZONE_ORDER: ZoneId[] = [
   "comm",
   "docs",
   "orion",
+  "lab",
   "settings",
 ];
 
-/** Ctrl/Cmd + цифра 1–9 → существующая зона; лишние цифры игнорируются. */
+/** Постоянные хоткеи вне счёта 1…9 — как stamina/nav.FIXED_HOTKEYS. */
+export const FIXED_HOTKEYS: Partial<Record<ZoneId, string>> = { lab: "0" };
+
+/** Ctrl/Cmd + цифра → зона; «0» = lab; 1…9 без зон из FIXED_HOTKEYS. */
 export function zoneFromDigit(digit: string): ZoneId | undefined {
+  if (digit === "0") return FIXED_HOTKEYS.lab === "0" ? "lab" : undefined;
   if (!/^[1-9]$/.test(digit)) return undefined;
-  return ZONE_ORDER[Number(digit) - 1];
+  const numbered = ZONE_ORDER.filter((z) => !(z in FIXED_HOTKEYS));
+  return numbered[Number(digit) - 1];
 }
 
 /** Подменю Мостика (не на верхнем ряду). */

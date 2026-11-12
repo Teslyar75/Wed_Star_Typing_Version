@@ -61,6 +61,7 @@ const RadioPanel = lazy(() => import("./radio/RadioPanel"));
 const DocsPanel = lazy(() => import("./docs/DocsPanel"));
 const CommPanel = lazy(() => import("./comm/CommPanel"));
 const OrionPanel = lazy(() => import("./orion/OrionPanel"));
+const LabPanel = lazy(() => import("./lab/LabPanel"));
 
 function TabFallback() {
   return <p className="muted">…</p>;
@@ -290,8 +291,8 @@ export default function App() {
         e.preventDefault();
         setCmdOpen((v) => !v);
       }
-      /* Ctrl+1…N — существующие зоны (ZONE_ORDER) */
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-9]$/.test(e.key)) {
+      /* Ctrl+1…9 / Ctrl+0(lab) — зоны (FIXED_HOTKEYS) */
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[0-9]$/.test(e.key)) {
         const next = zoneFromDigit(e.key);
         if (!next) return;
         if (isTextEditTarget(e.target)) return;
@@ -557,6 +558,9 @@ export default function App() {
         </LazyTab>
         <LazyTab when={tab === "orion"}>
           <OrionPanel />
+        </LazyTab>
+        <LazyTab when={tab === "lab"}>
+          <LabPanel />
         </LazyTab>
         <LazyTab when={tab === "settings"}>
           <SettingsHub

@@ -28,6 +28,7 @@ const ITEMS: Item[] = [
   { kind: "tab", id: "comm", labelKey: "comm", search: "comm ether эфир ефір äther airwaves" },
   { kind: "tab", id: "docs", labelKey: "docs", search: "docs documents документы" },
   { kind: "tab", id: "orion", labelKey: "orion_zone", search: "orion" },
+  { kind: "tab", id: "lab", labelKey: "lab", search: "lab laboratory лаборатория" },
   { kind: "tab", id: "settings", labelKey: "settings", search: "settings" },
 ];
 

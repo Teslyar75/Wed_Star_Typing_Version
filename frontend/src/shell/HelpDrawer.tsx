@@ -1,8 +1,7 @@
 /** Контекстная справка F1 — порт stamina/page_help.py PageHelpDialog. */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { t, getLang } from "../i18n";
-import { ZONE_ORDER } from "./zones";
 import { voiceLookup } from "../theme/voice";
 import { ti } from "../idle/idleI18n";
 import { zt } from "../zen/zenI18n";
@@ -19,7 +18,7 @@ const KEYBOARD_NAV =
   "• Ctrl+Home / Ctrl+End — первая / последняя кнопка в группе.\n" +
   "• Enter / Пробел — нажать кнопку в фокусе.\n" +
   "• Home — Орион · Page Up — слайды · Page Down — экран.\n" +
-  `• Ctrl+1…${ZONE_ORDER.length} — зона; F6 — цикл шапка ↔ содержимое.\n` +
+  "• Ctrl+1…9 — зона (без lab); Ctrl+0 — Лаборатория; F6 — цикл шапка ↔ содержимое.\n" +
   "• Ctrl+K — палитра; F1 — справка; Backspace — предыдущий раздел.\n\n" +
   "Tab с мостика уводит к кнопкам (полёт ставится на паузу). Стрелки во время набора остаются в прицеле — сначала Tab.\n" +
   "В гипердрайве и играх отдыха стрелки остаются за управлением режима.";
@@ -116,6 +115,27 @@ const PAGES: Record<string, { title: string; body: string }> = {
       "• Версии — снимки не чаще чем раз в 10 минут, последние 20.\n" +
       "• Печать — кнопка «Печать» и стили браузера (Ctrl+P).",
   },
+  lab: {
+    title: "ЛАБОРАТОРИЯ",
+    body:
+      "Созвездия знаний пилота — живая сущность из выученных слов, книг и печати.\n\n" +
+      "ТРИ УРОВНЯ\n\n" +
+      "• Визуальный (по умолчанию) — кластеры и мерцающая сущность, без отдельных слов.\n" +
+      "• Рабочий — клик по фрагменту: детали выбранной звезды и прямые связи (порции по 20, «Показать ещё»).\n" +
+      "• Полный слепок — отдельная кнопка; JSON чанками с прогрессом/отменой для сущности и агента.\n\n" +
+      "• Ctrl+0 — открыть зону; F1 — эта справка (вкладки уровней / управления).",
+  },
+  "lab.controls": {
+    title: "ЛАБОРАТОРИЯ · УПРАВЛЕНИЕ",
+    body:
+      "Жесты карты знаний\n\n" +
+      "• Ctrl+колёсико — зум точно к точке под курсором (точка неподвижна).\n" +
+      "• Колёсико без Ctrl — как обычно (не зум карты).\n" +
+      "• ЛКМ + перетаскивание — орбита 3D (yaw/pitch с ограничением).\n" +
+      "• Короткий клик — выбор (не орбита): на визуальном — фрагмент; на рабочем — звезда и связи.\n" +
+      "• 1∶1 / Ctrl+Home — сброс вида (не Ctrl+0 — он занят зоной).\n" +
+      "• Tab / Shift+Tab в справке — уровни ↔ управление.",
+  },
   settings: {
     title: "НАСТРОЙКИ",
     body:
@@ -143,8 +163,13 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
   /** Зафиксировать вкладку в момент открытия — смена раздела не подменяет текст. */
   const lockedTab = useRef(tab);
   const wasOpen = useRef(false);
+  const [labHelpPage, setLabHelpPage] = useState<"lab" | "lab.controls">("lab");
   if (open && !wasOpen.current) lockedTab.current = tab;
   wasOpen.current = open;
+
+  useEffect(() => {
+    if (open) setLabHelpPage("lab");
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -153,6 +178,12 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
         e.preventDefault();
         e.stopPropagation();
         onClose();
+        return;
+      }
+      if (lockedTab.current === "lab" && e.key === "Tab") {
+        e.preventDefault();
+        e.stopPropagation();
+        setLabHelpPage((p) => (e.shiftKey ? (p === "lab" ? "lab.controls" : "lab") : p === "lab" ? "lab.controls" : "lab"));
       }
     };
     /* capture: закрыть до App.toggle, чтобы F1 не открыл снова */
@@ -166,7 +197,8 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
   }, [open, onClose]);
 
   if (!open) return null;
-  const page = PAGES[lockedTab.current] || PAGES.bridge!;
+  const helpKey = lockedTab.current === "lab" ? labHelpPage : lockedTab.current;
+  const page = PAGES[helpKey] || PAGES.bridge!;
   /* Скин-мир: что значат слова оболочки в текущем скине (voice pack `skin.help`). */
   const skinHelp = t("skin.help") !== "skin.help" ? t("skin.help") : "";
 
@@ -194,6 +226,24 @@ export default function HelpDrawer({ tab, open, onClose, onFullHelp }: Props) {
             {t("close")} Esc
           </button>
         </header>
+        {lockedTab.current === "lab" ? (
+          <div className="help-lab-tabs" data-nav-group="help-lab">
+            <button
+              type="button"
+              className={`hud-btn ${labHelpPage === "lab" ? "amber" : ""}`}
+              onClick={() => setLabHelpPage("lab")}
+            >
+              Уровни
+            </button>
+            <button
+              type="button"
+              className={`hud-btn ${labHelpPage === "lab.controls" ? "amber" : ""}`}
+              onClick={() => setLabHelpPage("lab.controls")}
+            >
+              Управление
+            </button>
+          </div>
+        ) : null}
         <div className="help-modal-body">
           {page.body.split("\n").map((line, i) =>
             line.trim() === "" ? <br key={i} /> : <p key={i}>{line}</p>,
