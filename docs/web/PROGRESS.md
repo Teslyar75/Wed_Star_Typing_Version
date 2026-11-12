@@ -9,7 +9,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| Лаборатория (LOD) | *(после merge master)* | `cursor/laboratory-compartment-dd72` | [#33](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/33) | pending | pending | visual/work/full; Ctrl+0; merge origin/master (PR#32); merge PR не делали |
+| Лаборатория (LOD) | `119eb90` | `cursor/laboratory-compartment-dd72` | [#33](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/33) | local OK · CI pending | pending | visual/work/full; Ctrl+0; +master `ff6f694` (guide); merge PR не делали |
 | Орион guide jokes/facts full port | `aafe84f` | `cursor/orion-guide-content-648e` | [#32](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/32) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `ff6f694`; desktop guide_idle 60+60; remember kind; ONLINE ambient |
 | master | `ff6f694` | `master` | — | — | — | + PR #32 guide content (`ff6f694`) |
 | OpenCode автопорт (10013) | `580e9b4` | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `33ec4cf`; автопорт + `ORION_SILENT_SAY=1` |
