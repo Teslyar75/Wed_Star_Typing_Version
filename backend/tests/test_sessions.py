@@ -6,6 +6,12 @@ client = TestClient(app)
 
 
 def test_save_and_list_session() -> None:
+    import uuid
+
+    cs = f"Se{uuid.uuid4().hex[:6]}"
+    reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "9999"})
+    assert reg.status_code == 200
+    client.cookies.set("st_token", reg.cookies["st_token"])
     r = client.post(
         "/api/sessions",
         json={"chars": 40, "typed": 42, "errors": 2, "elapsed": 12.5, "cpm": 192, "acc": 95.2},
@@ -14,10 +20,13 @@ def test_save_and_list_session() -> None:
     body = r.json()
     assert body["chars"] == 40
     assert body["id"] > 0
-    assert body["pilot_id"] is None
+    assert body["pilot_id"] == reg.json()["id"]
 
     listed = client.get("/api/sessions").json()
     assert any(s["id"] == body["id"] for s in listed)
+
+    anon = TestClient(app)
+    assert anon.post("/api/sessions", json={"chars": 1, "typed": 1, "cpm": 1, "acc": 100}).status_code == 401
 
 
 def test_pilots_cannot_see_each_other_sessions() -> None:

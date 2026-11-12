@@ -82,6 +82,7 @@ def _ensure_columns() -> None:
         ("pilots", "is_guest", "BOOLEAN DEFAULT FALSE" if not _engine_url().startswith("sqlite") else "BOOLEAN DEFAULT 0"),
         ("texts", "prepared", "TEXT DEFAULT ''"),
         ("texts", "prep_opts", "VARCHAR(256) DEFAULT ''"),
+        ("texts", "is_public", "BOOLEAN DEFAULT FALSE" if not _engine_url().startswith("sqlite") else "BOOLEAN DEFAULT 0"),
         ("vocab_words", "slug", "VARCHAR(80) DEFAULT ''"),
         ("vocab_words", "rank", "INTEGER DEFAULT 0"),
         ("vocab_words", "meta", "TEXT DEFAULT ''"),
@@ -107,6 +108,18 @@ def _ensure_columns() -> None:
                 names = {r[1] for r in rows}
                 if col not in names:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}"))
+            # Публичные книги каталога (аддитивно).
+            try:
+                conn.execute(
+                    text(
+                        "UPDATE texts SET is_public = 1 "
+                        "WHERE IFNULL(is_public, 0) = 0 AND ("
+                        "source LIKE 'gutenberg%' OR source LIKE 'bilingu%' "
+                        "OR source LIKE 'bilingual%')"
+                    )
+                )
+            except Exception:  # noqa: BLE001 — таблица texts ещё может отсутствовать
+                pass
             return
 
         # Postgres
@@ -120,3 +133,11 @@ def _ensure_columns() -> None:
             ).fetchone()
             if not exists:
                 conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{col}" {typedef}'))
+
+        conn.execute(
+            text(
+                "UPDATE texts SET is_public = TRUE "
+                "WHERE is_public IS NOT TRUE AND ("
+                "source LIKE 'gutenberg%' OR source LIKE 'bilingu%' OR source LIKE 'bilingual%')"
+            )
+        )

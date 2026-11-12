@@ -16,10 +16,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import DateTime, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from app.auth_deps import get_optional_pilot
+from app.auth_deps import get_current_pilot, get_optional_pilot
 from app.db import Base, get_db
 from app.pilots import Pilot, make_token
 from app.stpilot import MAX_FILES, MAX_TOTAL, ImportError_, Package, export_stpilot, files_from_zip, split_packages
+from app.upload_limits import read_upload_limited
 
 router = APIRouter(prefix="/api/import", tags=["import"])
 
@@ -60,10 +61,16 @@ async def preview(
     total = 0
     try:
         for i, f in enumerate(files):
-            raw = await f.read()
-            total += len(raw)
-            if total > MAX_TOTAL:
+            remain = MAX_TOTAL - total
+            if remain <= 0:
                 raise ImportError_("too_large")
+            try:
+                raw = await read_upload_limited(f, max_bytes=remain, label="import")
+            except HTTPException as exc:
+                if exc.status_code == 413:
+                    raise ImportError_("too_large") from exc
+                raise
+            total += len(raw)
             name = (paths[i] if i < len(paths) and paths[i] else f.filename) or f"file{i}"
             low = name.lower()
             if len(files) == 1 and (low.endswith(".zip") or low.endswith(".stpilot")):
@@ -165,9 +172,7 @@ def commit(
 
 
 @router.get("/export")
-def export(db: Session = Depends(get_db), me: Pilot | None = Depends(get_optional_pilot)) -> Response:
-    if me is None:
-        raise HTTPException(401, "login required")
+def export(db: Session = Depends(get_db), me: Pilot = Depends(get_current_pilot)) -> Response:
     data = export_stpilot(db, me)
     safe = "".join(ch for ch in me.callsign if ch.isascii() and (ch.isalnum() or ch in "-_")) or "pilot"
     return Response(data, media_type="application/zip",

@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     web_update_url: str = "http://host.docker.internal:8766"
     web_update_token: str = ""
     web_update_timeout: float = 30.0
+    # Лимиты загрузок (байты / символы). Env: UPLOAD_MAX_BOOK_BYTES и т.д.
+    upload_max_book_bytes: int = 20 * 1024 * 1024
+    upload_max_image_bytes: int = 400_000
+    upload_max_doc_bytes: int = 8 * 1024 * 1024
+    upload_max_text_chars: int = 2_000_000
+    upload_max_epub_uncompressed: int = 80 * 1024 * 1024
 
     def repo_root(self) -> Path:
         """Корень с пакетом stamina (соседний клон My_Stamina) или этот репозиторий."""

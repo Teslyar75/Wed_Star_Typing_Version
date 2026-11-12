@@ -783,10 +783,12 @@ def from_book(
     """Карточки из сегментов книги: EN слово ← translation как подсказка."""
     import re
 
-    from app.models import Segment, TextDoc
+    from app.models import Segment
+    from app.text_access import require_read
 
-    if db.get(TextDoc, body.text_id) is None:
-        raise HTTPException(404, "text not found")
+    if pilot is None:
+        raise HTTPException(401, "login required")
+    require_read(db, pilot, body.text_id)
     segs = (
         db.query(Segment)
         .filter(Segment.text_id == body.text_id, Segment.idx <= body.up_to_sentence_id)
@@ -2057,24 +2059,16 @@ def book_hub(
     from app.api_library import PilotText, _stats
     from app.models import TextDoc
 
-    pid = pilot.id if pilot else None
+    if pilot is None:
+        raise HTTPException(401, "login required")
     out = []
-    if pid is None:
-        docs = db.query(TextDoc).order_by(TextDoc.id.desc()).limit(20).all()
-        for d in docs:
-            chars, words, n = _stats(db, d.id)
-            out.append(
-                {
-                    "text_id": d.id,
-                    "title": d.title or f"#{d.id}",
-                    "segments": n,
-                    "sentence_id": 0,
-                    "chars": chars,
-                    "words": words,
-                }
-            )
-        return out
-    rows = db.query(PilotText).filter_by(pilot_id=pid).order_by(PilotText.updated_at.desc()).limit(30).all()
+    rows = (
+        db.query(PilotText)
+        .filter_by(pilot_id=pilot.id)
+        .order_by(PilotText.updated_at.desc())
+        .limit(30)
+        .all()
+    )
     for row in rows:
         d = db.get(TextDoc, row.text_id)
         if d is None:

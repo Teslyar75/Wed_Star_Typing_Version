@@ -19,6 +19,11 @@ def test_bilinguis_list() -> None:
 
 
 def test_bilinguis_import_mocked() -> None:
+    import uuid
+
+    cs = f"Bi{uuid.uuid4().hex[:6]}"
+    reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    client.cookies.set("st_token", reg.cookies["st_token"])
     orig = "Hello world. " * 40 + "\n\nSecond paragraph here. " * 20
     trans = "Привет мир. " * 40 + "\n\nВторой абзац здесь. " * 20
     with patch("app.api_catalog.download_pair", return_value=(orig, trans)):

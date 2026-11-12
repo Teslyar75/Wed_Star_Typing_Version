@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import ipaddress
 import json
 import socket
 import time
@@ -255,19 +254,32 @@ class ProviderError(Exception):
 
 
 def _safe_url(url: str) -> str:
+    from app.ssrf import assert_safe_url
+
     u = urlparse(url or "")
     if u.scheme not in ("https", "http") or not u.hostname:
         raise ProviderError("bad_url")
-    if u.scheme == "http" and not settings.orion_byo_allow_http:
-        raise ProviderError("https_required")
-    if not settings.orion_byo_allow_private:
-        try:
-            for info in socket.getaddrinfo(u.hostname, None):
-                ip = ipaddress.ip_address(info[4][0])
-                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-                    raise ProviderError("private_host")
-        except socket.gaierror as e:
-            raise ProviderError("dns") from e
+    if settings.orion_byo_allow_private:
+        if u.scheme == "http" and not settings.orion_byo_allow_http:
+            raise ProviderError("https_required")
+        return url.rstrip("/")
+    try:
+        assert_safe_url(url, allow_http=settings.orion_byo_allow_http)
+    except ValueError as e:
+        code = str(e) or "private_host"
+        if code == "bad_scheme":
+            raise ProviderError("bad_url") from e
+        if code == "https_required":
+            raise ProviderError("https_required") from e
+        if code == "private_host":
+            # dns fail тоже даёт private_host через host_is_public False —
+            # отличим: если hostname не резолвится — dns
+            try:
+                socket.getaddrinfo(u.hostname, None)
+            except socket.gaierror as ge:
+                raise ProviderError("dns") from ge
+            raise ProviderError("private_host") from e
+        raise ProviderError(code) from e
     return url.rstrip("/")
 
 

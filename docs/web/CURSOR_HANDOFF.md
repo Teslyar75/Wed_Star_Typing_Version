@@ -113,9 +113,9 @@ cd ../frontend && npm test && npm run build && npx playwright test
 
 Смотри [PROGRESS.md](./PROGRESS.md).
 
-**Факт на master:** S0–S3 merged (PR17–20); PR21–23 merged (Орион, CEFR lazy, DOCUMENTS_PARITY matrix).  
+**Факт на master:** S0–S3 merged (PR17–20); PR21–25 merged (Орион, CEFR lazy, DOCUMENTS_PARITY, agents layout).  
 **S4** mostly done — остаток polish `task_progress`. **S5/S6/S7** не начаты.
 
-Текущая работа: закрытие пробелов зоны Документы по [DOCUMENTS_PARITY.md](./DOCUMENTS_PARITY.md) (ветка `cursor/docs-parity-gaps-84c6`).
+Текущая работа: security — изоляция `texts`/`pilot_texts`, лимиты upload, SSRF (ветка `cursor/security-text-access-e31f`).
 
 CEFR: не грузить весь архив на клиент — только страница (`page_size=24`) + `/cefr/counts`.

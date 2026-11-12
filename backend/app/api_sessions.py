@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth_deps import get_current_pilot, get_optional_pilot
+from app.auth_deps import get_current_pilot
 from app.db import get_db
 from app.missions_service import rank_for
 from app.pilots import Pilot
@@ -67,10 +67,10 @@ def _pilot_sessions(db: Session, pilot: Pilot | None) -> list[TypingSession]:
 def save_session(
     body: SessionIn,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> TypingSession:
     # pilot_id только из cookie — клиент не может подставить чужой id
-    pid = pilot.id if pilot else None
+    pid = pilot.id
     row = TypingSession(
         text_id=body.text_id,
         pilot_id=pid,
@@ -86,12 +86,11 @@ def save_session(
         best_streak=body.best_streak,
     )
     db.add(row)
-    if pilot is not None:
-        pilot.xp += _xp_for_session(body.chars, body.acc, body.cpm)
-        if body.key_stats:
-            from app.api_missions import _merge_key_stats
+    pilot.xp += _xp_for_session(body.chars, body.acc, body.cpm)
+    if body.key_stats:
+        from app.api_missions import _merge_key_stats
 
-            _merge_key_stats(db, pilot.id, body.key_stats)
+        _merge_key_stats(db, pilot.id, body.key_stats)
     db.commit()
     db.refresh(row)
     return row
@@ -101,20 +100,16 @@ def save_session(
 def list_sessions(
     limit: int = 30,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> list[TypingSession]:
-    q = db.query(TypingSession)
-    if pilot is None:
-        q = q.filter(TypingSession.pilot_id.is_(None))
-    else:
-        q = q.filter(TypingSession.pilot_id == pilot.id)
+    q = db.query(TypingSession).filter(TypingSession.pilot_id == pilot.id)
     return q.order_by(TypingSession.id.desc()).limit(max(1, min(limit, 100))).all()
 
 
 @router.get("/summary")
 def flight_summary(
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     """Сводка бортжурнала: карточки + последние 30 полётов для графика."""
     rows = _pilot_sessions(db, pilot)
@@ -125,17 +120,14 @@ def flight_summary(
     avg_cpm = sum(r.cpm for r in last10) / len(last10) if last10 else 0.0
     total_time = sum(r.elapsed or 0.0 for r in runs)
     total_chars = sum(r.chars or 0 for r in runs)
-    xp = int(pilot.xp) if pilot else 0
+    xp = int(pilot.xp)
     rank, _lo, hi = rank_for(xp)
 
-    missions_done = 0
-    mission_stars = 0
-    if pilot is not None:
-        from app.api_missions import DrillProgress
+    from app.api_missions import DrillProgress
 
-        prog = db.query(DrillProgress).filter_by(pilot_id=pilot.id).all()
-        missions_done = sum(1 for p in prog if p.best_stars > 0)
-        mission_stars = sum(p.best_stars for p in prog)
+    prog = db.query(DrillProgress).filter_by(pilot_id=pilot.id).all()
+    missions_done = sum(1 for p in prog if p.best_stars > 0)
+    mission_stars = sum(p.best_stars for p in prog)
 
     chart = [
         {"cpm": round(r.cpm, 1), "acc": round(r.acc, 1), "chars": r.chars, "elapsed": r.elapsed}
