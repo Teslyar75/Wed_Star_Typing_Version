@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import base64
+import hmac
 import io
 import re
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth_deps import COOKIE, get_current_pilot, get_optional_pilot
+from app.config import settings
 from app.db import get_db
 from app.pilots import Pilot, hash_pin, is_desktop_hash, make_token, rank_for, verify_pin
 from app.sessions import TypingSession
@@ -296,20 +298,31 @@ def me(pilot: Pilot | None = Depends(get_optional_pilot)) -> Pilot | None:
     return pilot
 
 
+def admin_ok(token: str | None) -> bool:
+    """Тот же контракт, что require_admin в app/api_orion.py (settings.orion_admin_token)."""
+    expected = settings.orion_admin_token
+    return bool(expected and token and hmac.compare_digest(expected.encode(), token.encode()))
+
+
 @router.delete("/{pilot_id}")
 def delete_pilot(
     pilot_id: int,
+    response: Response,
     db: Session = Depends(get_db),
     me: Pilot | None = Depends(get_optional_pilot),
+    x_orion_admin: str | None = Header(default=None),
 ) -> dict[str, bool]:
-    """Списать пилота. Гостя можно удалить всегда; остальных — если это текущая сессия или без PIN."""
+    """Списать пилота: только он сам (me.id == p.id) или админ (X-Orion-Admin)."""
     p = db.query(Pilot).filter(Pilot.id == pilot_id).first()
     if p is None:
         raise HTTPException(404, "pilot not found")
-    if not p.is_guest and p.pin_hash and (me is None or me.id != p.id):
-        raise HTTPException(403, "login as this pilot to dismiss")
+    is_self = me is not None and me.id == p.id
+    if not is_self and not admin_ok(x_orion_admin):
+        raise HTTPException(403, "login as this pilot or use admin token")
     db.delete(p)
     db.commit()
+    if is_self:
+        response.delete_cookie(COOKIE)
     return {"ok": True}
 
 

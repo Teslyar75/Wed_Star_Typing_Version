@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.auth_deps import get_current_pilot
 from app.config import settings
+from app.pilots import Pilot
 
 router = APIRouter(prefix="/api/updates", tags=["updates"])
 
@@ -33,7 +35,7 @@ def update_status() -> dict:
 
 
 @router.post("/apply")
-def update_apply() -> dict:
+def update_apply(_pilot: Pilot = Depends(get_current_pilot)) -> dict:
     try:
         with httpx.Client(timeout=max(settings.web_update_timeout, 600.0)) as client:
             r = client.post(f"{_base()}/apply", headers=_headers(), json={})
