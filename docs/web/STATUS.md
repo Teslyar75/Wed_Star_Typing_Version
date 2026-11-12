@@ -29,7 +29,7 @@
 | **G1** | Tetris + Breakout + `lounge_scores` + touch |
 | **H1** | Help drawer, welcome-тур, Ctrl+K, space profiles frost/light/full |
 | **S7 skins** | Per-skin FX + hard-reset при смене; эталон Звездолёт; image-сцены отложены |
-| **O1** | Орион: Чат/Агенты/Архив, OpenCode-мост :8765, голос, метки ПКМ |
+| **O1** | Орион: Чат/Агенты/Архив, OpenCode-мост (автопорт), голос, метки ПКМ |
 | **J1** | Журнал Обзор+Monkeytype, дзен Ctrl+M, EN-склад CEFR/глаголы |
 | **W-fast** | Lazy-вкладки, auto frost на слабых CPU, ContinueHub + 7d-сводка на мостике |
 

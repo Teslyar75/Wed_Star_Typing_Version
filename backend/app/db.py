@@ -99,6 +99,7 @@ def _ensure_columns() -> None:
         ("card_progress", "wh_avg", "DOUBLE PRECISION DEFAULT 0" if not _engine_url().startswith("sqlite") else "FLOAT DEFAULT 0"),
         ("card_progress", "wh_q", "TEXT DEFAULT ''"),
         ("pilot_docs", "deleted_at", "TIMESTAMP"),
+        ("comm_messages", "images_json", "TEXT DEFAULT '[]'"),
     ]
     url = _engine_url()
     with engine.begin() as conn:

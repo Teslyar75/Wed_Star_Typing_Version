@@ -11,7 +11,8 @@ import socket
 import time
 from collections import defaultdict, deque
 from datetime import datetime
-from urllib.parse import urlparse
+from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -377,9 +378,36 @@ class ProposalIn(BaseModel):
 
 
 
+def read_opencode_runtime_port(path: str | Path | None = None) -> int | None:
+    """Порт из runtime-файла моста; None если файла нет или он битый."""
+    raw = path if path is not None else settings.orion_opencode_runtime
+    if not raw:
+        return None
+    try:
+        data = json.loads(Path(raw).read_text(encoding="utf-8"))
+        port = int(data.get("port") or 0)
+        return port if 1 <= port <= 65535 else None
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def opencode_base_url() -> str:
+    """URL моста: runtime-порт подменяет порт в ORION_OPENCODE_URL (хост тот же)."""
+    fallback = (settings.orion_opencode_url or "http://host.docker.internal:8765").rstrip("/")
+    port = read_opencode_runtime_port()
+    if port is None:
+        return fallback
+    parsed = urlparse(fallback)
+    host = parsed.hostname or "host.docker.internal"
+    scheme = parsed.scheme or "http"
+    # IPv6 в netloc нужен в скобках
+    netloc = f"[{host}]:{port}" if ":" in host and not host.startswith("[") else f"{host}:{port}"
+    return urlunparse((scheme, netloc, "", "", "", "")).rstrip("/")
+
+
 def call_opencode(prompt: str, model: str, profile: str) -> str:
     """Спросить OpenCode CLI на хосте через tools/opencode_bridge.py."""
-    base = (settings.orion_opencode_url or "http://host.docker.internal:8765").rstrip("/")
+    base = opencode_base_url()
     headers = {}
     if settings.orion_opencode_token:
         headers["X-Orion-OpenCode"] = settings.orion_opencode_token
@@ -404,16 +432,31 @@ def call_opencode(prompt: str, model: str, profile: str) -> str:
 
 
 def opencode_status() -> dict:
-    base = (settings.orion_opencode_url or "http://host.docker.internal:8765").rstrip("/")
+    base = opencode_base_url()
+    port = read_opencode_runtime_port()
     try:
         with httpx.Client(timeout=2.0) as client:
             r = client.get(f"{base}/health")
         data = r.json() if r.status_code == 200 else {}
         cli = str(data.get("cli") or "")
-        return {"available": bool(cli), "cli": cli, "model": data.get("model") or settings.orion_opencode_model,
-                "reason": "" if cli else "no_cli"}
+        actual_port = int(data.get("port") or port or 0) or None
+        return {
+            "available": bool(cli),
+            "cli": cli,
+            "model": data.get("model") or settings.orion_opencode_model,
+            "reason": "" if cli else "no_cli",
+            "url": base,
+            "port": actual_port,
+        }
     except (httpx.HTTPError, ValueError):
-        return {"available": False, "cli": "", "model": settings.orion_opencode_model, "reason": "bridge_down"}
+        return {
+            "available": False,
+            "cli": "",
+            "model": settings.orion_opencode_model,
+            "reason": "bridge_down",
+            "url": base,
+            "port": port,
+        }
 
 
 # ---------- эндпоинты ----------

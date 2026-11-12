@@ -53,8 +53,29 @@ exit /b 1
 
 :docker_ok
 echo [1/5] Docker ready.
-echo       OpenCode bridge on :8765
+if not exist "%~dp0.runtime" mkdir "%~dp0.runtime"
+echo       OpenCode bridge (auto port)...
 start "Orion OpenCode" /min py -3 "%~dp0tools\opencode_bridge.py"
+set "OPENCODE_PORT="
+set /a _oc=0
+:wait_opencode_port
+ping -n 2 127.0.0.1 >nul
+if exist "%~dp0.runtime\opencode_bridge.json" (
+  for /f "usebackq tokens=2 delims=:," %%P in (`findstr /C:"\"port\"" "%~dp0.runtime\opencode_bridge.json"`) do (
+    set "OPENCODE_PORT=%%P"
+  )
+)
+if not "!OPENCODE_PORT!"=="" goto opencode_port_ok
+set /a _oc+=1
+if !_oc! GEQ 15 goto opencode_port_miss
+goto wait_opencode_port
+:opencode_port_ok
+set "OPENCODE_PORT=!OPENCODE_PORT: =!"
+echo       OpenCode bridge on :!OPENCODE_PORT!
+goto after_opencode
+:opencode_port_miss
+echo       OpenCode bridge started (port file not ready yet)
+:after_opencode
 echo       Updater on :8766
 start "Star Typing updater" /min py -3 "%~dp0tools\web_updater.py"
 set "GIT_UPDATED=0"

@@ -1,10 +1,17 @@
 # История изменений Star Typing Web
 
+## Unreleased
+
+### Исправлено
+- **Безопасность:** изоляция texts (auth + pilot_texts / is_public), лимиты upload (413), SSRF для исходящих HTTP включая BYO Orion (`app/ssrf.py`).
+- **Мост OpenCode:** автовыбор порта при WinError 10013/10048 (Hyper-V excluded ranges) и занятом порте; runtime-файл `.runtime/opencode_bridge.json` монтируется в backend — `/api/orion/config` видит `available=true` на нестандартном порту. `ORION_OPENCODE_PORT` остаётся предпочтительным. Второй экземпляр моста не стартует, если живой уже есть.
+- **Мост OpenCode:** CLI запускается с `ORION_SILENT_SAY=1`, чтобы не дублировать озвучку (локальный `say.py` / голос веба).
+
 ## 0.3.0 — 08.11.2026 — Орион как на десктопе, журнал, дзен, OpenCode
 
 ### Добавлено
 - **Орион:** три вкладки Чат / Агенты / Архив; дефолтный агент с моделью opencode/deepseek-v4.1-flash-free.
-- **Мост OpenCode** на хосте :8765 (tools/opencode_bridge.py) — тот же CLI, что у десктопа, из Docker через host.docker.internal.
+- **Мост OpenCode** на хосте (по умолчанию :8765, tools/opencode_bridge.py) — тот же CLI, что у десктопа, из Docker через host.docker.internal.
 - **Голос:** тумблер ГОЛОС/СТОП, Web Speech + TTS; старт распознавания в жесте click.
 - **Метки:** правый клик копирует место (zone/subtab/x,y) в буфер и в контекст чата Ориона.
 - **Бортжурнал:** вкладки Обзор + Monkeytype; Ctrl+M полностью подменяет UI дзен-порталом.

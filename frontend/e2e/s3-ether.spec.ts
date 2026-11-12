@@ -20,6 +20,8 @@ test("S3 два тестовых пилота: отправка, получен�
   await enrollPilot(page, a);
   await page.locator('.nav-tab[data-zone="comm"]').click();
   await expect(page.getByTestId("comm-input")).toBeVisible();
+  await expect(page.getByTestId("comm-send")).toHaveClass(/hud-btn/);
+  await expect(page.getByTestId("comm-link")).toContainText(/на связи|linked|зв/i);
   const ping = `ping-${Date.now().toString(36).slice(-6)}`;
   const pong = `pong-${Date.now().toString(36).slice(-6)}`;
   await page.getByTestId("comm-input").fill(ping);
@@ -41,6 +43,10 @@ test("S3 два тестовых пилота: отправка, получен�
   await expect(page.getByTestId("comm-msg").filter({ hasText: pong })).toBeVisible({ timeout: 10_000 });
   const reply = page.getByTestId("comm-msg").filter({ hasText: pong });
   await expect(reply).toHaveAttribute("data-mine", "0");
+  await page.getByTestId("comm-search").fill(pong);
+  await expect(page.getByTestId("comm-msg").filter({ hasText: pong })).toBeVisible();
+  await expect(page.getByTestId("comm-attach")).toBeVisible();
+  await expect(page.getByTestId("comm-export")).toBeVisible();
   await ctx.close();
 });
 
