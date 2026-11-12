@@ -13,8 +13,10 @@ import {
   type CrewAgent,
 } from "./orionApi";
 import AgentsPage from "./AgentsPage";
+import OrionLinkIndicator from "./OrionLinkIndicator";
 import { ot } from "./orionI18n";
 import { contextBlock, markSent } from "./marks";
+import { useOrionLink } from "./useOrionLink";
 import "./orion.css";
 
 type Tab = "chat" | "agents" | "archive";
@@ -120,6 +122,8 @@ function ChatScreen({ cfg, quotes, onQuotesUsed, draft, setDraft, boardOn, setBo
   const [autoOn, setAutoOn] = useState(true);
   const [pendingTask, setPendingTask] = useState("");
   const [listening, setListening] = useState("");
+  const [chatFail, setChatFail] = useState("");
+  const [chatOkTick, setChatOkTick] = useState(0);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const recRef = useRef<{ start: () => void; stop: () => void } | null>(null);
   const autoRef = useRef<number>(0);
@@ -150,6 +154,14 @@ function ChatScreen({ cfg, quotes, onQuotesUsed, draft, setDraft, boardOn, setBo
     orionApi.messages(0, 50).then((r) => { setMsgs(r.items); onMsgs(r.total); }).catch(() => {});
   }, [cfg.logged_in, onMsgs]);
   useEffect(() => { boardEnd.current?.scrollIntoView({ block: "end" }); }, [msgs, boardOn]);
+
+  const link = useOrionLink({
+    cfg,
+    agent: crew,
+    busy,
+    chatFailReason: chatFail,
+    chatOkTick,
+  });
 
   const lastUser = [...msgs].reverse().find((m) => m.role === "user");
   const lastOrion = [...msgs].reverse().find((m) => m.role === "orion");
@@ -198,12 +210,20 @@ function ChatScreen({ cfg, quotes, onQuotesUsed, draft, setDraft, boardOn, setBo
       const r = await orionApi.chat(text, sent, byo, crew?.agent_id || "", { quotes: usedQuotes, context: ctx });
       markSent();
       setMsgs((m) => [...m, { id: -Date.now() - 1, role: "orion", text: r.reply, mode: r.mode_used }]);
-      if (r.fallback) setNote(ot("fallback", r.reason || "error"));
-      else setNote("");
+      if (r.fallback) {
+        setNote(ot("fallback", r.reason || "error"));
+        setChatFail(r.reason || "provider_error");
+      } else {
+        setNote("");
+        setChatFail("");
+        setChatOkTick((n) => n + 1);
+      }
       if (ttsOn && (crew?.voice || "ship") !== "off") speak(r.reply);
       onMsgs(msgs.length + 2);
     } catch (e) {
-      { const msg = (e as Error).message; setNote(msg === "opencode_timeout" || msg === "http_502" ? ot("err_502") : ot("error", msg)); }
+      const msg = (e as Error).message;
+      setChatFail(msg === "opencode_timeout" || msg === "http_502" ? "opencode_timeout" : msg);
+      setNote(msg === "opencode_timeout" || msg === "http_502" ? ot("err_502") : ot("error", msg));
     } finally {
       setBusy(false);
     }
@@ -317,6 +337,7 @@ function ChatScreen({ cfg, quotes, onQuotesUsed, draft, setDraft, boardOn, setBo
     <div className="orion-screen orion-chat" data-testid="orion-chat">
       <div className="orion-who-bar">
         <span className="orion-who">{ot("who", whoName, accLab(crew?.access || "crew"), voiceLab(crew?.voice || "ship"))}</span>
+        <OrionLinkIndicator view={link.view} onRecheck={link.recheck} testId="orion-link-chat" />
         <button type="button" className="hud-btn" onClick={() => setPro((v) => !v)}>{pro ? ot("mode_pro") : ot("mode_chat")}</button>
         <button type="button" className="hud-btn" onClick={() => setNote(ot("book_none"))}>{ot("read_book")}</button>
         <button type="button" className="hud-btn amber" onClick={() => void clearChat()}>{ot("clear")}</button>
@@ -500,6 +521,15 @@ export default function OrionPanel() {
     }));
   }, []);
   useEffect(reload, [reload]);
+  useEffect(() => {
+    const tick = () => { if (!document.hidden) reload(); };
+    const id = window.setInterval(tick, 20_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [reload]);
 
   useEffect(() => {
     setZoneScreens("orion", TABS.map((s) => ({ slug: s, label: ot("tab_" + s) })));

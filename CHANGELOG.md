@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Добавлено
+- **Орион — индикатор связи:** зелёный / жёлтый / красный / серый в шапке чата и на вкладке Агенты; опрос `/api/orion/config` и `/api/orion/health` (~20 с, только при видимой вкладке); клик по красному — повторная проверка и подсказка (мост, ключ, таймаут).
+
 ### Исправлено
 - **Безопасность:** изоляция texts (auth + pilot_texts / is_public), лимиты upload (413), SSRF для исходящих HTTP включая BYO Orion (`app/ssrf.py`).
 - **Мост OpenCode:** автовыбор порта при WinError 10013/10048 (Hyper-V excluded ranges) и занятом порте; runtime-файл `.runtime/opencode_bridge.json` монтируется в backend — `/api/orion/config` видит `available=true` на нестандартном порту. `ORION_OPENCODE_PORT` остаётся предпочтительным. Второй экземпляр моста не стартует, если живой уже есть.

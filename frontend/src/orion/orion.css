@@ -47,8 +47,56 @@
   font-weight: 700;
   font-size: 0.82rem;
   letter-spacing: 0.03em;
-  margin-right: auto;
 }
+.orion-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  max-width: 14rem;
+  white-space: nowrap;
+}
+.orion-link.compact {
+  margin-right: 0;
+  padding: 2px 6px;
+  min-width: 0;
+}
+.orion-link-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
+  background: #8a9098;
+}
+.orion-link[data-tone="ok"] .orion-link-dot { background: var(--st-ok, #6fbf73); }
+.orion-link[data-tone="busy"] .orion-link-dot {
+  background: #e6c45c;
+  animation: orion-link-pulse 1.1s ease-in-out infinite;
+}
+.orion-link[data-tone="down"] .orion-link-dot { background: #d96a5f; }
+.orion-link[data-tone="off"] .orion-link-dot { background: #8a9098; }
+.orion-link-lab {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+.orion-link[data-tone="ok"] { color: var(--st-ok, #6fbf73); }
+.orion-link[data-tone="busy"] { color: #e6c45c; }
+.orion-link[data-tone="down"] { color: #d96a5f; }
+.orion-link[data-tone="off"] { color: #9aa0a6; }
+@keyframes orion-link-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.orion-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+.orion-card-head .orion-link { margin-right: 0; margin-left: auto; }
 .orion-live, .orion-board {
   flex: 1 1 auto;
   min-height: 0;

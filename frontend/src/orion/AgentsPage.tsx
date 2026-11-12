@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadAgentKey, maskKey, orionApi, saveAgentKey, type CrewAgent, type OrionConfig } from "./orionApi";
+import OrionLinkIndicator from "./OrionLinkIndicator";
+import { listLinkTone, reasonLabelKey, reasonTipKey, type LinkView } from "./orionLink";
 import { ot } from "./orionI18n";
+import { useOrionLink } from "./useOrionLink";
 
 const KINDS = ["openai_compat", "opencode", "github_bridge"] as const;
 const PRESETS: Record<string, { base_url: string; model: string; provider: "openai" | "anthropic" }> = {
@@ -151,6 +154,19 @@ export default function AgentsPage({ cfg, replicaCount = 0, onChange }: Props) {
 
   const evo = evoOf(replicaCount);
   const hasKey = rec ? loadAgentKey(cfg.pilot, rec.agent_id) || bind.oc : bind.oc;
+  const link = useOrionLink({ cfg, agent: isNew ? null : rec });
+
+  const listView = (a: CrewAgent): LinkView => {
+    if (a.agent_id === rec?.agent_id && !isNew) return link.view;
+    const tone = listLinkTone(a, cfg, !!loadAgentKey(cfg.pilot, a.agent_id));
+    const reason = tone === "ok" ? "" : tone === "off" ? "agent_off" : a.kind === "opencode" ? (cfg.opencode?.reason || "bridge_down") : "no_key";
+    return {
+      tone,
+      reason,
+      labelKey: tone === "ok" ? "link_ok" : reasonLabelKey(reason),
+      tipKey: tone === "ok" ? "link_ok" : reasonTipKey(reason),
+    };
+  };
 
   return (
     <div className="orion-screen" data-testid="orion-agents">
@@ -166,6 +182,12 @@ export default function AgentsPage({ cfg, replicaCount = 0, onChange }: Props) {
               onClick={() => pick(a.agent_id)}
             >
               <span className="orion-pass-row">
+                <OrionLinkIndicator
+                  view={listView(a)}
+                  compact
+                  onRecheck={a.agent_id === rec?.agent_id ? link.recheck : undefined}
+                  testId={"orion-link-pass-" + a.agent_id}
+                />
                 <b>{a.name}</b>
                 {a.agent_id === active ? <span className="orion-tag">{ot("crew_active")}</span> : null}
                 {a.agent_id !== "orion" ? (
@@ -185,7 +207,10 @@ export default function AgentsPage({ cfg, replicaCount = 0, onChange }: Props) {
         <div className="orion-card-col">
           <div className="orion-detail-pair" data-testid="orion-agents-pair">
             <section className="inst-panel orion-card-panel">
-              <h3>{ot("card")}</h3>
+              <h3 className="orion-card-head">
+                <span>{ot("card")}</span>
+                <OrionLinkIndicator view={link.view} onRecheck={link.recheck} testId="orion-link-card" />
+              </h3>
               <label className="orion-field">
                 {ot("fld_name")}
                 <input value={draft.name || ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
@@ -279,7 +304,7 @@ export default function AgentsPage({ cfg, replicaCount = 0, onChange }: Props) {
               <div className={"orion-note" + (cfg.opencode?.available ? "" : "")} data-testid="orion-opencode">
                 {cfg.opencode?.available
                   ? `OpenCode: ${cfg.opencode.model || "opencode/deepseek-v4.1-flash-free"}`
-                  : "OpenCode на хосте не найден — запустите start-star-typing-web.bat (мост :8765)."}
+                  : ot("link_tip_bridge")}
               </div>
               {note ? <div className="orion-note">{note}</div> : null}
             </section>

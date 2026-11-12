@@ -9,9 +9,10 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| master | `5bf47f0` | `master` | — | — | — | S0–S3 + PR21–27, #29 влиты (`33ec4cf` + `5bf47f0`) |
+| master | `72721c8` | `master` | — | — | — | + PR #28 индикатор Ориона (`72721c8`) |
 | OpenCode автопорт (10013) | `580e9b4` | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `33ec4cf`; автопорт + `ORION_SILENT_SAY=1` |
-| Security: texts ACL + upload limits + SSRF | *(merge master)* | `cursor/security-text-access-e31f` | [#30](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/30) | pending | pending | auth+pilot_texts/is_public; 413; SSRF (`app/ssrf.py`); после merge master (PR27+29) |
+| Орион индикатор связи | `ce190b1` | `cursor/orion-link-indicator-dc67` | [#28](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/28) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `72721c8`; health + индикатор |
+| Security: texts ACL + upload limits + SSRF | *(merge master)* | `cursor/security-text-access-e31f` | [#30](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/30) | pending | pending | auth+pilot_texts/is_public; 413; SSRF; после merge master (PR27–29) |
 | Орион Agents layout (no-scroll) | `202de6b` | `cursor/orion-agents-layout-15ea` | [#25](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/25) | **5/5 SUCCESS** | **SUCCESS** | **merged** Сергеем в `cc7afac` |
 | S0 | — | — | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | merged | — | e2e CI |
 | S1 | — | — | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | merged | — | зоны / EN lifecycle |
@@ -42,6 +43,8 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | 11.11 CI | PR #25 HEAD `dd9ddcc`/`202de6b`: **GitHub 5/5 SUCCESS**; merge Сергеем → master `cc7afac`. |
 | 11.11 | Security backend: тексты только через cookie-пилот + `pilot_texts`; Gutenberg `is_public` (read-only без полки); upload limits + epub zip-bomb; SSRF (ICY/Gutenberg/BYO). |
 | 11.11 CI | PR #30 HEAD `9f35b3e`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
+
+| 11.11 CI | PR #28 HEAD `5581f87`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
 
 ## Локальные прогоны vs CI
 

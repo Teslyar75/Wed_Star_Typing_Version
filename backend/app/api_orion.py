@@ -941,3 +941,155 @@ def delete_agent(agent_id: str, db: Session = Depends(get_db),
         pref.active_agent = nxt.agent_id if nxt else ""
     db.commit()
     return {"ok": True}
+
+
+# ---------- health агента (лёгкая проверка без генерации) ----------
+_HEALTH_CACHE: dict[str, tuple[float, dict]] = {}
+_HEALTH_TTL = 20.0
+
+
+def _health_cache_get(key: str) -> dict | None:
+    row = _HEALTH_CACHE.get(key)
+    if not row:
+        return None
+    ts, data = row
+    if time.monotonic() - ts > _HEALTH_TTL:
+        _HEALTH_CACHE.pop(key, None)
+        return None
+    return dict(data)
+
+
+def _health_cache_put(key: str, data: dict) -> dict:
+    out = dict(data)
+    _HEALTH_CACHE[key] = (time.monotonic(), out)
+    return out
+
+
+def probe_openai_compat(base_url: str, key: str, provider: str, check_url: bool = True) -> dict:
+    """Дешёвый GET /models (или anthropic /v1/models) — без генерации."""
+    if not (key or "").strip():
+        return {"available": False, "reason": "no_key"}
+    if not (base_url or "").strip():
+        return {"available": False, "reason": "no_url"}
+    try:
+        base = _safe_url(base_url) if check_url else base_url.rstrip("/")
+    except ProviderError as e:
+        return {"available": False, "reason": str(e) or "bad_url"}
+    try:
+        with httpx.Client(timeout=4.0) as c:
+            if provider == "anthropic":
+                r = c.get(
+                    f"{base}/v1/models",
+                    headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+                )
+            else:
+                r = c.get(f"{base}/models", headers={"Authorization": f"Bearer {key}"})
+        if r.status_code in (401, 403):
+            return {"available": False, "reason": "bad_key"}
+        if r.status_code >= 500:
+            return {"available": False, "reason": f"http_{r.status_code}"}
+        if r.status_code >= 400:
+            # некоторые провайдеры режут /models — считаем «ключ принят», если не auth
+            if r.status_code in (404, 405):
+                return {"available": True, "reason": ""}
+            return {"available": False, "reason": f"http_{r.status_code}"}
+        return {"available": True, "reason": ""}
+    except httpx.TimeoutException:
+        return {"available": False, "reason": "timeout"}
+    except httpx.HTTPError:
+        return {"available": False, "reason": "provider_error"}
+
+
+@router.get("/health")
+def agent_health(
+    agent_id: str = "",
+    refresh: bool = False,
+    db: Session = Depends(get_db),
+    pilot: Pilot | None = Depends(get_optional_pilot),
+    x_orion_key: str | None = Header(default=None),
+) -> dict:
+    """Статус связи с выбранным агентом. Для opencode — мост; для openai_compat — /models."""
+    if pilot is None:
+        return {
+            "available": False,
+            "reason": "login",
+            "state": "off",
+            "kind": "",
+            "agent_id": "",
+            "cached": False,
+        }
+    _ensure_default_agent(db, pilot)
+    pref = _pref(db, pilot)
+    aid = (agent_id or pref.active_agent or "orion").strip()
+    row = (
+        db.query(OrionAgent)
+        .filter(OrionAgent.pilot_id == pilot.id, OrionAgent.agent_id == aid)
+        .first()
+    )
+    if row is None:
+        return {
+            "available": False,
+            "reason": "no_agent",
+            "state": "off",
+            "kind": "",
+            "agent_id": aid,
+            "cached": False,
+        }
+    if not row.enabled:
+        return {
+            "available": False,
+            "reason": "agent_off",
+            "state": "off",
+            "kind": row.kind,
+            "agent_id": row.agent_id,
+            "cached": False,
+        }
+
+    key_fp = (x_orion_key or "")[:8]
+    cache_key = f"{pilot.id}:{row.agent_id}:{row.kind}:{key_fp}:{row.base_url}"
+    if not refresh:
+        hit = _health_cache_get(cache_key)
+        if hit is not None:
+            hit["cached"] = True
+            return hit
+
+    if row.kind == "opencode":
+        oc = opencode_status()
+        data = {
+            "available": bool(oc.get("available")),
+            "reason": "" if oc.get("available") else (oc.get("reason") or "bridge_down"),
+            "state": "ok" if oc.get("available") else "down",
+            "kind": row.kind,
+            "agent_id": row.agent_id,
+            "model": oc.get("model") or row.model,
+            "cached": False,
+        }
+        return _health_cache_put(cache_key, data)
+
+    if row.kind == "github_bridge":
+        data = {
+            "available": False,
+            "reason": "github_bridge_later",
+            "state": "down",
+            "kind": row.kind,
+            "agent_id": row.agent_id,
+            "cached": False,
+        }
+        return _health_cache_put(cache_key, data)
+
+    # openai_compat / byo
+    probe = probe_openai_compat(
+        row.base_url or "",
+        x_orion_key or "",
+        row.provider or "openai",
+        check_url=True,
+    )
+    data = {
+        "available": bool(probe.get("available")),
+        "reason": "" if probe.get("available") else (probe.get("reason") or "provider_error"),
+        "state": "ok" if probe.get("available") else "down",
+        "kind": row.kind,
+        "agent_id": row.agent_id,
+        "cached": False,
+    }
+    return _health_cache_put(cache_key, data)
