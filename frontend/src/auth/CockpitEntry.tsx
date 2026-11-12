@@ -439,6 +439,7 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
     setConfirmDel(null);
     if (res.ok) {
       say(te("dismiss_ok"), "ok");
+      if (meId !== null && selected.id === meId) setMeId(null);
       setSel(0);
       setPage(0);
       void refresh();
