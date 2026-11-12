@@ -1,0 +1,245 @@
+{
+  "lang": "de",
+  "items": [
+    {
+      "id": "joke_001",
+      "text": "Wie viele Programmierer braucht man, um eine Glühbirne zu wechseln? Keinen. Das ist ein Hardwareproblem."
+    },
+    {
+      "id": "joke_002",
+      "text": "Ein Programmierer stellt zwei Gläser auf den Nachttisch: eines mit Wasser, falls er nachts Durst hat, und ein leeres, falls nicht."
+    },
+    {
+      "id": "joke_003",
+      "text": "Ein Optimist sieht das Glas halb voll, ein Pessimist halb leer, und ein Programmierer sieht ein Glas, das doppelt so groß ist wie nötig."
+    },
+    {
+      "id": "joke_004",
+      "text": "Warum verwechseln Programmierer Halloween und Weihnachten? Weil OCT 31 gleich DEC 25 ist."
+    },
+    {
+      "id": "joke_005",
+      "text": "Es gibt 10 Arten von Menschen: die, die Binär verstehen, und die, die es nicht tun."
+    },
+    {
+      "id": "joke_006",
+      "text": "Die Frau sagt zum Programmierer: Kauf ein Brot, und wenn es Eier gibt, nimm ein Dutzend. Er kam mit zehn Broten zurück — es gab Eier."
+    },
+    {
+      "id": "joke_007",
+      "text": "Mein Code funktioniert nicht, und ich weiß nicht warum. Mein Code funktioniert, und ich weiß auch nicht warum."
+    },
+    {
+      "id": "joke_008",
+      "text": "Debugging ist wie ein Krimi, in dem man gleichzeitig Detektiv und Täter ist."
+    },
+    {
+      "id": "joke_009",
+      "text": "Bei mir auf dem Rechner läuft alles! Super — dann schicken wir dem Kunden Ihren Rechner."
+    },
+    {
+      "id": "joke_010",
+      "text": "Commit: finale Version. Commit: jetzt wirklich final. Commit: final, ehrlich, die letzte."
+    },
+    {
+      "id": "joke_011",
+      "text": "Das kürzeste Programmierer-Märchen: das ist eine kleine Änderung, dauert fünf Minuten."
+    },
+    {
+      "id": "joke_012",
+      "text": "Ein Programmierer ist ein Gerät, das Kaffee in Code verwandelt."
+    },
+    {
+      "id": "joke_013",
+      "text": "Eine Stunde vor dem Deadline schreibt ein Programmierer mehr Code als in der ganzen Vorwoche."
+    },
+    {
+      "id": "joke_014",
+      "text": "Als ich diesen Code schrieb, verstanden ihn zwei: ich und Gott. Jetzt versteht ihn nur Gott."
+    },
+    {
+      "id": "joke_015",
+      "text": "Es gibt nur zwei schwere Dinge in der Programmierung: Cache-Invalidierung, Benennung und Off-by-one-Fehler."
+    },
+    {
+      "id": "joke_016",
+      "text": "Ein Tester geht in eine Bar. Bestellt ein Bier. Null Bier. Eine Million Bier. Minus ein Bier. Eine Eidechse. Alles funktioniert. Der erste echte Gast fragt nach dem Ausgang — und die Bar stürzt ab."
+    },
+    {
+      "id": "joke_017",
+      "text": "Du hattest ein Problem und hast es mit einem regulären Ausdruck gelöst. Glückwunsch, jetzt hast du zwei Probleme."
+    },
+    {
+      "id": "joke_018",
+      "text": "Wenn es läuft — nicht anfassen. Erstes Gesetz der Technik, gebrochen von jedem Refactoring."
+    },
+    {
+      "id": "joke_019",
+      "text": "Ich ruhe nicht. Ein Build läuft."
+    },
+    {
+      "id": "joke_020",
+      "text": "Wie steht es um dein Privatleben? Wie bei Git: es gibt Branches, es ist kompliziert, und ein paar ungelöste Konflikte."
+    },
+    {
+      "id": "joke_021",
+      "text": "Ein Senior ist ein Junior, der schon gesehen hat, wie genau das kaputtgeht."
+    },
+    {
+      "id": "joke_022",
+      "text": "Um Rekursion zu verstehen, muss man zuerst Rekursion verstehen."
+    },
+    {
+      "id": "joke_023",
+      "text": "Deploy in Produktion am Freitagabend. Der kürzeste Horrorfilm."
+    },
+    {
+      "id": "joke_024",
+      "text": "Warum lieben Programmierer Dark Mode? Weil Licht Bugs anzieht."
+    },
+    {
+      "id": "joke_025",
+      "text": "Ein Bug ist eine undokumentierte Funktion. Eine Funktion ist ein dokumentierter Bug."
+    },
+    {
+      "id": "joke_026",
+      "text": "Was kostet es, einen Fehler zu beheben? Eine Codezeile und drei Tage Suche, welche."
+    },
+    {
+      "id": "joke_027",
+      "text": "Wir machen keine Fehler. Wir liefern Betaversionen."
+    },
+    {
+      "id": "joke_028",
+      "text": "Eine Variable namens temp überlebt im Projekt länger als alle dauerhaften."
+    },
+    {
+      "id": "joke_029",
+      "text": "Ein Programmierer schläft ein mit einem Gedanken: was, wenn es null ist?"
+    },
+    {
+      "id": "joke_030",
+      "text": "Warum schläfst du nicht? Ich warte, bis die Abhängigkeiten installiert sind. Morgens wache ich auf und schreibe fertig."
+    },
+    {
+      "id": "joke_031",
+      "text": "Der Teamlead fragt, wie lange die Aufgabe dauert. Der Programmierer verdoppelt die Schätzung, addiert eins und wechselt die Einheit. Zwei Stunden werden drei Tage."
+    },
+    {
+      "id": "joke_032",
+      "text": "Guter Code ist wie ein guter Witz: wenn man ihn erklären muss, ist er nicht so gut."
+    },
+    {
+      "id": "joke_033",
+      "text": "Ein Stacktrace über drei Bildschirme — und die Ursache ist ein fehlendes Komma."
+    },
+    {
+      "id": "joke_034",
+      "text": "Dokumentation ist ein Brief an dein zukünftiges Ich. Den niemand je schreibt."
+    },
+    {
+      "id": "joke_035",
+      "text": "Anruf beim Support: bei mir geht nichts. Schon aus- und eingeschaltet? Ja. Jetzt geht überhaupt nichts mehr."
+    },
+    {
+      "id": "joke_036",
+      "text": "Unit-Tests bestanden, Integrationstests nicht. Wie zwei Kommodenschubladen: jede allein geht auf, zusammen klemmen sie."
+    },
+    {
+      "id": "joke_037",
+      "text": "Fast fertig heißt: neunzig Prozent der Arbeit sind getan. Es bleiben noch neunzig."
+    },
+    {
+      "id": "joke_038",
+      "text": "Warum so viel Debug-Ausgabe in deinem Code? Das ist keine Ausgabe — das ist Sonar."
+    },
+    {
+      "id": "joke_039",
+      "text": "Blindschreiben heißt tippen, ohne auf die Tastatur zu schauen. Ein erfahrener Programmierer schaut auch nicht auf das, was er getippt hat."
+    },
+    {
+      "id": "joke_040",
+      "text": "Alarm an Bord: jemand hat den Browser-Tab mit der Forumslösung geschlossen."
+    },
+    {
+      "id": "joke_041",
+      "text": "Code-Review: zehn Zeilen — zehn Anmerkungen. Fünfhundert Zeilen — sieht gut aus."
+    },
+    {
+      "id": "joke_042",
+      "text": "Die schlimmste Commit-Nachricht: kleine Fixes. Zweitausend Zeilen."
+    },
+    {
+      "id": "joke_043",
+      "text": "Der Computer macht genau das, was man ihm gesagt hat. Genau das ist das Problem."
+    },
+    {
+      "id": "joke_044",
+      "text": "Ich checke nur kurz die Mail, sagte der Programmierer. Eine Stunde später kannte er die Geschichte der Tab-Taste."
+    },
+    {
+      "id": "joke_045",
+      "text": "Leerzeichen oder Tabs? Das Schiff wäre dreimal fast daran zerbrochen."
+    },
+    {
+      "id": "joke_046",
+      "text": "Ein Tippfehler im Wort Tippfehler — Klassiker jedes Tipptrainers."
+    },
+    {
+      "id": "joke_047",
+      "text": "Der Bordcomputer irrt nicht. Er wählt nur manchmal eine alternative Realität."
+    },
+    {
+      "id": "joke_048",
+      "text": "Warum fliegt das Schiff seitwärts? Das ist kein Bug, Kapitän. Das ist ein neuer Navigationsmodus."
+    },
+    {
+      "id": "joke_049",
+      "text": "Man sagt, irgendwo gibt es einen Programmierer, der die Docs liest, bevor alles kaputtgeht. Niemand hat ihn gesehen, aber alle glauben an ihn."
+    },
+    {
+      "id": "joke_050",
+      "text": "Der Code kompilierte beim ersten Versuch. Verdächtig. Prüfe, ob das richtige Projekt offen ist."
+    },
+    {
+      "id": "joke_051",
+      "text": "Fehler 404: Witz nicht gefunden. Ach nein — doch gefunden."
+    },
+    {
+      "id": "joke_052",
+      "text": "Wie nennt man eine Variable? Dreißig Minuten Nachdenken. Ergebnis: x."
+    },
+    {
+      "id": "joke_053",
+      "text": "Erkläre den Code einem Kollegen — und der Fehler findet sich von selbst. Deshalb steht bei vielen eine Quietscheente auf dem Schreibtisch."
+    },
+    {
+      "id": "joke_054",
+      "text": "Nachts kam dem Programmierer eine geniale Idee. Morgens las er seinen Code und merkte: das war keine Idee, das war Fieber."
+    },
+    {
+      "id": "joke_055",
+      "text": "Wo sehen Sie sich in fünf Jahren? Nach diesem Code: immer noch im selben Legacy."
+    },
+    {
+      "id": "joke_056",
+      "text": "Im Dampfzeitalter gab es auch einen Debugger: einen Menschen mit Schraubenschlüssel und sehr schlechter Laune."
+    },
+    {
+      "id": "joke_057",
+      "text": "In der Neonstadt leuchten sogar Fehler. Rot."
+    },
+    {
+      "id": "joke_058",
+      "text": "Ein Roboter fragt den anderen: warum so langsam? Der antwortet: ich laufe auf einem Interpreter."
+    },
+    {
+      "id": "joke_059",
+      "text": "Ein Programmierer am Strand sonnt sich nicht. Er wartet, bis die Sonne ihre Änderungen committed."
+    },
+    {
+      "id": "joke_060",
+      "text": "Was sagte ein Byte zum anderen? Alles okay? Nein, mir ist ein Bit rausgefallen."
+    }
+  ]
+}

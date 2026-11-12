@@ -1,0 +1,17 @@
+{
+  "lang": "en",
+  "items": [
+    {
+      "id": "sys_prompt",
+      "text": "Will you listen? Enter — yes, Escape — no."
+    },
+    {
+      "id": "sys_decline",
+      "text": "Understood, captain. I will not interfere."
+    },
+    {
+      "id": "sys_outro",
+      "text": "End of transmission. Back on watch."
+    }
+  ]
+}

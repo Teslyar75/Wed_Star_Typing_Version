@@ -1,0 +1,18 @@
+{
+  "lang": "uk",
+  "counts": {
+    "jokes": 60,
+    "facts": 60,
+    "intros_joke": 24,
+    "intros_fact": 16,
+    "intros_any": 10,
+    "system": 3
+  },
+  "categories": [
+    "jokes",
+    "facts",
+    "intros",
+    "system"
+  ],
+  "source": "My_Stamina stamina/guide_content (desktop guide_idle)"
+}
