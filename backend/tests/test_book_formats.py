@@ -57,11 +57,16 @@ def test_fb2():
 
 
 def test_extract_endpoint():
+    import uuid
+
     from app.db import init_db
     from app.main import app
 
     init_db()
     client = TestClient(app)
+    cs = f"Ex{uuid.uuid4().hex[:6]}"
+    reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    client.cookies.set("st_token", reg.cookies["st_token"])
     r = client.post("/api/texts/extract", files={"file": ("pg.txt", GUT.encode("utf-8"), "text/plain")})
     assert r.status_code == 200, r.text
     assert r.json()["text"].strip() == "Down the rabbit hole."

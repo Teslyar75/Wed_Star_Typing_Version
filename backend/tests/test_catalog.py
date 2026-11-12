@@ -85,6 +85,11 @@ def test_gutenberg_bilingual_list_seed_mocked() -> None:
 
 
 def test_catalog_import_mocked() -> None:
+    import uuid
+
+    cs = f"Cat{uuid.uuid4().hex[:6]}"
+    reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    client.cookies.set("st_token", reg.cookies["st_token"])
     meta = {
         "id": 11,
         "title": "Alice",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -16,12 +16,14 @@ class TextDoc(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(512), default="")
     lang: Mapped[str] = mapped_column(String(16), default="und")
-    source: Mapped[str] = mapped_column(String(64), default="upload")  # upload | pdf | bilingual
+    source: Mapped[str] = mapped_column(String(64), default="upload")  # upload | pdf | bilingual | gutenberg
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Версия для набора (lower/punct/spaces). Чтение (гипердрайв/книга) — только paragraphs.
     prepared: Mapped[str] = mapped_column(Text, default="")
     # JSON: {"lower":true,"punct":true,"spaces":true,...}
     prep_opts: Mapped[str] = mapped_column(String(256), default="")
+    # Каталог Gutenberg/bilinguis: чтение всем авторизованным; правки — только через pilot_texts.
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False)
 
     paragraphs: Mapped[list[Paragraph]] = relationship(
         back_populates="text", cascade="all, delete-orphan", order_by="Paragraph.idx"

@@ -12,10 +12,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth_deps import get_optional_pilot
+from app.auth_deps import get_current_pilot
 from app.bilinguis import BilinguisError, download_pair, list_bilingual_pairs
+from app.config import settings
 from app.db import get_db
 from app.pilots import Pilot
+from app.ssrf import assert_safe_url
+from app.text_access import link_pilot_text
 from app.texts_service import import_bilingual, import_text
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
@@ -88,10 +91,21 @@ class GutenbergBiImportIn(BaseModel):
 
 
 def _get_json(url: str) -> dict:
+    try:
+        assert_safe_url(url, allow_http=True)
+    except ValueError as exc:
+        raise HTTPException(400, f"unsafe url: {exc}") from exc
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:  # noqa: S310 — после SSRF-проверки
+            final = r.geturl() if hasattr(r, "geturl") else url
+            try:
+                assert_safe_url(final, allow_http=True)
+            except ValueError as exc:
+                raise HTTPException(400, f"unsafe redirect: {exc}") from exc
             return json.loads(r.read().decode("utf-8", "replace"))
+    except HTTPException:
+        raise
     except urllib.error.HTTPError as exc:
         raise HTTPException(400, f"catalog HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:
@@ -99,11 +113,26 @@ def _get_json(url: str) -> dict:
 
 
 def _get_bytes(url: str) -> bytes:
+    try:
+        assert_safe_url(url, allow_http=True)
+    except ValueError as exc:
+        raise HTTPException(400, f"unsafe url: {exc}") from exc
+    limit = min(MAX_BYTES, int(settings.upload_max_book_bytes))
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        data = r.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
-        raise HTTPException(400, "file too large")
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:  # noqa: S310
+            final = r.geturl() if hasattr(r, "geturl") else url
+            try:
+                assert_safe_url(final, allow_http=True)
+            except ValueError as exc:
+                raise HTTPException(400, f"unsafe redirect: {exc}") from exc
+            data = r.read(limit + 1)
+    except HTTPException:
+        raise
+    except urllib.error.URLError as exc:
+        raise HTTPException(503, "download unreachable") from exc
+    if len(data) > limit:
+        raise HTTPException(413, f"file too large (max {limit} bytes)")
     return data
 
 
@@ -291,7 +320,7 @@ def cefr_gutenberg(
 def import_gutenberg(
     body: ImportIn,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     data = _get_json(f"{GUTENDEX}{body.gutenberg_id}")
     book = _normalize(data)
@@ -313,13 +342,10 @@ def import_gutenberg(
     if len(text) > 500_000:
         text = text[:500_000]
     title = body.title or book.title or f"Gutenberg {body.gutenberg_id}"
-    doc = import_text(db, title=title, lang=body.lang, content=text, source="gutenberg")
-    if pilot is not None:
-        from app.api_library import PilotText
-
-        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
-            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
-            db.commit()
+    doc = import_text(
+        db, title=title, lang=body.lang, content=text, source="gutenberg", is_public=True
+    )
+    link_pilot_text(db, pilot, doc.id)
     return {"text_id": doc.id, "title": doc.title, "chars": len(text)}
 
 
@@ -366,7 +392,7 @@ def gutenberg_bilingual_list(
 def gutenberg_bilingual_import(
     body: GutenbergBiImportIn,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     """Скачать оригинал + перевод Gutenberg → import_bilingual."""
     from app import gutenberg_bilingual as gbi
@@ -415,13 +441,10 @@ def gutenberg_bilingual_import(
         lang_tgt=lb,
         original=text_a,
         translation=text_b,
+        source="gutenberg_bilingual",
+        is_public=True,
     )
-    if pilot is not None:
-        from app.api_library import PilotText
-
-        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
-            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
-            db.commit()
+    link_pilot_text(db, pilot, doc.id)
     return {
         "text_id": doc.id,
         "title": doc.title,
@@ -441,7 +464,7 @@ def bilinguis_list(lang_a: str = "en", lang_b: str = "ru") -> dict:
 def bilinguis_import(
     body: BilinguisImportIn,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     book = {
         "slug": body.slug.strip(),
@@ -465,11 +488,8 @@ def bilinguis_import(
         lang_tgt=body.lang_b,
         original=text_a,
         translation=text_b,
+        source="bilinguis",
+        is_public=True,
     )
-    if pilot is not None:
-        from app.api_library import PilotText
-
-        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
-            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
-            db.commit()
+    link_pilot_text(db, pilot, doc.id)
     return {"text_id": doc.id, "title": doc.title, "chars": len(text_a), "source": "bilinguis"}

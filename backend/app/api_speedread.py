@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import DateTime, Float, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
-from app.auth_deps import get_optional_pilot
+from app.auth_deps import get_current_pilot
 from app.db import Base, get_db
 from app.pilots import Pilot
 
@@ -52,10 +52,10 @@ class ResultOut(BaseModel):
 def save_result(
     body: ResultIn,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> SpeedResult:
     row = SpeedResult(
-        pilot_id=pilot.id if pilot else None,
+        pilot_id=pilot.id,
         mode=body.mode,
         wpm=body.wpm,
         words=body.words,
@@ -63,8 +63,7 @@ def save_result(
         score=body.score,
     )
     db.add(row)
-    if pilot is not None:
-        pilot.xp += 3 if body.mode == "rsvp" else 2
+    pilot.xp += 3 if body.mode == "rsvp" else 2
     db.commit()
     db.refresh(row)
     return row
@@ -75,13 +74,9 @@ def list_results(
     limit: int = 30,
     mode: str | None = None,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> list[SpeedResult]:
-    q = db.query(SpeedResult)
-    if pilot is None:
-        q = q.filter(SpeedResult.pilot_id.is_(None))
-    else:
-        q = q.filter(SpeedResult.pilot_id == pilot.id)
+    q = db.query(SpeedResult).filter(SpeedResult.pilot_id == pilot.id)
     if mode:
         q = q.filter(SpeedResult.mode == mode)
     return q.order_by(SpeedResult.id.desc()).limit(max(1, min(limit, 100))).all()

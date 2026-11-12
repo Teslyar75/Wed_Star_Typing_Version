@@ -121,6 +121,7 @@ def test_repeated_glue_split_when_spaced_form_present():
 
 def test_glue_fix_api_saves_prepared():
     import os
+    import uuid
     os.environ.setdefault("DATABASE_URL", "sqlite:///./test_star_typing.db")
     from fastapi.testclient import TestClient
     from app.db import init_db, SessionLocal
@@ -128,6 +129,9 @@ def test_glue_fix_api_saves_prepared():
     from app.models import TextDoc
     init_db()
     c = TestClient(app)
+    cs = f"Gf{uuid.uuid4().hex[:6]}"
+    reg = c.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    c.cookies.set("st_token", reg.cookies["st_token"])
     r = c.post("/api/texts", json={"title": "G", "lang": "en", "content": "It was forty-\nfive. Distaste--this was it."})
     tid = r.json()["id"]
     body = c.get(f"/api/texts/{tid}/prepared").json()["body"]
@@ -146,9 +150,13 @@ def test_glue_fix_api_saves_prepared():
 
 
 def test_prepare_text_api_own_text():
+    import uuid
     from fastapi.testclient import TestClient
     from app.main import app
     c = TestClient(app)
+    cs = f"Pt{uuid.uuid4().hex[:6]}"
+    reg = c.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    c.cookies.set("st_token", reg.cookies["st_token"])
     j = c.post("/api/texts/prepare-text", json={"text": "Hello—world, forty-\nfive; 1984was it.", "opts": {}}).json()
     assert j["text"] == "hello world forty-five 1984 was it" and j["count"] == 1
     j = c.post("/api/texts/prepare-text", json={"text": "1984was", "opts": {"glue": False}}).json()

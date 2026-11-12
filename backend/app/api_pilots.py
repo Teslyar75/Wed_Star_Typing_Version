@@ -330,9 +330,14 @@ async def upload_avatar(
     db: Session = Depends(get_db),
     pilot: Pilot = Depends(get_current_pilot),
 ) -> Pilot:
-    raw = await file.read()
-    if len(raw) > 400_000:
-        raise HTTPException(400, "avatar too large")
+    from app.config import settings
+    from app.upload_limits import read_upload_limited
+
+    raw = await read_upload_limited(
+        file, max_bytes=settings.upload_max_image_bytes, label="avatar"
+    )
+    if not raw:
+        raise HTTPException(400, "empty file")
     mime = file.content_type or "image/png"
     if not mime.startswith("image/"):
         raise HTTPException(400, "image required")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 
 # изолированная БД для тестов
 os.environ["DATABASE_URL"] = "sqlite:///./test_star_typing.db"
@@ -17,11 +18,19 @@ init_db()
 client = TestClient(app)
 
 
+def _login() -> None:
+    cs = f"T{uuid.uuid4().hex[:8]}"
+    r = client.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    assert r.status_code == 200
+    client.cookies.set("st_token", r.cookies["st_token"])
+
+
 def test_health() -> None:
     assert client.get("/api/health").json() == {"ok": True}
 
 
 def test_create_and_list_segments() -> None:
+    _login()
     r = client.post(
         "/api/texts",
         json={"title": "Demo", "lang": "en", "content": "Hello world. Second sentence.\n\nNew para!"},
@@ -35,6 +44,7 @@ def test_create_and_list_segments() -> None:
 
 
 def test_bilingual_align() -> None:
+    _login()
     r = client.post(
         "/api/texts/bilingual",
         json={

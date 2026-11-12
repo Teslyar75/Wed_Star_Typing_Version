@@ -37,6 +37,7 @@
 
 | Дата | Что |
 | --- | --- |
+| 2026-11-11 | Security: IDOR на `/api/texts/*` закрыт (auth + `pilot_texts` / `is_public`); лимиты upload 413; SSRF для ICY/Gutenberg/BYO. |
 | 2026-11-08 | Орион+журнал+дзен+OpenCode + S0–S3. Голос: start() в click. Caddy 300s. |
 | 2026-11-08 | CI e2e на `a6142bf` красный: 3 fail + 1 flaky. Диагноз: overlay перехват клика «Экипаж»; гид G1 ловит Enter; вкладка English — `button` не `tab`; «Из книги» strict-mode (nav + обзор); карта миссий в `MissionsPanel`; sqlite 2 worker + honor top-10. S0: [SESSION_2026-11-08](./SESSION_2026-11-08.md). |
 | 2026-11-08 | S1 (зоны/EN/lifecycle, не эпик Горбова): хоткеи 1–7 по `ZONE_ORDER`; abort/epoch/observeBox; скрытый EN уже размонтировался — покрыто тестами. Docs/Comm тогда не добавлялись. |

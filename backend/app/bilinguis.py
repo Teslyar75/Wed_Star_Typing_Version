@@ -92,10 +92,25 @@ def list_bilingual_pairs(*, lang_a: str = "en", lang_b: str = "ru") -> dict:
 
 
 def _get(url: str) -> str:
+    from app.ssrf import assert_safe_url
+
+    try:
+        assert_safe_url(url, allow_http=True)
+    except ValueError as exc:
+        raise BilinguisError(f"unsafe url: {exc}") from exc
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            raw = r.read()
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:  # noqa: S310
+            final = r.geturl() if hasattr(r, "geturl") else url
+            try:
+                assert_safe_url(final, allow_http=True)
+            except ValueError as exc:
+                raise BilinguisError(f"unsafe redirect: {exc}") from exc
+            raw = r.read(8 * 1024 * 1024 + 1)
+            if len(raw) > 8 * 1024 * 1024:
+                raise BilinguisError("response too large")
+    except BilinguisError:
+        raise
     except urllib.error.HTTPError as exc:
         raise BilinguisError(f"bilinguis HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:

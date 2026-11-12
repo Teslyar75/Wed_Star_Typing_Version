@@ -64,7 +64,9 @@ def ensure_prepared(db: Session, doc: TextDoc, *, opts: dict | None = None) -> s
     return prepared
 
 
-def _persist_mono(db: Session, title: str, lang: str, source: str, raw: str) -> TextDoc:
+def _persist_mono(
+    db: Session, title: str, lang: str, source: str, raw: str, *, is_public: bool = False
+) -> TextDoc:
     data = segment_text(raw, lang=lang)
     prepared, opts_json = make_prepared(raw, DEFAULT_PREP_OPTS)
     doc = TextDoc(
@@ -73,6 +75,7 @@ def _persist_mono(db: Session, title: str, lang: str, source: str, raw: str) -> 
         source=source,
         prepared=prepared,
         prep_opts=opts_json,
+        is_public=bool(is_public),
     )
     db.add(doc)
     db.flush()
@@ -115,8 +118,16 @@ def _persist_mono(db: Session, title: str, lang: str, source: str, raw: str) -> 
     return doc
 
 
-def import_text(db: Session, *, title: str, lang: str, content: str, source: str = "upload") -> TextDoc:
-    return _persist_mono(db, title, lang, source, content)
+def import_text(
+    db: Session,
+    *,
+    title: str,
+    lang: str,
+    content: str,
+    source: str = "upload",
+    is_public: bool = False,
+) -> TextDoc:
+    return _persist_mono(db, title, lang, source, content, is_public=is_public)
 
 
 def import_bilingual(
@@ -128,6 +139,7 @@ def import_bilingual(
     original: str,
     translation: str,
     source: str = "bilingual",
+    is_public: bool = False,
 ) -> TextDoc:
     src = segment_text(original, lang=lang_src)
     tgt = segment_text(translation, lang=lang_tgt)
@@ -150,6 +162,7 @@ def import_bilingual(
         source=(source or "bilingual").strip() or "bilingual",
         prepared="",
         prep_opts="",
+        is_public=bool(is_public),
     )
     db.add(doc)
     db.flush()

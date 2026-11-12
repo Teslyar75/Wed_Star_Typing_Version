@@ -2,32 +2,18 @@
 
 from __future__ import annotations
 
-import ipaddress
 import re
-import socket
 import urllib.error
 import urllib.request
 from urllib.parse import urlparse
+
+from app.ssrf import host_is_public
 
 _TITLE_RE = re.compile(rb"StreamTitle='([^']*)';", re.I)
 
 
 def _host_ok(host: str) -> bool:
-    if not host or host.lower() in {"localhost", "metadata.google.internal"}:
-        return False
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except socket.gaierror:
-        return False
-    for info in infos:
-        ip = info[4][0]
-        try:
-            addr = ipaddress.ip_address(ip)
-        except ValueError:
-            continue
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
-            return False
-    return True
+    return host_is_public(host)
 
 
 def fetch_icy_title(url: str, *, timeout: float = 4.0, max_bytes: int = 64_000) -> str | None:

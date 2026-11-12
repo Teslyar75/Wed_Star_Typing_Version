@@ -6,9 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.auth_deps import get_current_pilot
 from app.db import get_db
-from app.models import Segment, TextDoc
+from app.models import Segment
+from app.pilots import Pilot
 from app import translate_jobs
+from app.text_access import can_write_text, require_read
 from app.translate_cache import cache_get, cache_put, fill_missing_translations, uplink_translate
 
 router = APIRouter(prefix="/api/reader", tags=["reader"])
@@ -27,7 +30,13 @@ _TR_MAX = 900
 
 
 @router.get("/word-tr")
-def word_tr(q: str = "", src: str = "en", dst: str = "ru", db: Session = Depends(get_db)) -> dict:
+def word_tr(
+    q: str = "",
+    src: str = "en",
+    dst: str = "ru",
+    db: Session = Depends(get_db),
+    _pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
     """Перевод слова / кадра / предложения для UPLINK (кэш + сеть)."""
     text = (q or "").strip()[:_TR_MAX]
     if not text:
@@ -51,7 +60,11 @@ class WordTrBatchIn(BaseModel):
 
 
 @router.post("/word-tr-batch")
-def word_tr_batch(body: WordTrBatchIn, db: Session = Depends(get_db)) -> dict:
+def word_tr_batch(
+    body: WordTrBatchIn,
+    db: Session = Depends(get_db),
+    _pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
     """Пакетный перевод для прогрева кэша гипердрайва (до 80 уникальных ключей)."""
     out: dict[str, str] = {}
     seen: set[str] = set()
@@ -78,15 +91,20 @@ def word_tr_batch(body: WordTrBatchIn, db: Session = Depends(get_db)) -> dict:
 
 
 @router.get("/{text_id}/bilingual")
-def bilingual_view(text_id: int, offset: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    if db.get(TextDoc, text_id) is None:
-        raise HTTPException(404, "not found")
+def bilingual_view(
+    text_id: int,
+    offset: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+):
+    require_read(db, pilot, text_id)
     segs = (
         db.query(Segment)
         .filter(Segment.text_id == text_id)
         .order_by(Segment.idx)
         .offset(max(0, offset))
-                        .limit(max(1, min(limit, 800)))
+        .limit(max(1, min(limit, 800)))
         .all()
     )
     return [
@@ -103,9 +121,15 @@ def bilingual_view(text_id: int, offset: int = 0, limit: int = 100, db: Session 
 
 
 @router.post("/translate")
-def queue_translate(body: TranslateJob, db: Session = Depends(get_db)) -> dict:
-    if db.get(TextDoc, body.text_id) is None:
-        raise HTTPException(404, "not found")
+def queue_translate(
+    body: TranslateJob,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
+    doc = require_read(db, pilot, body.text_id)
+    # Приватные — только владелец полки; публичные — досев перевода для всех читателей.
+    if not bool(getattr(doc, "is_public", False)) and not can_write_text(db, pilot, doc):
+        raise HTTPException(404, "text not found")
     if body.async_mode:
         info = translate_jobs.enqueue(body.text_id, body.src_lang, body.dst_lang, body.limit)
         return {"mode": "async", **info}
@@ -114,5 +138,5 @@ def queue_translate(body: TranslateJob, db: Session = Depends(get_db)) -> dict:
 
 
 @router.get("/translate/status")
-def translate_status() -> dict[str, int]:
+def translate_status(_pilot: Pilot = Depends(get_current_pilot)) -> dict[str, int]:
     return translate_jobs.status()

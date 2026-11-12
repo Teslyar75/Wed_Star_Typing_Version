@@ -10,10 +10,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import DateTime, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
-from app.auth_deps import get_current_pilot, get_optional_pilot
+from app.auth_deps import get_current_pilot
 from app.db import Base, get_db
 from app.models import Segment, TextDoc
 from app.pilots import Pilot
+from app.text_access import can_read_text, require_write
 from app.text_processing import DEFAULT_PREP_OPTS, norm_opts
 from app.texts_service import ensure_prepared
 
@@ -137,19 +138,8 @@ class ShelfAddIn(BaseModel):
 @router.get("", response_model=list[LibraryItem])
 def list_shelf(
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> list[LibraryItem]:
-    if pilot is None:
-        # гости — все тексты без персональной позиции
-        docs = db.query(TextDoc).order_by(TextDoc.id.desc()).limit(50).all()
-        out: list[LibraryItem] = []
-        for d in docs:
-            chars, words, n = _stats(db, d.id)
-            out.append(
-                _item(db, d, sentence_id=0, mode="reader", chars=chars, words=words, segments=n)
-            )
-        return out
-
     rows = db.query(PilotText).filter_by(pilot_id=pilot.id).order_by(PilotText.updated_at.desc()).all()
     out = []
     for row in rows:
@@ -178,10 +168,13 @@ def add_to_shelf(
     pilot: Pilot = Depends(get_current_pilot),
 ) -> LibraryItem:
     doc = db.get(TextDoc, body.text_id)
-    if doc is None:
+    if doc is None or not can_read_text(db, pilot, doc):
         raise HTTPException(404, "text not found")
+    # На полку — только публичные каталожные или уже свои (повтор).
     row = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=body.text_id).first()
     if row is None:
+        if not bool(getattr(doc, "is_public", False)):
+            raise HTTPException(404, "text not found")
         row = PilotText(pilot_id=pilot.id, text_id=body.text_id)
         db.add(row)
         db.commit()
@@ -206,13 +199,8 @@ def rename_shelf_item(
     pilot: Pilot = Depends(get_current_pilot),
 ) -> LibraryItem:
     """Порт LibraryPage.rename — название (+ автор в title через · )."""
-    doc = db.get(TextDoc, text_id)
-    if doc is None:
-        raise HTTPException(404, "text not found")
+    doc = require_write(db, pilot, text_id)
     row = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=text_id).first()
-    if row is None and pilot is not None:
-        # гостевая полка / чужой текст — всё равно даём переименовать документ
-        pass
     title = (body.title or "").strip() or doc.title
     author = (body.author or "").strip()
     doc.title = f"{title} · {author}" if author else title
@@ -228,28 +216,28 @@ def rename_shelf_item(
 def remove_from_shelf(
     text_id: int,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
-    """Убрать с полки (как desktop delete) — у пилота soft-remove, иначе удалить TextDoc."""
-    if pilot is not None:
-        row = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=text_id).first()
-        if row is not None:
-            db.delete(row)
-            db.commit()
-            return {"ok": True, "removed": "shelf"}
+    """Убрать с полки пилота. Приватный текст без других владельцев — удалить TextDoc."""
+    row = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=text_id).first()
+    if row is None:
+        raise HTTPException(404, "text not found")
+    db.delete(row)
+    db.commit()
     doc = db.get(TextDoc, text_id)
     if doc is None:
-        raise HTTPException(404, "text not found")
-    # сегменты/абзацы каскадом или вручную
-    from app.models import Paragraph, Sentence
+        return {"ok": True, "removed": "shelf"}
+    remaining = db.query(PilotText).filter_by(text_id=text_id).count()
+    if remaining == 0 and not bool(getattr(doc, "is_public", False)):
+        from app.models import Paragraph, Sentence
 
-    db.query(Segment).filter_by(text_id=text_id).delete()
-    db.query(Sentence).filter_by(text_id=text_id).delete(synchronize_session=False)
-    db.query(Paragraph).filter_by(text_id=text_id).delete(synchronize_session=False)
-    db.query(PilotText).filter_by(text_id=text_id).delete(synchronize_session=False)
-    db.delete(doc)
-    db.commit()
-    return {"ok": True, "removed": "text"}
+        db.query(Segment).filter_by(text_id=text_id).delete()
+        db.query(Sentence).filter_by(text_id=text_id).delete(synchronize_session=False)
+        db.query(Paragraph).filter_by(text_id=text_id).delete(synchronize_session=False)
+        db.delete(doc)
+        db.commit()
+        return {"ok": True, "removed": "text"}
+    return {"ok": True, "removed": "shelf"}
 
 
 @router.put("/{text_id}/position", response_model=LibraryItem)
@@ -260,10 +248,12 @@ def put_position(
     pilot: Pilot = Depends(get_current_pilot),
 ) -> LibraryItem:
     doc = db.get(TextDoc, text_id)
-    if doc is None:
+    if doc is None or not can_read_text(db, pilot, doc):
         raise HTTPException(404, "text not found")
     row = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=text_id).first()
     if row is None:
+        if not bool(getattr(doc, "is_public", False)):
+            raise HTTPException(404, "text not found")
         row = PilotText(pilot_id=pilot.id, text_id=text_id)
         db.add(row)
     row.sentence_id = max(0, body.sentence_id)

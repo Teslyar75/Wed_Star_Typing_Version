@@ -29,7 +29,9 @@ export default function BilingualReader() {
   }, [sentenceId, pages]);
 
   const fetchRows = async (id: number, from = 0, append = false) => {
-    const data: Row[] = await (await fetch(`/api/reader/${id}/bilingual?offset=${from}&limit=200`)).json();
+    const data: Row[] = await (
+      await fetch(`/api/reader/${id}/bilingual?offset=${from}&limit=200`, { credentials: "include" })
+    ).json();
     setRows((prev) => (append ? [...prev, ...data] : data));
     if (!append && data[0] && sentenceId === 0) setSentence(data[0].sentence_id);
     setOffset(from + data.length);
@@ -46,13 +48,14 @@ export default function BilingualReader() {
     await fetch("/api/reader/translate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ text_id: id, src_lang: "en", dst_lang: "ru", async_mode: true }),
     });
     await fetchRows(id, 0, false);
     for (let k = 0; k < 8; k++) {
       await new Promise((r) => setTimeout(r, 400));
       await fetchRows(id, 0, false);
-      const st = await (await fetch("/api/reader/translate/status")).json();
+      const st = await (await fetch("/api/reader/translate/status", { credentials: "include" })).json();
       setStatus(`очередь: pending ${st.pending}, done ${st.done}`);
       if (st.pending === 0 && st.done > 0) break;
     }

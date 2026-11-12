@@ -87,14 +87,40 @@ def html_to_text(src: str) -> str:
     return "\n\n".join(x for x in paras if x) + "\n"
 
 
+def _epub_budget() -> int:
+    try:
+        from app.config import settings
+
+        return int(settings.upload_max_epub_uncompressed)
+    except Exception:  # noqa: BLE001
+        return 80 * 1024 * 1024
+
+
 def epub_to_text(raw: bytes) -> str:
+    budget = _epub_budget()
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
-        cont = z.read("META-INF/container.xml").decode("utf-8", "replace")
+        # Защита от zip-бомб: сумма заявленных размеров + фактическое чтение.
+        declared = 0
+        for info in z.infolist():
+            declared += max(0, int(info.file_size or 0))
+            if declared > budget:
+                raise ValueError("epub: uncompressed size limit exceeded")
+        used = 0
+
+        def _read(name: str) -> bytes:
+            nonlocal used
+            data = z.read(name)
+            used += len(data)
+            if used > budget:
+                raise ValueError("epub: uncompressed size limit exceeded")
+            return data
+
+        cont = _read("META-INF/container.xml").decode("utf-8", "replace")
         m = re.search(r'full-path="([^"]+)"', cont)
         if not m:
             raise ValueError("epub: no rootfile")
         opf_path = m.group(1)
-        opf = z.read(opf_path).decode("utf-8", "replace")
+        opf = _read(opf_path).decode("utf-8", "replace")
         base = posixpath.dirname(opf_path)
         items = {}
         for it in re.finditer(r"<(?:\w+:)?item\b[^>]*>", opf):
@@ -111,7 +137,7 @@ def epub_to_text(raw: bytes) -> str:
                 continue
             path = posixpath.normpath(posixpath.join(base, html.unescape(href).split("#")[0]))
             try:
-                parts.append(html_to_text(z.read(path).decode("utf-8", "replace")))
+                parts.append(html_to_text(_read(path).decode("utf-8", "replace")))
             except KeyError:
                 continue
     return strip_gutenberg("\n".join(p for p in parts if p.strip()))

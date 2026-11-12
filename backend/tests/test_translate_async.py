@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from fastapi.testclient import TestClient
 
@@ -9,6 +10,10 @@ os.environ["TRANSLATE_OFFLINE"] = "1"
 
 
 def test_async_translate_queue() -> None:
+    cs = f"Tr{uuid.uuid4().hex[:6]}"
+    reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "1212"})
+    assert reg.status_code == 200
+    client.cookies.set("st_token", reg.cookies["st_token"])
     doc = client.post("/api/texts", json={"title": "t", "lang": "en", "content": "Hello world. Second line."}).json()
     r = client.post(
         "/api/reader/translate",

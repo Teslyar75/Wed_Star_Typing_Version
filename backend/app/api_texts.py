@@ -1,4 +1,4 @@
-"""API текстов: импорт, сегменты."""
+"""API текстов: импорт, сегменты. Доступ — cookie-пилот + pilot_texts / is_public."""
 
 from __future__ import annotations
 
@@ -8,26 +8,31 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.auth_deps import get_current_pilot
 from app.book_formats import extract_text
-from app.auth_deps import get_optional_pilot
+from app.config import settings
 from app.db import get_db
 from app.models import Segment, TextDoc
 from app.pilots import Pilot
+from app.text_access import link_pilot_text, require_read, require_write
+from app.text_processing import DEFAULT_PREP_OPTS, norm_opts
 from app.texts_service import (
     ensure_prepared,
     import_bilingual,
     import_text,
     rebuild_original_body,
 )
-from app.text_processing import DEFAULT_PREP_OPTS, norm_opts
+from app.upload_limits import assert_text_len, read_upload_limited
 
 router = APIRouter(prefix="/api/texts", tags=["texts"])
+
+_MAX_CHARS = settings.upload_max_text_chars
 
 
 class TextCreate(BaseModel):
     title: str = ""
     lang: str = "und"
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, max_length=_MAX_CHARS)
 
 
 class BilingualCreate(BaseModel):
@@ -35,8 +40,8 @@ class BilingualCreate(BaseModel):
     author: str = ""
     lang_src: str = "en"
     lang_tgt: str = "ru"
-    original: str = Field(min_length=1)
-    translation: str = Field(min_length=1)
+    original: str = Field(min_length=1, max_length=_MAX_CHARS)
+    translation: str = Field(min_length=1, max_length=_MAX_CHARS)
     # pd | mt | mixed — как desktop BILINGUAL_SOURCES
     source_kind: str = "mt"
 
@@ -63,8 +68,15 @@ class SegmentOut(BaseModel):
 
 
 @router.post("", response_model=TextOut)
-def create_text(body: TextCreate, db: Session = Depends(get_db)) -> TextDoc:
-    return import_text(db, title=body.title, lang=body.lang, content=body.content)
+def create_text(
+    body: TextCreate,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> TextDoc:
+    assert_text_len(body.content)
+    doc = import_text(db, title=body.title, lang=body.lang, content=body.content)
+    link_pilot_text(db, pilot, doc.id)
+    return doc
 
 
 def _parse_page_range(first_raw: str, last_raw: str) -> tuple[int, int | None]:
@@ -100,9 +112,10 @@ async def pdf_preview(
     file: UploadFile = File(...),
     first: str = Form("1"),
     last: str = Form(""),
+    _pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     """Предпросмотр PDF с диапазоном страниц (как desktop PdfImportDialog.reload)."""
-    raw = await file.read()
+    raw = await read_upload_limited(file, label="PDF")
     if not raw:
         raise HTTPException(400, "empty file")
     f, lst = _parse_page_range(first, last)
@@ -135,10 +148,10 @@ async def pdf_import_text(
     title: str = Form(""),
     lang: str = Form("und"),
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> TextDoc:
     """Импорт PDF → текстовая книга на полке (печать / скорочтение / перевод)."""
-    raw = await file.read()
+    raw = await read_upload_limited(file, label="PDF")
     if not raw:
         raise HTTPException(400, "empty file")
     f, lst = _parse_page_range(first, last)
@@ -150,6 +163,7 @@ async def pdf_import_text(
         raise HTTPException(400, f"PDF import failed: {exc}") from exc
     if res.scanned or not (res.text or "").strip():
         raise HTTPException(400, "PDF looks scanned (no text layer)")
+    assert_text_len(res.text or "")
     name = (file.filename or "book.pdf").rsplit(".", 1)[0]
     doc = import_text(
         db,
@@ -158,12 +172,7 @@ async def pdf_import_text(
         content=res.text,
         source="pdf",
     )
-    if pilot is not None:
-        from app.api_library import PilotText
-
-        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
-            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
-            db.commit()
+    link_pilot_text(db, pilot, doc.id)
     return doc
 
 
@@ -172,9 +181,10 @@ async def extract_book_text(
     file: UploadFile = File(...),
     first: str = Form("1"),
     last: str = Form(""),
+    _pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     """Только текст файла (txt/html/epub/fb2/pdf) — для «СВОЕГО ТЕКСТА», без записи в библиотеку."""
-    raw = await file.read()
+    raw = await read_upload_limited(file, label="book")
     name = (file.filename or "").lower()
     if name.endswith(".pdf"):
         f, lst = _parse_page_range(first, last)
@@ -192,6 +202,7 @@ async def extract_book_text(
             raise HTTPException(400, str(exc)) from exc
     if not text.strip():
         raise HTTPException(400, "empty file")
+    assert_text_len(text)
     return {"text": text, "chars": len(text)}
 
 
@@ -203,9 +214,9 @@ async def upload_text(
     first: str = Form("1"),
     last: str = Form(""),
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> TextDoc:
-    raw = await file.read()
+    raw = await read_upload_limited(file, label="book")
     name = (file.filename or "").lower()
     if name.endswith(".pdf"):
         f, lst = _parse_page_range(first, last)
@@ -225,6 +236,7 @@ async def upload_text(
             raise HTTPException(400, str(exc)) from exc
     if not content.strip():
         raise HTTPException(400, "empty file")
+    assert_text_len(content)
     doc = import_text(
         db,
         title=title or (file.filename or "upload"),
@@ -232,12 +244,7 @@ async def upload_text(
         content=content,
         source="pdf" if name.endswith(".pdf") else "upload",
     )
-    if pilot is not None:
-        from app.api_library import PilotText
-
-        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
-            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
-            db.commit()
+    link_pilot_text(db, pilot, doc.id)
     return doc
 
 
@@ -245,7 +252,7 @@ async def upload_text(
 def create_bilingual(
     body: BilingualCreate,
     db: Session = Depends(get_db),
-    pilot: Pilot | None = Depends(get_optional_pilot),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> TextDoc:
     """Ручной импорт 2ЯЗ (порт stamina.bilingual_dialog) → полка пилота."""
     kind = (body.source_kind or "mt").strip().lower()
@@ -253,10 +260,11 @@ def create_bilingual(
         kind = "mt"
     title = (body.title or "").strip()
     if body.author.strip():
-        # автор в title, отдельного поля TextDoc нет
         title = f"{title} — {body.author.strip()}" if title else body.author.strip()
     if len(body.original.strip()) < 20 or len(body.translation.strip()) < 20:
         raise HTTPException(400, "both original and translation required")
+    assert_text_len(body.original)
+    assert_text_len(body.translation)
     doc = import_bilingual(
         db,
         title=title or "Bilingual",
@@ -266,29 +274,27 @@ def create_bilingual(
         translation=body.translation,
         source=f"bilingual_{kind}",
     )
-    if pilot is not None:
-        from app.api_library import PilotText
-
-        if db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first() is None:
-            db.add(PilotText(pilot_id=pilot.id, text_id=doc.id))
-            db.commit()
+    link_pilot_text(db, pilot, doc.id)
     return doc
 
 
 @router.get("/{text_id}", response_model=TextOut)
-def get_text(text_id: int, db: Session = Depends(get_db)) -> TextDoc:
-    doc = db.get(TextDoc, text_id)
-    if doc is None:
-        raise HTTPException(404, "text not found")
-    return doc
+def get_text(
+    text_id: int,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> TextDoc:
+    return require_read(db, pilot, text_id)
 
 
 @router.get("/{text_id}/content")
-def get_text_content(text_id: int, db: Session = Depends(get_db)) -> dict:
+def get_text_content(
+    text_id: int,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
     """Оригинал для чтения: гипердрайв и «Книга». Никогда не prepared."""
-    doc = db.get(TextDoc, text_id)
-    if doc is None:
-        raise HTTPException(404, "text not found")
+    doc = require_read(db, pilot, text_id)
     body = rebuild_original_body(db, text_id)
     return {
         "id": doc.id,
@@ -310,11 +316,13 @@ class PreparedOptsIn(BaseModel):
 
 
 @router.get("/{text_id}/prepared")
-def get_text_prepared(text_id: int, db: Session = Depends(get_db)) -> dict:
+def get_text_prepared(
+    text_id: int,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
     """Адаптированный текст только для набора (мостик / «Печатать»)."""
-    doc = db.get(TextDoc, text_id)
-    if doc is None:
-        raise HTTPException(404, "text not found")
+    doc = require_read(db, pilot, text_id)
     bilingual = (doc.source or "").startswith("bilingu") or "-" in (doc.lang or "")
     if bilingual:
         raise HTTPException(400, "bilingual texts are not for typing")
@@ -341,16 +349,15 @@ def regenerate_prepared(
     text_id: int,
     body: PreparedOptsIn | None = None,
     db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
     """Пересобрать prepared из оригинала с заданными опциями."""
-    doc = db.get(TextDoc, text_id)
-    if doc is None:
-        raise HTTPException(404, "text not found")
+    doc = require_write(db, pilot, text_id)
     bilingual = (doc.source or "").startswith("bilingu") or "-" in (doc.lang or "")
     if bilingual:
         raise HTTPException(400, "bilingual texts are not for typing")
     ensure_prepared(db, doc, opts=body.model_dump() if body else None)
-    return get_text_prepared(text_id, db)
+    return get_text_prepared(text_id, db, pilot)
 
 
 @router.get("/{text_id}/segments", response_model=list[SegmentOut])
@@ -359,9 +366,9 @@ def get_segments(
     offset: int = 0,
     limit: int = 200,
     db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
 ) -> list[Segment]:
-    if db.get(TextDoc, text_id) is None:
-        raise HTTPException(404, "text not found")
+    require_read(db, pilot, text_id)
     limit = max(1, min(limit, 500))
     offset = max(0, offset)
     return (
@@ -375,28 +382,27 @@ def get_segments(
 
 
 class GlueFixIn(BaseModel):
-    text: str = ""
+    text: str = Field(default="", max_length=_MAX_CHARS)
     text_id: int | None = None
     lang: str | None = None
 
 
 @router.post("/glue-fix")
-def glue_fix(body: GlueFixIn, db: Session = Depends(get_db)) -> dict:
-    """«✦ Проверить ИИ»: найти и разделить сросшиеся слова (офлайн, частотные словари EN/RU).
-
-    Если передан ``text_id`` — исправленный текст сохраняется поверх prepared этой книги,
-    и мостик/«Печатать» дальше загружают уже чистую версию.
-    """
+def glue_fix(
+    body: GlueFixIn,
+    db: Session = Depends(get_db),
+    pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
+    """«✦ Проверить ИИ»: найти и разделить сросшиеся слова (офлайн, частотные словари EN/RU)."""
     from app.glue_fix import examples, repair
 
     base = body.text or ""
     doc = None
     if body.text_id is not None:
-        doc = db.get(TextDoc, body.text_id)
-        if doc is None:
-            raise HTTPException(404, "text not found")
+        doc = require_write(db, pilot, body.text_id)
         if not base.strip():
             base = ensure_prepared(db, doc)
+    assert_text_len(base)
     lang = body.lang if body.lang in ("en", "ru") else None
     new, fixes = repair(base, lang)
     saved = False
@@ -414,16 +420,20 @@ def glue_fix(body: GlueFixIn, db: Session = Depends(get_db)) -> dict:
 
 
 class PrepareTextIn(BaseModel):
-    text: str = ""
+    text: str = Field(default="", max_length=_MAX_CHARS)
     opts: dict | None = None
 
 
 @router.post("/prepare-text")
-def prepare_text(body: PrepareTextIn) -> dict:
+def prepare_text(
+    body: PrepareTextIn,
+    _pilot: Pilot = Depends(get_current_pilot),
+) -> dict:
     """«Свой текст» из трюма: та же подготовка, что у книг (без склеек), с отчётом о склейках."""
     from app.glue_fix import examples, repair
     from app.text_processing import process_text
 
+    assert_text_len(body.text or "")
     o = norm_opts(body.opts)
     glue = o.pop("glue", True)
     plain = process_text(body.text or "", **o, glue=False)

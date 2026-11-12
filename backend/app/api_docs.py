@@ -290,10 +290,10 @@ async def import_doc(
     db: Session = Depends(get_db),
     pilot: Pilot = Depends(get_current_pilot),
 ) -> dict:
+    from app.upload_limits import read_upload_limited
+
     name = file.filename or "doc.txt"
-    raw = await file.read()
-    if len(raw) > IMPORT_MAX:
-        raise HTTPException(413, "file too large")
+    raw = await read_upload_limited(file, max_bytes=IMPORT_MAX, label="document")
     try:
         title, body = docs_io.import_bytes(name, raw)
     except ValueError as e:

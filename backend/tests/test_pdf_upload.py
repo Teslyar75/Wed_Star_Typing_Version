@@ -20,7 +20,15 @@ def _tiny_pdf() -> bytes:
     return buf.getvalue()
 
 
+def _login() -> None:
+    cs = f"P-{uuid.uuid4().hex[:6]}"
+    reg = client.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    assert reg.status_code == 200
+    client.cookies.set("st_token", reg.cookies["st_token"])
+
+
 def test_pdf_upload_or_empty_scan() -> None:
+    _login()
     pdf = _tiny_pdf()
     r = client.post(
         "/api/texts/upload",
@@ -32,6 +40,7 @@ def test_pdf_upload_or_empty_scan() -> None:
 
 
 def test_pdf_preview_blank_is_scanned() -> None:
+    _login()
     pdf = _tiny_pdf()
     r = client.post(
         "/api/texts/pdf/preview",
@@ -45,8 +54,7 @@ def test_pdf_preview_blank_is_scanned() -> None:
 
 
 def test_txt_upload_via_multipart() -> None:
-    cs = f"P-{uuid.uuid4().hex[:6]}"
-    client.post("/api/pilots/register", json={"callsign": cs, "pin": "1111"})
+    _login()
     r = client.post(
         "/api/texts/upload",
         files={"file": ("a.txt", b"Once upon a time. The end.", "text/plain")},
