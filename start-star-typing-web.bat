@@ -54,14 +54,16 @@ exit /b 1
 :docker_ok
 echo [1/5] Docker ready.
 if not exist "%~dp0.runtime" mkdir "%~dp0.runtime"
+REM Тот же путь, что пишет tools/opencode_bridge.py (web repo root / .runtime).
+set "ORION_OPENCODE_RUNTIME=%~dp0.runtime\opencode_bridge.json"
 echo       OpenCode bridge (auto port)...
 start "Orion OpenCode" /min py -3 "%~dp0tools\opencode_bridge.py"
 set "OPENCODE_PORT="
 set /a _oc=0
 :wait_opencode_port
 ping -n 2 127.0.0.1 >nul
-if exist "%~dp0.runtime\opencode_bridge.json" (
-  for /f "usebackq tokens=2 delims=:," %%P in (`findstr /C:"\"port\"" "%~dp0.runtime\opencode_bridge.json"`) do (
+if exist "!ORION_OPENCODE_RUNTIME!" (
+  for /f "usebackq tokens=2 delims=:," %%P in (`findstr /C:"\"port\"" "!ORION_OPENCODE_RUNTIME!"`) do (
     set "OPENCODE_PORT=%%P"
   )
 )
