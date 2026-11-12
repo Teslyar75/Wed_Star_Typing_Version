@@ -70,3 +70,30 @@ def test_empty_and_trim() -> None:
     r = a.post("/api/comm", json={"text": long})
     assert r.status_code == 200
     assert len(r.json()["text"]) == 500
+
+
+def test_comm_image_attachment_and_legacy_text() -> None:
+    a, _ = _pilot("Ci")
+    # text-only по-прежнему ок; images по умолчанию []
+    r0 = a.post("/api/comm", json={"text": "plain-only"})
+    assert r0.status_code == 200
+    assert r0.json()["images"] == []
+
+    tiny = (
+        "data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+    r = a.post("/api/comm", json={"text": "", "images": [tiny]})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["text"] == ""
+    assert len(body["images"]) == 1
+    assert body["images"][0].startswith("data:image/png;base64,")
+
+    feed = a.get("/api/comm").json()
+    assert "limits" in feed
+    assert feed["limits"]["max_images"] == 3
+    got = next(m for m in feed["items"] if m["id"] == body["id"])
+    assert got["images"]
+    # старые текстовые сообщения на месте
+    assert any(m["text"] == "plain-only" for m in feed["items"])

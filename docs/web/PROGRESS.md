@@ -9,8 +9,10 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| master | `e730cb1` | `master` | — | — | — | S0–S3 + PR21–26 влиты |
-| Орион индикатор связи | `5581f87` | `cursor/orion-link-indicator-dc67` | [#28](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/28) | **5/5 SUCCESS** | **SUCCESS** | зел/жёлт/красн/сер; `/api/orion/health`; vitest+pytest |
+| master | `5bf47f0` | `master` | — | — | — | S0–S3 + PR21–27, #29 влиты (`33ec4cf` + `5bf47f0`) |
+| OpenCode автопорт (10013) | `580e9b4` | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `33ec4cf`; автопорт + `ORION_SILENT_SAY=1` |
+| Орион индикатор связи | *(merge master)* | `cursor/orion-link-indicator-dc67` | [#28](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/28) | pending | pending | зел/жёлт/красн/сер; `/api/orion/health`; после merge master (PR27+29) |
+
 | Орион Agents layout (no-scroll) | `202de6b` | `cursor/orion-agents-layout-15ea` | [#25](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/25) | **5/5 SUCCESS** | **SUCCESS** | **merged** Сергеем в `cc7afac` |
 | S0 | — | — | [#17](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/17) | merged | — | e2e CI |
 | S1 | — | — | [#18](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/18) | merged | — | зоны / EN lifecycle |
@@ -19,6 +21,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | S4 (часть) | — | — | [#21](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/21), [#22](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/22) | merged | — | Орион вкладки, журнал, дзен, autoupdate; остаток — polish `task_progress` |
 | CEFR / settings / no-scroll / docs matrix | — | — | [#23](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/23) | merged | — | DOCUMENTS_PARITY.md на master |
 | Документы: закрытие пробелов parity | `f693ed1` | `cursor/docs-parity-gaps-84c6` | [#24](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/24) | **5/5 SUCCESS** | **SUCCESS** | корзина, шаблоны, MD-лента, import/export, find/undo, TTS |
+| Эфир HUD + chat reuse / Docs `.btn`→HUD | `89c0a21` | `cursor/comm-hud-buttons-fd24` | [#29](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/29) | **5/5 SUCCESS** | **SUCCESS** | пилот↔пилот; `.btn` alias `hud-btn`; вложения; см. COMM_ETHER_WEB.md |
 | S5–S7 | — | — | — | — | — | не начаты |
 
 `gh` — только чтение. Создавать/обновлять PR — `ManagePullRequest`.

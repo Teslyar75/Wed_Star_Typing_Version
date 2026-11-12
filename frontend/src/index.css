@@ -47,6 +47,7 @@
 .st-cut,
 .panel,
 .panel-inset,
+.btn,
 .hud-btn,
 .nav-tab,
 .tab,
@@ -108,6 +109,8 @@
     --st-frame-line 0.2s ease;
 }
 
+.btn,
+
 .hud-btn,
 .nav-tab,
 .tab,
@@ -130,6 +133,7 @@
 .st-cut::before,
 .panel::before,
 .panel-inset::before,
+.btn::before,
 .hud-btn::before,
 .nav-tab::before,
 .tab::before,
@@ -204,6 +208,7 @@
 .st-cut::after,
 .panel::after,
 .panel-inset::after,
+.btn::after,
 .hud-btn::after,
 .nav-tab::after,
 .tab::after,
@@ -297,6 +302,7 @@
 .st-cut > *,
 .panel > *,
 .panel-inset > *,
+.btn > *,
 .hud-btn > *,
 .nav-tab > *,
 .tab > *,
@@ -319,6 +325,7 @@
 .st-cut:hover,
 .panel:hover,
 .panel-inset:hover,
+.btn:hover,
 .hud-btn:hover,
 .nav-tab:hover,
 .tab:hover,
@@ -341,6 +348,7 @@
 .st-cut:hover::before,
 .panel:hover::before,
 .panel-inset:hover::before,
+.btn:hover::before,
 .hud-btn:hover::before,
 .nav-tab:hover::before,
 .tab:hover::before,
@@ -369,6 +377,7 @@
 .st-cut:hover::after,
 .panel:hover::after,
 .panel-inset:hover::after,
+.btn:hover::after,
 .hud-btn:hover::after,
 .nav-tab:hover::after,
 .tab:hover::after,
@@ -406,11 +415,14 @@
 }
 
 .nav-tab:hover,
+.btn:hover,
 .hud-btn:hover,
 .tab:hover {
   color: color-mix(in srgb, var(--st-frame-glow) 85%, var(--st-text));
   --st-frame-fill: color-mix(in srgb, var(--st-frame-glow) 8%, transparent);
 }
+
+.btn.amber ,
 
 .hud-btn.amber {
   --st-frame-glow: var(--st-accent);
@@ -443,13 +455,19 @@
   --st-frame-line: var(--st-line);
 }
 
+.btn.on ,
+
 .hud-btn.on {
   --st-frame-line: var(--st-cyan);
 }
 
+.btn.ok ,
+
 .hud-btn.ok {
   --st-frame-line: color-mix(in srgb, var(--st-ok) 65%, var(--st-line));
 }
+
+.btn.danger ,
 
 .hud-btn.danger {
   --st-frame-line: color-mix(in srgb, var(--st-error) 65%, var(--st-line));
@@ -471,6 +489,7 @@
 html[data-glow="off"] .st-cut::before,
 html[data-glow="off"] .panel::before,
 html[data-glow="off"] .panel-inset::before,
+html[data-glow="off"] .btn::before,
 html[data-glow="off"] .hud-btn::before,
 html[data-glow="off"] .nav-tab::before,
 html[data-glow="off"] .tab::before,
@@ -503,6 +522,7 @@ html[data-glow="off"] .hud-select-trigger::before,
 html[data-glow="off"] .hud-select-menu::before,
 html[data-glow="off"] .st-cut:hover::before,
 html[data-glow="off"] .panel:hover::before,
+html[data-glow="off"] .btn:hover::before,
 html[data-glow="off"] .hud-btn:hover::before,
 html[data-glow="off"] .nav-tab:hover::before,
 html[data-glow="off"] .tab:hover::before,
@@ -516,6 +536,7 @@ html[data-glow="off"] .key:hover::before {
 html[data-glow="off"] .st-cut::after,
 html[data-glow="off"] .panel::after,
 html[data-glow="off"] .panel-inset::after,
+html[data-glow="off"] .btn::after,
 html[data-glow="off"] .hud-btn::after,
 html[data-glow="off"] .nav-tab::after,
 html[data-glow="off"] .tab::after,
@@ -548,6 +569,7 @@ html[data-glow="off"] .hud-select-trigger::after,
 html[data-glow="off"] .hud-select-menu::after,
 html[data-glow="off"] .st-cut:hover::after,
 html[data-glow="off"] .panel:hover::after,
+html[data-glow="off"] .btn:hover::after,
 html[data-glow="off"] .hud-btn:hover::after,
 html[data-glow="off"] .nav-tab:hover::after,
 html[data-glow="off"] .tab:hover::after,
@@ -560,6 +582,7 @@ html[data-glow="off"] .key:hover::after {
 
 html[data-glow="off"] .top-bar:hover,
 html[data-glow="off"] .brand:hover,
+html[data-glow="off"] .btn.on,
 html[data-glow="off"] .hud-btn.on,
 html[data-glow="off"] .nav-tab.on,
 html[data-glow="off"] .tab.on {
@@ -567,6 +590,27 @@ html[data-glow="off"] .tab.on {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :is(
+    .nav-channel,
+    .inst-panel,
+    .uplink,
+    .viewport,
+    .panel,
+    .panel-inset,
+    .cargo-prep,
+    .bi-virt,
+    .sight-box,
+    .nav-tab,
+    .tab,
+    .btn,
+    .badge,
+    .lang-select,
+    .key,
+    .mission-list li,
+    .route-bar,
+    .top-bar,
+    .brand
+  ),
   :is(
     .nav-channel,
     .inst-panel,
@@ -588,6 +632,27 @@ html[data-glow="off"] .tab.on {
     .top-bar,
     .brand
   ),
+  :is(
+    .nav-channel,
+    .inst-panel,
+    .uplink,
+    .viewport,
+    .panel,
+    .panel-inset,
+    .cargo-prep,
+    .bi-virt,
+    .sight-box,
+    .nav-tab,
+    .tab,
+    .btn,
+    .badge,
+    .lang-select,
+    .key,
+    .mission-list li,
+    .route-bar,
+    .top-bar,
+    .brand
+  )::before ,
   :is(
     .nav-channel,
     .inst-panel,
@@ -722,6 +787,8 @@ body {
   background: color-mix(in srgb, var(--st-cyan) 8%, var(--st-panel));
   box-sizing: border-box;
 }
+
+.radio-minibar .btn ,
 
 .radio-minibar .hud-btn {
   height: 1.45rem;
@@ -1163,6 +1230,8 @@ body {
 .mission-list li.locked {
   opacity: 0.45;
 }
+
+.mission-list li.on .btn ,
 
 .mission-list li.on .hud-btn {
   border-color: var(--st-accent);
@@ -1898,6 +1967,8 @@ code {
   resize: vertical;
 }
 
+.btn ,
+
 .hud-btn {
   --st-frame-fill: color-mix(in srgb, var(--st-panel) 18%, transparent);
   color: var(--st-cyan);
@@ -1907,9 +1978,13 @@ code {
   white-space: nowrap;
 }
 
+.btn.amber ,
+
 .hud-btn.amber {
   color: var(--st-accent);
 }
+
+.btn.on ,
 
 .hud-btn.on {
   color: var(--st-cyan);
@@ -3026,6 +3101,8 @@ html[data-ui-scale="XXL"] .bridge-set-note {
   padding: 0.25rem 0.85rem 0.15rem;
   flex: 0 0 auto;
 }
+/* как .en-nav .btn — единый кегль зональных подменю */
+.zone-subnav .btn ,
 /* как .en-nav .hud-btn — единый кегль зональных подменю */
 .zone-subnav .hud-btn {
   font: inherit;
@@ -5205,6 +5282,8 @@ html {
   text-overflow: ellipsis;
 }
 
+.flog-weak .btn ,
+
 .flog-weak .hud-btn {
   flex: 0 0 auto;
   width: 100%;
@@ -5214,6 +5293,9 @@ html {
   .flog-weak-list {
     grid-template-columns: 1fr;
   }
+}
+
+.btn.danger ,
 }
 
 .hud-btn.danger {
@@ -5354,9 +5436,13 @@ html {
   padding-top: 0.55rem;
 }
 
+.sr-launch-acts .btn.amber ,
+
 .sr-launch-acts .hud-btn.amber {
   flex: 1 1 auto;
 }
+
+.btn.ok ,
 
 .hud-btn.ok {
   --st-frame-glow: var(--st-ok);
@@ -6372,6 +6458,7 @@ html {
   gap: 0.45rem;
   padding-top: 0.35rem;
 }
+.debrief-actions .btn.ok ,
 .debrief-actions .hud-btn.ok {
   border-color: color-mix(in srgb, var(--st-ok) 55%, var(--st-line));
   color: var(--st-ok);
@@ -6785,6 +6872,7 @@ html {
   display: inline-flex;
   gap: 0.2rem;
 }
+.hd-chunk-btns .btn ,
 .hd-chunk-btns .hud-btn {
   min-width: 1.7rem;
   padding: 0.15rem 0.35rem;
@@ -7354,6 +7442,7 @@ html {
   display: flex;
   gap: 0.28rem;
 }
+.lib-act-row > .btn ,
 .lib-act-row > .hud-btn {
   flex: 1 1 0;
   min-width: 0;
@@ -7415,6 +7504,7 @@ html {
 .lib-pass-acts .lib-del {
   margin-left: auto;
 }
+.btn.danger ,
 .hud-btn.danger {
   color: var(--st-danger, #ff5d6c);
   border-color: color-mix(in srgb, var(--st-danger, #ff5d6c) 55%, transparent);
@@ -7603,12 +7693,15 @@ html {
 }
 /* Tab/стрелки вызывают .focus() из JS — нужен :focus и .is-kbd-focus, не только :focus-visible */
 .nav-tab:focus,
+.btn:focus,
 .hud-btn:focus,
 .pilot-chip:focus,
 .nav-tab.is-kbd-focus,
+.btn.is-kbd-focus,
 .hud-btn.is-kbd-focus,
 .pilot-chip.is-kbd-focus,
 .nav-tab:focus-visible,
+.btn:focus-visible,
 .hud-btn:focus-visible,
 .pilot-chip:focus-visible,
 .mission-card:focus-visible,
@@ -7636,6 +7729,7 @@ html {
   margin-bottom: 0;
 }
 /* как .nav-tab верхнего ряда: тот же кегль, padding, uppercase */
+.en-nav .btn , uppercase */
 .en-nav .hud-btn {
   font: inherit;
   font-size: 0.68rem;
@@ -8328,6 +8422,7 @@ html {
   gap: 0.35rem;
   flex-wrap: wrap;
 }
+.en-mic-row .btn ,
 .en-mic-row .hud-btn {
   font-size: 0.68rem;
   padding: 0.28rem 0.5rem;
@@ -8363,6 +8458,7 @@ html {
   50% { transform: scale(1.15); }
 }
 .en-sc-mic .en-mic-block .bridge-actions { gap: 0.2rem; }
+.en-sc-mic .en-mic-block .btn ,
 .en-sc-mic .en-mic-block .hud-btn {
   font-size: 0.7rem;
   padding: 0.28rem 0.55rem;
@@ -8583,7 +8679,8 @@ html {
 .en-wh-stars-sm { color: var(--st-amber, #d4a017); font-weight: 700; }
 .en-wh-rank { font-variant-numeric: tabular-nums; }
 .en-wh-empty { padding: 1.2rem 0.4rem; }
-.en-warehouse .hud-btn, .en-wh-card .hud-btn { text-transform: uppercase; }
+.en-warehouse .btn,
+.en-warehouse .btn, .en-warehouse .hud-btn, .en-wh-card .btn, .en-wh-card .hud-btn { text-transform: uppercase; }
 /* .en-tiles legacy removed — use .en-sm-grid / .en-sm-tile */
 .en-lists-grid { display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: 0.55rem; }
 .en-list-nav { list-style: none; margin: 0; padding: 0; }
@@ -9198,3 +9295,36 @@ body.zen-lock {
 .en-wh-line-wrap { display: flex; gap: 0.4rem; align-items: center; flex: 1; }
 .en-wh-line.ok strong { opacity: 0.85; }
 .en-wh-score { margin-left: 0.5rem; font-variant-numeric: tabular-nums; }
+
+
+/* === btn legacy alias extras === */
+/* class "btn" = HUD; ghost — вторичная; disabled — общий */
+.btn,
+.hud-btn {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.btn.ghost {
+  color: color-mix(in srgb, var(--st-cyan) 78%, var(--st-muted, #8aa));
+  opacity: 0.92;
+}
+.btn:disabled,
+.hud-btn:disabled,
+.btn[disabled],
+.hud-btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+.btn.ok,
+.hud-btn.ok { color: var(--st-ok, #6fbf73); }
+.btn.danger,
+.hud-btn.danger { color: var(--st-error, #d96a5f); }
+.btn.amber,
+.hud-btn.amber { color: var(--st-accent); }
+.btn.on,
+.hud-btn.on {
+  color: var(--st-cyan);
+  --st-frame-line: var(--st-cyan);
+  --st-frame-glow: var(--st-cyan);
+}
