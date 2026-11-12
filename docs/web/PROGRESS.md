@@ -9,7 +9,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| Лаборатория (LOD) | `b6ee1ab` | `cursor/laboratory-compartment-dd72` | [#33](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/33) | **in_progress** | pending | visual/work/full; Ctrl+0; эталон desktop PR#36; см. LABORATORY.md |
+| Лаборатория (LOD) | `38a7194` | `cursor/laboratory-compartment-dd72` | [#33](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/33) | **5/5 SUCCESS** | **SUCCESS** | visual/work/full; Ctrl+0; эталон desktop PR#36; см. LABORATORY.md; merge не делали |
 | master | `6f5a902` | `master` | — | — | — | + PR #31 OpenCode path (`6f5a902`) |
 | OpenCode автопорт (10013) | `580e9b4` | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `33ec4cf`; автопорт + `ORION_SILENT_SAY=1` |
 | Орион индикатор связи | `ce190b1` | `cursor/orion-link-indicator-dc67` | [#28](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/28) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `72721c8`; health + индикатор |
@@ -47,6 +47,7 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | 11.11 CI | PR #28 HEAD `5581f87`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
 | 12.11 | Лаборатория web: порт desktop PR#36 — три LOD, сущность, зум к курсору, слепок, F1; зона Ctrl+0. Merge не делать. |
+| 12.11 CI | PR #33 HEAD `38a7194`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
 
 ## Локальные прогоны vs CI
 
