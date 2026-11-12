@@ -437,6 +437,7 @@ class FromBookIn(BaseModel):
 
 _SEED_ROWS_CACHE: dict[int, list[dict]] = {}
 _SEED_LOCK = threading.RLock()
+_SEED_ROWS_BUILD_LOCK = threading.Lock()
 
 
 def _iter_seed_rows(limit: int) -> list[dict]:
@@ -446,6 +447,16 @@ def _iter_seed_rows(limit: int) -> list[dict]:
     cached = _SEED_ROWS_CACHE.get(limit)
     if cached is not None:
         return cached
+    with _SEED_ROWS_BUILD_LOCK:
+        cached = _SEED_ROWS_CACHE.get(limit)
+        if cached is not None:
+            return cached
+        return _build_seed_rows(limit)
+
+
+def _build_seed_rows(limit: int) -> list[dict]:
+    from app.english_vocab import load_raw_words, word_meta
+
     raw = load_raw_words(limit, include_dev=True)
     rows: list[dict] = []
     for item in raw:
@@ -467,12 +478,6 @@ def _iter_seed_rows(limit: int) -> list[dict]:
                 "meta": json.dumps(meta, ensure_ascii=False),
             }
         )
-        freq_n = sum(1 for r in rows if not str(r["slug"]).startswith("dev:"))
-        if freq_n >= limit and str(rows[-1]["slug"]).startswith("dev:"):
-            continue
-        if freq_n >= limit and not str(rows[-1]["slug"]).startswith("dev:"):
-            # продолжаем только для dev
-            pass
     if not rows:
         rows = [
             {
@@ -623,7 +628,6 @@ def _ensure_seeded_for(db: Session, need_rank: int, max_rounds: int = 40, *, nee
     """Досеять словарь, пока набор с лимитом need_rank не заполнен целиком."""
     if os.environ.get("CI"):
         return
-    _iter_seed_rows(20000)
 
     def _full() -> bool:
         have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
