@@ -16,6 +16,15 @@ export type OrionConfig = {
   max_image_bytes: number;
   opencode?: { available: boolean; cli: string; model: string; reason: string };
 };
+export type OrionHealth = {
+  available: boolean;
+  reason: string;
+  state?: string;
+  kind?: string;
+  agent_id?: string;
+  model?: string;
+  cached?: boolean;
+};
 export type ChatMsg = { id: number; role: "user" | "orion"; text: string; mode?: string; images?: string[] | number };
 export type Step = { title: string; weight: number; status: string };
 export type Task = { id: number; title: string; state: string; steps: Step[]; percent: number; color: string; stale: boolean };
@@ -45,6 +54,11 @@ const JSONH = { "Content-Type": "application/json" };
 
 export const orionApi = {
   config: () => j<OrionConfig>("/api/orion/config"),
+  health: (agentId = "", key = "", refresh = false) =>
+    j<OrionHealth>(
+      `/api/orion/health?agent_id=${encodeURIComponent(agentId)}&refresh=${refresh ? "1" : "0"}`,
+      key ? { headers: { "X-Orion-Key": key } } : undefined,
+    ),
   setMode: (mode: ModeId) => j<{ mode: ModeId }>("/api/orion/mode", { method: "PUT", headers: JSONH, body: JSON.stringify({ mode }) }),
   messages: (offset = 0, limit = 50) => j<{ total: number; items: ChatMsg[] }>(`/api/orion/messages?offset=${offset}&limit=${limit}`),
   agents: () => j<{ active: string; items: CrewAgent[] }>("/api/orion/agents"),

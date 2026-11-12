@@ -176,3 +176,57 @@ def test_opencode_bridge_chat(monkeypatch) -> None:
     assert seen["model"] == "opencode/deepseek-v4.1-flash-free"
     assert seen["profile"] == "orion-commander"
     assert "привет" in seen["prompt"]
+
+
+def test_agent_health_states(monkeypatch) -> None:
+    """Один пилот: bridge_down / ok / cache / openai no_key / models ok / agent_off."""
+    c, _ = _pilot()
+    assert c.get("/api/orion/agents").json()["active"] == "orion"
+
+    monkeypatch.setattr(api_orion, "opencode_status", lambda: {
+        "available": False, "cli": "", "model": "m", "reason": "bridge_down",
+    })
+    api_orion._HEALTH_CACHE.clear()
+    h = c.get("/api/orion/health", params={"refresh": True}).json()
+    assert h["available"] is False and h["reason"] == "bridge_down" and h["state"] == "down"
+    assert h["kind"] == "opencode" and h["agent_id"] == "orion"
+
+    calls = {"n": 0}
+
+    def oc_ok():
+        calls["n"] += 1
+        return {"available": True, "cli": "/bin/opencode", "model": "m", "reason": ""}
+
+    monkeypatch.setattr(api_orion, "opencode_status", oc_ok)
+    api_orion._HEALTH_CACHE.clear()
+    assert c.get("/api/orion/health").json()["available"] is True
+    assert c.get("/api/orion/health").json()["cached"] is True
+    assert calls["n"] == 1
+    assert c.get("/api/orion/health", params={"refresh": True}).json()["cached"] is False
+    assert calls["n"] == 2
+
+    a = c.post("/api/orion/agents", json={
+        "name": "Deep", "kind": "openai_compat", "provider": "openai",
+        "base_url": "https://api.example.com/v1", "model": "m",
+    }).json()
+    api_orion._HEALTH_CACHE.clear()
+    h = c.get("/api/orion/health", params={"agent_id": a["agent_id"], "refresh": True}).json()
+    assert h["available"] is False and h["reason"] == "no_key"
+
+    monkeypatch.setattr(
+        api_orion,
+        "probe_openai_compat",
+        lambda base_url, key, provider, check_url=True: {"available": True, "reason": ""},
+    )
+    api_orion._HEALTH_CACHE.clear()
+    h = c.get(
+        "/api/orion/health",
+        params={"agent_id": a["agent_id"], "refresh": True},
+        headers={"X-Orion-Key": "sk-test"},
+    ).json()
+    assert h["available"] is True and h["state"] == "ok"
+
+    assert c.delete("/api/orion/agents/orion").json()["disabled"] is True
+    api_orion._HEALTH_CACHE.clear()
+    h = c.get("/api/orion/health", params={"agent_id": "orion", "refresh": True}).json()
+    assert h["available"] is False and h["state"] == "off" and h["reason"] == "agent_off"

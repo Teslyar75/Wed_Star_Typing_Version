@@ -27,5 +27,13 @@ def test_register_login_honor() -> None:
     assert me.json() is not None
     assert me.json()["callsign"] == cs
 
+    # XP>0 — иначе при >50 пилотах с нулём доска (limit 50) может не включить новичка.
+    sess = client.post(
+        "/api/sessions",
+        json={"chars": 40, "typed": 40, "errors": 0, "elapsed": 10, "cpm": 200, "acc": 100.0},
+    )
+    assert sess.status_code == 200
+    assert client.get("/api/pilots/me").json()["xp"] > 0
+
     honor = client.get("/api/pilots/honor").json()
     assert any(h["callsign"] == cs for h in honor)
