@@ -1641,6 +1641,17 @@ def warehouse_goal(
 
 
 
+def _cefr_level_for_set(set_id: str) -> str:
+    """cefr-a1 / cefr-b1-1 -> A1 / B1.1; иначе пустая строка."""
+    sid = (set_id or "").lower()
+    if not sid.startswith("cefr-"):
+        return ""
+    for lv, _t, _d in packs.LEVELS:
+        if sid == "cefr-" + lv.lower().replace(".", "-"):
+            return lv
+    return ""
+
+
 @router.post("/missions/start")
 def mission_start(
     body: MissionStartIn,
@@ -1691,7 +1702,20 @@ def mission_start(
         ]
         words_orm = db.query(VocabWord).filter(VocabWord.id.in_(ids or [-1])).all() if ids else []
     else:
-        if body.set_id in THEMATIC_SETS:
+        cefr_lv = _cefr_level_for_set(body.set_id)
+        if cefr_lv:
+            # Миссия по уровню CEFR: слова из пакета уровня (как на десктопе), не top-3000.
+            pack_words = [w for b in packs.cefr_blocks(cefr_lv) for w in b][:400]
+            needles = [str(w.get("slug") or w.get("word") or "").lower() for w in pack_words]
+            needles = [n for n in needles if n]
+            words_orm = (
+                db.query(VocabWord)
+                .filter(or_(VocabWord.slug.in_(needles or ["__none__"]), func.lower(VocabWord.word).in_(needles or ["__none__"])))
+                .filter(~VocabWord.slug.like("dev:%"))
+                .limit(400)
+                .all()
+            )
+        elif body.set_id in THEMATIC_SETS:
             words_orm = db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).order_by(VocabWord.id).limit(200).all()
         else:
             lim = SET_LIMIT.get(body.set_id, 3000)

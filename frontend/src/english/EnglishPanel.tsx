@@ -16,7 +16,7 @@ import MissionsPage from "./MissionsPage";
 import ReviewPage from "./ReviewPage";
 import ScannerPage from "./ScannerPage";
 import SettingsPage from "./SettingsPage";
-import StarMapsPage from "./StarMapsPage";
+import SetsHubPage from "./SetsHubPage";
 import WarehousePage from "./WarehousePage";
 import type { EnPage, EnProgress, EnSettings } from "./types";
 
@@ -119,6 +119,7 @@ export default function EnglishPanel() {
   const [bookSegments, setBookSegments] = useState(0);
   const [settings, setSettings] = useState<EnSettings | null>(null);
   const [missionSet, setMissionSet] = useState("top-3000");
+  const [hubTab, setHubTab] = useState<"std" | "cefr" | "verbs" | "book">("std");
   const setDuck = useRadio((s) => s.setDuck);
   const duckOnType = useRadio((s) => s.duckOnType);
   const seedBusy = useRef(false);
@@ -294,6 +295,7 @@ export default function EnglishPanel() {
       openScanner(last, page === "scanner" ? scanBack : page);
       return;
     }
+    if (name === "sets") setHubTab("std");
     setPage(name);
     void reloadMeta();
   };
@@ -308,7 +310,13 @@ export default function EnglishPanel() {
   }, [page, scanSeed, scanQ, scanBack]);
 
   const openSets = (setId: string) => {
-    setMissionSet(setId);
+    // Плитки обзора CEFR / Глаголы / Из книги открывают свою вкладку хаба, а не частотную карту.
+    if (setId === "cefr" || setId === "verbs" || setId === "book") {
+      setHubTab(setId);
+    } else {
+      setHubTab("std");
+      setMissionSet(setId);
+    }
     setPage("sets");
   };
 
@@ -410,7 +418,9 @@ export default function EnglishPanel() {
       )}
 
       {page === "sets" && (
-        <StarMapsPage
+        <SetsHubPage
+          key={hubTab}
+          initialTab={hubTab}
           currentSet={missionSet}
           onOpenScanner={(w) => openScanner(w, "sets")}
           onStartMission={(id) => startMission({ mode: "random", source: "set", setId: id })}
@@ -419,6 +429,9 @@ export default function EnglishPanel() {
             startReview();
           }}
           onSetChange={setMissionSet}
+          onDuck={onDuck}
+          ttsRate={settings?.tts_rate ?? 1}
+          onPracticeBook={() => startMission({ mode: "speaking", source: "book", autoStart: true })}
         />
       )}
 
