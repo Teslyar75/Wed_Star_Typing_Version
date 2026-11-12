@@ -56,6 +56,12 @@ echo [1/5] Docker ready.
 if not exist "%~dp0.runtime" mkdir "%~dp0.runtime"
 REM Тот же путь, что пишет tools/opencode_bridge.py (web repo root / .runtime).
 set "ORION_OPENCODE_RUNTIME=%~dp0.runtime\opencode_bridge.json"
+if "%ORION_OPENCODE_PORT%"=="" set "ORION_OPENCODE_PORT=7865"
+REM Мост уже слушает свой порт - второй экземпляр не нужен, файл не трогаем.
+netstat -ano | findstr /R /C:":%ORION_OPENCODE_PORT% .*LISTENING" >nul
+if not errorlevel 1 goto opencode_bridge_up
+REM Старый JSON от прошлого запуска сбивает ожидание - удаляем перед стартом.
+if exist "!ORION_OPENCODE_RUNTIME!" del /f /q "!ORION_OPENCODE_RUNTIME!"
 echo       OpenCode bridge (auto port)...
 start "Orion OpenCode" /min py -3 "%~dp0tools\opencode_bridge.py"
 set "OPENCODE_PORT="
@@ -74,9 +80,27 @@ goto wait_opencode_port
 :opencode_port_ok
 set "OPENCODE_PORT=!OPENCODE_PORT: =!"
 echo       OpenCode bridge on :!OPENCODE_PORT!
-goto after_opencode
+goto opencode_wait_listen
 :opencode_port_miss
 echo       OpenCode bridge started (port file not ready yet)
+goto after_opencode
+:opencode_bridge_up
+echo       OpenCode bridge already listening on :%ORION_OPENCODE_PORT%
+goto after_opencode
+:opencode_wait_listen
+set /a _ocw=0
+:opencode_listen_loop
+netstat -ano | findstr /R /C:":!OPENCODE_PORT! .*LISTENING" >nul
+if not errorlevel 1 goto opencode_listen_ok
+set /a _ocw+=1
+if !_ocw! GEQ 30 goto opencode_listen_fail
+timeout /t 1 /nobreak >nul
+goto opencode_listen_loop
+:opencode_listen_ok
+echo       OpenCode bridge listening on :!OPENCODE_PORT!
+goto after_opencode
+:opencode_listen_fail
+echo       WARNING: Orion bridge did not start - port !OPENCODE_PORT! is not listening. See the "Orion OpenCode" window.
 :after_opencode
 echo       Updater on :8766
 start "Star Typing updater" /min py -3 "%~dp0tools\web_updater.py"
