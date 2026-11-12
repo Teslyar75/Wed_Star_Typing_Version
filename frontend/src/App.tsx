@@ -232,6 +232,36 @@ export default function App() {
     if (!g.st.seen.includes("first_launch") && g.st.id !== "none") return;
     g.fire(tr, { skin: useSkin.getState().skin.id, vars: { zone: zoneName(tab) } });
   }, [tab, pilotName, crewOpen]);
+  const refreshPilot = useCallback(async (applySkin = true): Promise<boolean> => {
+    try {
+      const me = await fetch("/api/pilots/me", { credentials: "include" });
+      if (me.ok) {
+        const j = await me.json();
+        if (j?.id || j?.callsign) {
+          if (applySkin && j.skin) useSkin.getState().setSkin(j.skin);
+          setPilot({
+            callsign: j.callsign || j.name || t("pilot"),
+            rank: j.rank,
+            xp: j.xp,
+            xp_next: j.xp_next ?? j.xp_to_next,
+          });
+          return true;
+        }
+      }
+    } catch {
+      /* guest */
+    }
+    return false;
+  }, []);
+
+  useEffect(() => {
+    const onXp = () => {
+      void refreshPilot(false);
+    };
+    window.addEventListener("st-xp", onXp);
+    return () => window.removeEventListener("st-xp", onXp);
+  }, [refreshPilot]);
+
   useEffect(() => {
     bootSkin({ preferBase: true });
     useCabin.getState().hydrate();
@@ -240,25 +270,7 @@ export default function App() {
       setSpaceProfile("full");
     }
     void (async () => {
-      let hasPilot = false;
-      try {
-        const me = await fetch("/api/pilots/me", { credentials: "include" });
-        if (me.ok) {
-          const j = await me.json();
-          if (j?.id || j?.callsign) {
-            hasPilot = true;
-            if (j.skin) useSkin.getState().setSkin(j.skin);
-            setPilot({
-              callsign: j.callsign || j.name || t("pilot"),
-              rank: j.rank,
-              xp: j.xp,
-              xp_next: j.xp_next ?? j.xp_to_next,
-            });
-          }
-        }
-      } catch {
-        /* guest */
-      }
+      const hasPilot = await refreshPilot();
       if (!hasPilot && localStorage.getItem(ASK_CREW_KEY) !== "0") {
         setCrewOpen(true);
       }
@@ -267,7 +279,7 @@ export default function App() {
       setLangState(getLang());
       bump((x) => x + 1);
     });
-  }, []);
+  }, [refreshPilot]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -78,6 +78,7 @@ export default function ScannerPage({
   const [hint, setHint] = useState(false);
   const [ptab, setPtab] = useState<"ipa" | "syl" | "guide" | "notes">("ipa");
   const [match, setMatch] = useState<MatchInfo | null>(null);
+  const [booting, setBooting] = useState(true);
   const liveRef = useRef(true);
 
   useEffect(() => {
@@ -125,32 +126,36 @@ export default function ScannerPage({
   useEffect(() => {
     const ac = new AbortController();
     void (async () => {
-      const seed = initialQuery.trim();
-      if (seed) {
-        if (!ac.signal.aborted) await load(seed, { signal: ac.signal });
-        return;
-      }
       try {
-        const wod = await fetch("/api/english/word-of-day", { credentials: "include", signal: ac.signal });
-        if (wod.ok) {
-          const j = (await wod.json()) as { word?: string };
-          if (!ac.signal.aborted && j.word && (await load(j.word, { silentEmpty: true, remember: true, signal: ac.signal }))) return;
+        const seed = initialQuery.trim();
+        if (seed) {
+          if (!ac.signal.aborted) await load(seed, { signal: ac.signal });
+          return;
         }
-      } catch (e) {
-        if (isAbortError(e)) return;
-      }
-      try {
-        const r = await fetch(
-          `/api/english/set/${encodeURIComponent(currentSet)}?limit=1&offset=0&sort=freq`,
-          { credentials: "include", signal: ac.signal },
-        );
-        if (r.ok) {
-          const j = (await r.json()) as { items?: EnWord[] };
-          const first = j.items?.[0]?.word;
-          if (!ac.signal.aborted && first) await load(first, { silentEmpty: true, remember: true, signal: ac.signal });
+        try {
+          const wod = await fetch("/api/english/word-of-day", { credentials: "include", signal: ac.signal });
+          if (wod.ok) {
+            const j = (await wod.json()) as { word?: string };
+            if (!ac.signal.aborted && j.word && (await load(j.word, { silentEmpty: true, remember: true, signal: ac.signal }))) return;
+          }
+        } catch (e) {
+          if (isAbortError(e)) return;
         }
-      } catch (e) {
-        if (isAbortError(e)) return;
+        try {
+          const r = await fetch(
+            `/api/english/set/${encodeURIComponent(currentSet)}?limit=1&offset=0&sort=freq`,
+            { credentials: "include", signal: ac.signal },
+          );
+          if (r.ok) {
+            const j = (await r.json()) as { items?: EnWord[] };
+            const first = j.items?.[0]?.word;
+            if (!ac.signal.aborted && first) await load(first, { silentEmpty: true, remember: true, signal: ac.signal });
+          }
+        } catch (e) {
+          if (isAbortError(e)) return;
+        }
+      } finally {
+        if (!ac.signal.aborted) setBooting(false);
       }
     })();
     return () => ac.abort();
@@ -208,6 +213,7 @@ export default function ScannerPage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ word_id: word.id, grade: 2 }),
     });
+    window.dispatchEvent(new Event("st-xp"));
     setMsg(t("en_added_review"));
   };
 
@@ -298,7 +304,7 @@ export default function ScannerPage({
 
       {msg && <p className="en-sc-msg">{msg}</p>}
 
-      {!word ? (
+      {booting && !word ? null : !word ? (
         <form
           className="en-sc-empty"
           onSubmit={(e) => {

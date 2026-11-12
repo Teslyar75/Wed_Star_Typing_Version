@@ -72,6 +72,7 @@ export default function ReviewPage({ onDuck, ttsRate = 1, reverse = false }: Pro
     if (r.ok) {
       const j = (await r.json()) as { preview_days?: number; interval?: number };
       setPreview(t("en_next_in").replace("{0}", String(j.preview_days ?? j.interval ?? 1)));
+      window.dispatchEvent(new Event("st-xp"));
     }
     setShow(false);
     if (i + 1 >= words.length) {
@@ -93,6 +94,7 @@ export default function ReviewPage({ onDuck, ttsRate = 1, reverse = false }: Pro
         body: JSON.stringify({ word_id: row.id, grade: 2 }),
       });
     }
+    window.dispatchEvent(new Event("st-xp"));
     setMsg(t("en_added_new").replace("{0}", "10"));
     void reload();
   };

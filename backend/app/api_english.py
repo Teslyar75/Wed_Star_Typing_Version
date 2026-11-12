@@ -976,7 +976,7 @@ def review(
             card.wh_state = card.wh_state or "shelf"
     db.add(ReviewLog(pilot_id=pid, word_id=body.word_id, grade=body.grade))
     if pilot is not None:
-        pilot.xp += 2 if body.grade >= 3 else 1
+        pilot.xp += 2
     db.commit()
     return {
         "ease": ease,
