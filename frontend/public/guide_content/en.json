@@ -1,0 +1,710 @@
+{
+ "_note": "Port from My_Stamina stamina/guide_content (desktop guide_idle). Same ids/counts; web i18n.",
+ "lang": "en",
+ "intros": {
+  "joke": [
+   {
+    "id": "intro_joke_001",
+    "text": "Captain, sorry to interrupt. I have a joke here — I am practising. Care to rate it?"
+   },
+   {
+    "id": "intro_joke_002",
+    "text": "Captain, onboard computer online. A fresh entry appeared in the humour log."
+   },
+   {
+    "id": "intro_joke_003",
+    "text": "Captain, permission to report: a joke detected. It poses no danger."
+   },
+   {
+    "id": "intro_joke_004",
+    "text": "Captain, while we cruise at speed, how about a minute of laughter?"
+   },
+   {
+    "id": "intro_joke_005",
+    "text": "Captain, the engineers in the engine room told a joke. Relaying on intercom."
+   },
+   {
+    "id": "intro_joke_006",
+    "text": "Captain, my build passed with zero errors. I will mark that with a joke."
+   },
+   {
+    "id": "intro_joke_007",
+    "text": "Captain, sensors show crew mood down two percent. Recommending a joke."
+   },
+   {
+    "id": "intro_joke_008",
+    "text": "Captain, incoming joke from a neighbouring ship. Accept the signal?"
+   },
+   {
+    "id": "intro_joke_009",
+    "text": "Captain, everyone in Neon City is retelling one joke. Want to hear it?"
+   },
+   {
+    "id": "intro_joke_010",
+    "text": "Captain, boiler pressure is nominal. Perfect time for a joke."
+   },
+   {
+    "id": "intro_joke_011",
+    "text": "Captain, the programmers in bay three have been laughing for ten minutes. I found out why."
+   },
+   {
+    "id": "intro_joke_012",
+    "text": "Captain, I am training my sense of humour. Another test. Will you listen?"
+   },
+   {
+    "id": "intro_joke_013",
+    "text": "Captain, serious report. Just kidding. It is a joke."
+   },
+   {
+    "id": "intro_joke_014",
+    "text": "Captain, something funny turned up in the logs. Read it aloud?"
+   },
+   {
+    "id": "intro_joke_015",
+    "text": "Captain, commit of the week: a joke. Needs your review."
+   },
+   {
+    "id": "intro_joke_016",
+    "text": "Captain, coffee is ready in the galley — and I have a joke to go with it."
+   },
+   {
+    "id": "intro_joke_017",
+    "text": "Captain, old pilot tradition: a joke before the next jump."
+   },
+   {
+    "id": "intro_joke_018",
+    "text": "Captain, the navigator says we will not fly further without a joke."
+   },
+   {
+    "id": "intro_joke_019",
+    "text": "Captain, there is a joke in my clipboard. Paste it?"
+   },
+   {
+    "id": "intro_joke_020",
+    "text": "Captain, permission to break the silence. Briefly, and purely for a laugh."
+   },
+   {
+    "id": "intro_joke_021",
+    "text": "Captain, the neon signs are blinking in rhythm. Time to joke."
+   },
+   {
+    "id": "intro_joke_022",
+    "text": "Captain, the brass gears of my memory turned and produced a joke."
+   },
+   {
+    "id": "intro_joke_023",
+    "text": "Captain, silence and stars outside. Shall we add a little laughter?"
+   },
+   {
+    "id": "intro_joke_024",
+    "text": "Captain, onboard computer speaking. Scheduled humour-system check."
+   }
+  ],
+  "fact": [
+   {
+    "id": "intro_fact_001",
+    "text": "Captain, I have an interesting fact. Exactly half a minute."
+   },
+   {
+    "id": "intro_fact_002",
+    "text": "Captain, the onboard library suggests a curious story."
+   },
+   {
+    "id": "intro_fact_003",
+    "text": "Captain, while we stay on course — a short fact for general knowledge."
+   },
+   {
+    "id": "intro_fact_004",
+    "text": "Captain, scanners found something noteworthy in the archive."
+   },
+   {
+    "id": "intro_fact_005",
+    "text": "Captain, attention: the Did-you-know segment."
+   },
+   {
+    "id": "intro_fact_006",
+    "text": "Captain, fact of the day from our observatory."
+   },
+   {
+    "id": "intro_fact_007",
+    "text": "Captain, a serious minute: a real historical fact."
+   },
+   {
+    "id": "intro_fact_008",
+    "text": "Captain, the steam-age archives hold an interesting detail. Shall I tell it?"
+   },
+   {
+    "id": "intro_fact_009",
+    "text": "Captain, every hacker in Neon City knows this. Now you will too."
+   },
+   {
+    "id": "intro_fact_010",
+    "text": "Captain, permission for a report from the onboard encyclopaedia."
+   },
+   {
+    "id": "intro_fact_011",
+    "text": "Captain, the brain benefits from new information. Here is a fresh portion."
+   },
+   {
+    "id": "intro_fact_012",
+    "text": "Captain, while your fingers rest — a little food for thought."
+   },
+   {
+    "id": "intro_fact_013",
+    "text": "Captain, a short note from the history of computing."
+   },
+   {
+    "id": "intro_fact_014",
+    "text": "Captain, the star chart reminded me of one fact."
+   },
+   {
+    "id": "intro_fact_015",
+    "text": "Captain, checked and double-checked: this is a fact, not a tall tale."
+   },
+   {
+    "id": "intro_fact_016",
+    "text": "Captain, the onboard computer shares knowledge. It will take a minute."
+   }
+  ],
+  "any": [
+   {
+    "id": "intro_any_001",
+    "text": "Captain, onboard guide on the line. Got a minute?"
+   },
+   {
+    "id": "intro_any_002",
+    "text": "Captain, sorry for breaking into the channel. I have something."
+   },
+   {
+    "id": "intro_any_003",
+    "text": "Captain, silence on the bridge has gone on too long. Permission to break it?"
+   },
+   {
+    "id": "intro_any_004",
+    "text": "Captain, onboard guide reports: something interesting found."
+   },
+   {
+    "id": "intro_any_005",
+    "text": "Captain, you are working hard. A short pause would not hurt?"
+   },
+   {
+    "id": "intro_any_006",
+    "text": "Captain, it is me, your onboard computer. I missed talking."
+   },
+   {
+    "id": "intro_any_007",
+    "text": "Captain, internal comms on. A couple of words from the guide?"
+   },
+   {
+    "id": "intro_any_008",
+    "text": "Captain, ship status: all nominal. And now something for the mood."
+   },
+   {
+    "id": "intro_any_009",
+    "text": "Captain, the watch is going well. I suggest a short break."
+   },
+   {
+    "id": "intro_any_010",
+    "text": "Captain, do not be alarmed — just the onboard guide. With a little gift."
+   }
+  ]
+ },
+ "system": [
+  {
+   "id": "sys_prompt",
+   "text": "Will you listen? Enter — yes, Escape — no."
+  },
+  {
+   "id": "sys_decline",
+   "text": "Understood, captain. I will not interfere."
+  },
+  {
+   "id": "sys_outro",
+   "text": "End of transmission. Back on watch."
+  }
+ ],
+ "jokes": [
+  {
+   "id": "joke_001",
+   "text": "How many programmers does it take to change a light bulb? None. It is a hardware problem."
+  },
+  {
+   "id": "joke_002",
+   "text": "A programmer puts two glasses on the nightstand: one with water, in case he gets thirsty at night, and an empty one, in case he does not."
+  },
+  {
+   "id": "joke_003",
+   "text": "An optimist sees the glass half full, a pessimist half empty, and a programmer sees a glass that is twice as big as needed."
+  },
+  {
+   "id": "joke_004",
+   "text": "Why do programmers confuse Halloween and Christmas? Because OCT 31 equals DEC 25."
+  },
+  {
+   "id": "joke_005",
+   "text": "There are 10 kinds of people in the world: those who understand binary, and those who do not."
+  },
+  {
+   "id": "joke_006",
+   "text": "A wife tells a programmer: buy a loaf of bread, and if they have eggs, get a dozen. He came back with ten loaves — they had eggs."
+  },
+  {
+   "id": "joke_007",
+   "text": "My code does not work, and I do not know why. My code works, and I also do not know why."
+  },
+  {
+   "id": "joke_008",
+   "text": "Debugging is like being a detective in a crime movie where you are also the murderer."
+  },
+  {
+   "id": "joke_009",
+   "text": "It works on my machine! Great — then we will ship your machine to the client."
+  },
+  {
+   "id": "joke_010",
+   "text": "Commit: final version. Commit: now definitely final. Commit: final, honestly, the last one."
+  },
+  {
+   "id": "joke_011",
+   "text": "The shortest programmer fairy tale: it is a tiny fix, will take five minutes."
+  },
+  {
+   "id": "joke_012",
+   "text": "A programmer is a device for turning coffee into code."
+  },
+  {
+   "id": "joke_013",
+   "text": "An hour before the deadline a programmer writes more code than in the whole previous week."
+  },
+  {
+   "id": "joke_014",
+   "text": "When I wrote this code, two beings understood it: me and God. Now only God does."
+  },
+  {
+   "id": "joke_015",
+   "text": "There are only two hard things in programming: cache invalidation, naming things, and off-by-one errors."
+  },
+  {
+   "id": "joke_016",
+   "text": "A tester walks into a bar. Orders one beer. Zero beers. A million beers. Minus one beer. A lizard. Everything works. The first real customer asks where the exit is — and the bar crashes."
+  },
+  {
+   "id": "joke_017",
+   "text": "You had a problem and solved it with a regular expression. Congratulations, now you have two problems."
+  },
+  {
+   "id": "joke_018",
+   "text": "If it works — do not touch it. The first law of engineering, broken by every refactor."
+  },
+  {
+   "id": "joke_019",
+   "text": "I am not resting. A build is running."
+  },
+  {
+   "id": "joke_020",
+   "text": "How is your personal life? Like git: there are branches, it is complicated, and a couple of unresolved conflicts."
+  },
+  {
+   "id": "joke_021",
+   "text": "A senior is a junior who has already seen exactly how this breaks."
+  },
+  {
+   "id": "joke_022",
+   "text": "To understand recursion, you must first understand recursion."
+  },
+  {
+   "id": "joke_023",
+   "text": "Deploy to production on Friday evening. The shortest horror movie."
+  },
+  {
+   "id": "joke_024",
+   "text": "Why do programmers love dark themes? Because light attracts bugs."
+  },
+  {
+   "id": "joke_025",
+   "text": "A bug is an undocumented feature. A feature is a documented bug."
+  },
+  {
+   "id": "joke_026",
+   "text": "How much does it cost to fix a bug? One line of code and three days finding which one."
+  },
+  {
+   "id": "joke_027",
+   "text": "We do not make mistakes. We ship beta versions."
+  },
+  {
+   "id": "joke_028",
+   "text": "A variable named temp outlives every permanent one in the project."
+  },
+  {
+   "id": "joke_029",
+   "text": "A programmer falls asleep with one thought: what if it is null?"
+  },
+  {
+   "id": "joke_030",
+   "text": "Why are you still up? Waiting for dependencies to install. I will wake up and finish in the morning."
+  },
+  {
+   "id": "joke_031",
+   "text": "The team lead asks how long the task will take. The programmer doubles the estimate, adds one, and switches to the next unit. Two hours become three days."
+  },
+  {
+   "id": "joke_032",
+   "text": "Good code is like a good joke: if you have to explain it, it is not that good."
+  },
+  {
+   "id": "joke_033",
+   "text": "A stack trace three screens long — and the cause is a missing comma."
+  },
+  {
+   "id": "joke_034",
+   "text": "Documentation is a letter to your future self. That nobody ever writes."
+  },
+  {
+   "id": "joke_035",
+   "text": "Support call: nothing works. Did you try turning it off and on? I did. Now nothing works at all."
+  },
+  {
+   "id": "joke_036",
+   "text": "Unit tests pass, integration tests do not. Like two dresser drawers: each opens alone, but together they jam."
+  },
+  {
+   "id": "joke_037",
+   "text": "Almost done means ninety percent of the work is done. Another ninety percent remains."
+  },
+  {
+   "id": "joke_038",
+   "text": "Why so much debug printing in your code? That is not printing — that is sonar."
+  },
+  {
+   "id": "joke_039",
+   "text": "Touch typing means typing without looking at the keyboard. An experienced programmer also does not look at what they typed."
+  },
+  {
+   "id": "joke_040",
+   "text": "Ship alarm: someone closed the browser tab with the forum solution."
+  },
+  {
+   "id": "joke_041",
+   "text": "Code review: ten lines — ten comments. Five hundred lines — looks fine."
+  },
+  {
+   "id": "joke_042",
+   "text": "The scariest commit message: minor fixes. Two thousand lines."
+  },
+  {
+   "id": "joke_043",
+   "text": "The computer does exactly what you told it. That is the problem."
+  },
+  {
+   "id": "joke_044",
+   "text": "I will just check my email, said the programmer. An hour later he knew the history of the tab key."
+  },
+  {
+   "id": "joke_045",
+   "text": "Spaces or tabs? The ship nearly fell apart three times over that argument."
+  },
+  {
+   "id": "joke_046",
+   "text": "A typo in the word typo — a classic of any typing trainer."
+  },
+  {
+   "id": "joke_047",
+   "text": "The onboard computer does not make mistakes. It merely sometimes chooses an alternate reality."
+  },
+  {
+   "id": "joke_048",
+   "text": "Why is the ship flying sideways? That is not a bug, captain. It is a new navigation mode."
+  },
+  {
+   "id": "joke_049",
+   "text": "They say somewhere there is a programmer who reads the docs before everything breaks. Nobody has seen him, but everyone believes."
+  },
+  {
+   "id": "joke_050",
+   "text": "The code compiled on the first try. Suspicious. Checking whether the right project is open."
+  },
+  {
+   "id": "joke_051",
+   "text": "Error 404: joke not found. Oh wait — there it is."
+  },
+  {
+   "id": "joke_052",
+   "text": "How to name a variable? Thirty minutes of thinking. Result: x."
+  },
+  {
+   "id": "joke_053",
+   "text": "Start explaining your code to a colleague and the bug finds itself. That is why many keep a rubber duck on the desk."
+  },
+  {
+   "id": "joke_054",
+   "text": "At night a brilliant idea came to the programmer. In the morning he read his code and realised it was not an idea — it was a fever."
+  },
+  {
+   "id": "joke_055",
+   "text": "Where do you see yourself in five years? Judging by this code, still in the same legacy."
+  },
+  {
+   "id": "joke_056",
+   "text": "In the steam age they also had a debugger: a person with a wrench and a very bad mood."
+  },
+  {
+   "id": "joke_057",
+   "text": "In Neon City even errors glow. In red."
+  },
+  {
+   "id": "joke_058",
+   "text": "One robot asks another: why so slow? The other answers: I am on an interpreter."
+  },
+  {
+   "id": "joke_059",
+   "text": "A programmer on the beach does not sunbathe. He waits for the sun to commit its changes."
+  },
+  {
+   "id": "joke_060",
+   "text": "What did one byte say to the other? Are you okay? No, I dropped a bit."
+  }
+ ],
+ "facts": [
+  {
+   "id": "fact_001",
+   "text": "The first computer bug was real: in 1947 a moth was found in a relay of the Harvard Mark II and taped into the log with the note first actual case of bug being found."
+  },
+  {
+   "id": "fact_002",
+   "text": "The QWERTY layout appeared in the 1870s on Christopher Sholes typewriters, long before computers."
+  },
+  {
+   "id": "fact_003",
+   "text": "Ada Lovelace is often called the first programmer: in 1843 she published an algorithm for Charles Babbage analytical engine."
+  },
+  {
+   "id": "fact_004",
+   "text": "The Python language is named not after the snake, but after the British comedy show Monty Python Flying Circus."
+  },
+  {
+   "id": "fact_005",
+   "text": "The first website in the world was launched by Tim Berners-Lee at CERN in 1991."
+  },
+  {
+   "id": "fact_006",
+   "text": "The word robot first appeared in Karel Capek play in 1920; it was coined by his brother, the artist Josef Capek."
+  },
+  {
+   "id": "fact_007",
+   "text": "The Apollo onboard computer had about two thousand words of RAM."
+  },
+  {
+   "id": "fact_008",
+   "text": "Software for the Apollo lunar program was built by a team led by Margaret Hamilton. A famous photo shows her next to a stack of printouts as tall as she is."
+  },
+  {
+   "id": "fact_009",
+   "text": "In 1991 Linus Torvalds announced his operating system as just a hobby. That is how Linux began."
+  },
+  {
+   "id": "fact_010",
+   "text": "Linus Torvalds wrote the Git version-control system in 2005 in just a few weeks."
+  },
+  {
+   "id": "fact_011",
+   "text": "The phrase Hello, world became famous thanks to Kernighan and Ritchie book on the C language from 1978."
+  },
+  {
+   "id": "fact_012",
+   "text": "Unix time counts seconds from midnight on 1 January 1970."
+  },
+  {
+   "id": "fact_013",
+   "text": "On 19 January 2038 the thirty-two-bit Unix time counter will overflow. This is called the Year 2038 problem."
+  },
+  {
+   "id": "fact_014",
+   "text": "One of the first electronic computers in continental Europe, MESM, was built in Kyiv under Sergey Lebedev and started working in the early 1950s."
+  },
+  {
+   "id": "fact_015",
+   "text": "In 1888 stenographer Frank McGurrin won a famous typing contest using all ten fingers blind. After that touch typing quickly became the standard."
+  },
+  {
+   "id": "fact_016",
+   "text": "The at sign in email addresses was first used by engineer Ray Tomlinson in 1971."
+  },
+  {
+   "id": "fact_017",
+   "text": "The most frequent letter in English texts is E; in Russian texts it is O."
+  },
+  {
+   "id": "fact_018",
+   "text": "The brain is about two percent of body mass but uses roughly one fifth of the body energy."
+  },
+  {
+   "id": "fact_019",
+   "text": "German psychologist Hermann Ebbinghaus described the forgetting curve in 1885. Spaced repetition for learning English words is based on it."
+  },
+  {
+   "id": "fact_020",
+   "text": "Sleep helps lock in what you learned: during sleep the brain moves new knowledge into long-term memory."
+  },
+  {
+   "id": "fact_021",
+   "text": "Light from the Sun takes about eight minutes and twenty seconds to reach Earth."
+  },
+  {
+   "id": "fact_022",
+   "text": "Voyager 1, launched in 1977, is the farthest human-made object from Earth."
+  },
+  {
+   "id": "fact_023",
+   "text": "A day on Venus is longer than its year: the planet spins on its axis more slowly than it orbits the Sun."
+  },
+  {
+   "id": "fact_024",
+   "text": "The International Space Station orbits Earth roughly every ninety minutes, so the crew sees about sixteen sunrises a day."
+  },
+  {
+   "id": "fact_025",
+   "text": "On 12 April 1961 Yuri Gagarin made the first human flight into space. The flight lasted one hundred and eight minutes."
+  },
+  {
+   "id": "fact_026",
+   "text": "The first artificial Earth satellite was launched on 4 October 1957."
+  },
+  {
+   "id": "fact_027",
+   "text": "In zero gravity tears do not run down the cheeks; they gather into a water blob by the eye."
+  },
+  {
+   "id": "fact_028",
+   "text": "The Moon moves away from Earth by about 3.8 centimetres per year."
+  },
+  {
+   "id": "fact_029",
+   "text": "More than one thousand three hundred Earth-sized planets would fit inside Jupiter."
+  },
+  {
+   "id": "fact_030",
+   "text": "The transistor, foundation of all modern electronics, was invented at Bell Labs in 1947."
+  },
+  {
+   "id": "fact_031",
+   "text": "In 1965 Gordon Moore noted that the number of transistors on a chip grows exponentially. That observation became Moore law."
+  },
+  {
+   "id": "fact_032",
+   "text": "The first computer mouse was invented by Douglas Engelbart. Its body was wooden."
+  },
+  {
+   "id": "fact_033",
+   "text": "One of the first electronic computers, ENIAC, weighed about twenty-seven tonnes and filled an entire hall."
+  },
+  {
+   "id": "fact_034",
+   "text": "The word bit is short for binary digit. Claude Shannon introduced it into scientific use in 1948."
+  },
+  {
+   "id": "fact_035",
+   "text": "The eight-bit byte became standard largely thanks to IBM System/360 computers from 1964."
+  },
+  {
+   "id": "fact_036",
+   "text": "Brendan Eich created the first version of JavaScript in about ten days in 1995."
+  },
+  {
+   "id": "fact_037",
+   "text": "The first emoji set was drawn by Japanese designer Shigetaka Kurita in 1999. It had one hundred and seventy-six icons."
+  },
+  {
+   "id": "fact_038",
+   "text": "When reading, the eyes do not move smoothly but in jumps — saccades. We take in text during brief stops between jumps."
+  },
+  {
+   "id": "fact_039",
+   "text": "The phrase The quick brown fox jumps over the lazy dog contains every letter of the English alphabet. Such phrases are called pangrams."
+  },
+  {
+   "id": "fact_040",
+   "text": "A Russian pangram: Eat more of these soft French rolls and drink some tea. It contains every letter of the Russian alphabet."
+  },
+  {
+   "id": "fact_041",
+   "text": "The word alphabet comes from the names of the first two Greek letters — alpha and beta."
+  },
+  {
+   "id": "fact_042",
+   "text": "Cyril and Methodius created the Glagolitic script. The Cyrillic alphabet, named after Cyril, was according to most scholars composed later by their students."
+  },
+  {
+   "id": "fact_043",
+   "text": "An octopus has three hearts and blue blood."
+  },
+  {
+   "id": "fact_044",
+   "text": "Botanically, a banana is a berry, and a strawberry is not."
+  },
+  {
+   "id": "fact_045",
+   "text": "Ice floats because water expands when it freezes and becomes lighter."
+  },
+  {
+   "id": "fact_046",
+   "text": "A lightning channel heats up to several times the temperature of the surface of the Sun."
+  },
+  {
+   "id": "fact_047",
+   "text": "Looking at a screen, people blink much less than usual. Hence the twenty-twenty-twenty rule: every twenty minutes look for twenty seconds at something about twenty feet away."
+  },
+  {
+   "id": "fact_048",
+   "text": "The first SMS in the world was sent in 1992. The text was Merry Christmas."
+  },
+  {
+   "id": "fact_049",
+   "text": "Wikipedia appeared in 2001."
+  },
+  {
+   "id": "fact_050",
+   "text": "The name Google comes from googol — a one followed by one hundred zeros."
+  },
+  {
+   "id": "fact_051",
+   "text": "Tetris was invented by Alexey Pajitnov in 1984 at the Computing Centre of the Academy of Sciences in Moscow."
+  },
+  {
+   "id": "fact_052",
+   "text": "The word pixel is short for picture element."
+  },
+  {
+   "id": "fact_053",
+   "text": "The first production IBM hard disk from 1956 held about four megabytes and weighed nearly a tonne."
+  },
+  {
+   "id": "fact_054",
+   "text": "CAPTCHA stands for Completely Automated Public Turing test to tell Computers and Humans Apart."
+  },
+  {
+   "id": "fact_055",
+   "text": "The F and J keys have small bumps. They help fingers find the home row for touch typing without looking at the keyboard."
+  },
+  {
+   "id": "fact_056",
+   "text": "The most pressed key when typing ordinary text is the space bar."
+  },
+  {
+   "id": "fact_057",
+   "text": "In space it is silent: sound needs air or another medium, and in vacuum it has nothing to travel through."
+  },
+  {
+   "id": "fact_058",
+   "text": "Sunsets on Mars look bluish: Martian dust scatters light differently from Earth air."
+  },
+  {
+   "id": "fact_059",
+   "text": "Saturn average density is less than that of water. In a giant ocean it would not sink."
+  },
+  {
+   "id": "fact_060",
+   "text": "Programmer indexes usually start at zero, not one. That makes it easier to compute the offset from the start of an array in memory."
+  }
+ ]
+}

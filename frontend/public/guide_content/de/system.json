@@ -1,0 +1,17 @@
+{
+  "lang": "de",
+  "items": [
+    {
+      "id": "sys_prompt",
+      "text": "Hören Sie zu? Enter — ja, Escape — nein."
+    },
+    {
+      "id": "sys_decline",
+      "text": "Verstanden, Kapitän. Ich störe nicht."
+    },
+    {
+      "id": "sys_outro",
+      "text": "Ende der Übertragung. Zurück auf Wache."
+    }
+  ]
+}

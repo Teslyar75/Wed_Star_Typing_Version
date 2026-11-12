@@ -59,10 +59,10 @@ export default function GuideEvents() {
     };
     window.addEventListener("st-type", onType);
     window.addEventListener(SESSION_EVENT, onSess);
-    /* шутки: раз в ~60 с проверяем тишину и кулдаун (~10 мин) */
+    /* шутки/факты: опрос раз в минуту; интервал 5–40 мин как desktop guide_idle */
     const jokeIv = window.setInterval(() => useGuide.getState().maybeOfferJoke(), 60_000);
-    /* первый шанс через 2 мин после входа в кабину (не сразу после знакомства) */
-    const jokeSoon = window.setTimeout(() => useGuide.getState().maybeOfferJoke(), 120_000);
+    /* первый шанс не сразу после знакомства */
+    const jokeSoon = window.setTimeout(() => useGuide.getState().maybeOfferJoke(), 180_000);
     return () => {
       window.removeEventListener("st-type", onType);
       window.removeEventListener(SESSION_EVENT, onSess);

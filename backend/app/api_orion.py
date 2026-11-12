@@ -36,10 +36,13 @@ class OrionMessage(Base):
     __tablename__ = "orion_messages"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     pilot_id: Mapped[int] = mapped_column(Integer, index=True)
-    role: Mapped[str] = mapped_column(String(16))  # user | orion
+    role: Mapped[str] = mapped_column(String(16))  # user | orion | system
     mode: Mapped[str] = mapped_column(String(16), default="guide")
     text: Mapped[str] = mapped_column(Text, default="")
     images: Mapped[int] = mapped_column(Integer, default=0)
+    # как desktop orion.remember(..., kind=): "" | joke | fact | task | quote | voice | …
+    kind: Mapped[str] = mapped_column(String(24), default="")
+    clip_id: Mapped[str] = mapped_column(String(40), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -496,9 +499,13 @@ def chat(body: ChatIn, db: Session = Depends(get_db), pilot: Pilot | None = Depe
         mode = "guide"
     history: list[dict] = []
     if pilot:
+        # шутки/факты гида не смешиваем в контекст агента (desktop: toast; web: kind в чате)
+        ambient = ("joke", "fact")
         rows = (db.query(OrionMessage).filter(OrionMessage.pilot_id == pilot.id)
-                .order_by(OrionMessage.id.desc()).limit(10).all())
-        history = [{"role": r.role, "text": r.text} for r in reversed(rows)]
+                .order_by(OrionMessage.id.desc()).limit(30).all())
+        history = [{"role": r.role, "text": r.text} for r in reversed(rows)
+                   if (getattr(r, "kind", "") or "") not in ambient
+                   and r.role in ("user", "orion")][-10:]
     reply, used, reason = "", mode, ""
     agent_tag = ""
     boarded = None
@@ -564,9 +571,58 @@ def messages(offset: int = 0, limit: int = 20, db: Session = Depends(get_db),
     q = db.query(OrionMessage).filter(OrionMessage.pilot_id == pilot.id)
     total = q.count()
     rows = q.order_by(OrionMessage.id.desc()).offset(max(0, offset)).limit(max(1, min(limit, 50))).all()
-    return {"total": total, "items": [{"id": r.id, "role": r.role, "mode": r.mode, "text": r.text,
-                                       "images": r.images,
-                                       "at": r.created_at.isoformat() if r.created_at else ""} for r in reversed(rows)]}
+    return {"total": total, "items": [_msg_out(r) for r in reversed(rows)]}
+
+
+def _msg_out(r: OrionMessage) -> dict:
+    return {
+        "id": r.id,
+        "role": r.role,
+        "mode": r.mode,
+        "text": r.text,
+        "images": r.images,
+        "kind": getattr(r, "kind", "") or "",
+        "clip_id": getattr(r, "clip_id", "") or "",
+        "at": r.created_at.isoformat() if r.created_at else "",
+    }
+
+
+class RememberIn(BaseModel):
+    """Зеркало desktop orion.remember(agent_id, role, text, kind=…)."""
+    role: str = Field(default="orion", pattern="^(orion|system)$")
+    text: str = Field(min_length=1, max_length=4000)
+    kind: str = ""
+    clip_id: str = Field(default="", max_length=40)
+    mode: str = Field(default="guide", max_length=16)
+
+
+@router.post("/remember")
+def remember(body: RememberIn, db: Session = Depends(get_db),
+             pilot: Pilot = Depends(get_current_pilot)) -> dict:
+    """Сохранить реплику гида (шутка/факт) в историю чата — формат desktop remember.
+
+    Desktop guide_idle: toast+аудио, в чат не пишет. Web: пишем accepted item
+    через тот же контракт remember(role, text, kind=joke|fact).
+    """
+    kind = (body.kind or "").strip()
+    if kind not in ("", "joke", "fact"):
+        raise HTTPException(400, "bad_kind")
+    text = " ".join((body.text or "").split())[:4000]
+    if not text:
+        raise HTTPException(400, "empty")
+    row = OrionMessage(
+        pilot_id=pilot.id,
+        role=body.role,
+        mode=(body.mode or "guide")[:16],
+        text=text,
+        images=0,
+        kind=kind[:24],
+        clip_id=(body.clip_id or "")[:40],
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _msg_out(row)
 
 
 @router.delete("/messages")
@@ -593,13 +649,14 @@ def archive(q: str = "", limit: int = 20, ctx: int = 40, db: Session = Depends(g
             if i < 0:
                 continue
             a, b = max(0, i - ctx), min(len(text), i + len(needle) + ctx)
-            item = {"id": r.id, "role": r.role,
+            item = {"id": r.id, "role": r.role, "kind": getattr(r, "kind", "") or "",
                     "before": ("…" if a else "") + text[a:i],
                     "match": text[i:i + len(needle)],
                     "after": text[i + len(needle):b] + ("…" if b < len(text) else ""),
                     "at": at, "text": text}
         else:
-            item = {"id": r.id, "role": r.role, "before": text[:ctx], "match": "",
+            item = {"id": r.id, "role": r.role, "kind": getattr(r, "kind", "") or "",
+                    "before": text[:ctx], "match": "",
                     "after": text[ctx:ctx * 2], "at": at, "text": text}
         out.append(item)
         if len(out) >= cap:

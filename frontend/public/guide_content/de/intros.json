@@ -1,0 +1,211 @@
+{
+  "lang": "de",
+  "intros": {
+    "joke": [
+      {
+        "id": "intro_joke_001",
+        "text": "Kapitän, entschuldigen Sie die Störung. Ich habe hier einen Witz — ich übe. Bewerten Sie ihn?"
+      },
+      {
+        "id": "intro_joke_002",
+        "text": "Kapitän, Bordcomputer meldet sich. Im Humorprotokoll steht ein neuer Eintrag."
+      },
+      {
+        "id": "intro_joke_003",
+        "text": "Kapitän, Erlaubnis zur Meldung: Witz entdeckt. Keine Gefahr für das Schiff."
+      },
+      {
+        "id": "intro_joke_004",
+        "text": "Kapitän, während wir kreuzen — eine Minute Lachen?"
+      },
+      {
+        "id": "intro_joke_005",
+        "text": "Kapitän, die Mechaniker im Maschinenraum haben einen Witz erzählt. Ich gebe ihn weiter."
+      },
+      {
+        "id": "intro_joke_006",
+        "text": "Kapitän, mein Build lief ohne Fehler. Ich markiere das mit einem Witz."
+      },
+      {
+        "id": "intro_joke_007",
+        "text": "Kapitän, Sensoren melden zwei Prozent weniger Stimmung an Bord. Empfehlung: Witz."
+      },
+      {
+        "id": "intro_joke_008",
+        "text": "Kapitän, eingehender Witz von einem Nachbarschiff. Signal annehmen?"
+      },
+      {
+        "id": "intro_joke_009",
+        "text": "Kapitän, in der Neonstadt erzählt jeder denselben Witz. Wollen Sie ihn hören?"
+      },
+      {
+        "id": "intro_joke_010",
+        "text": "Kapitän, Kesseldruck normal. Perfekte Zeit für einen Witz."
+      },
+      {
+        "id": "intro_joke_011",
+        "text": "Kapitän, die Programmierer in Sektion drei lachen seit zehn Minuten. Ich weiß warum."
+      },
+      {
+        "id": "intro_joke_012",
+        "text": "Kapitän, ich trainiere meinen Humor. Nächster Test. Hören Sie zu?"
+      },
+      {
+        "id": "intro_joke_013",
+        "text": "Kapitän, ernster Bericht. Scherz. Es ist ein Witz."
+      },
+      {
+        "id": "intro_joke_014",
+        "text": "Kapitän, in den Logs fand sich etwas Lustiges. Vorlesen?"
+      },
+      {
+        "id": "intro_joke_015",
+        "text": "Kapitän, Commit der Woche: ein Witz. Braucht Ihr Review."
+      },
+      {
+        "id": "intro_joke_016",
+        "text": "Kapitän, Kaffee in der Kombüse ist fertig — und ich habe einen Witz dazu."
+      },
+      {
+        "id": "intro_joke_017",
+        "text": "Kapitän, alte Piloten-Tradition: ein Witz vor dem nächsten Sprung."
+      },
+      {
+        "id": "intro_joke_018",
+        "text": "Kapitän, der Navigator sagt: ohne Witz fliegen wir nicht weiter."
+      },
+      {
+        "id": "intro_joke_019",
+        "text": "Kapitän, in meiner Zwischenablage liegt ein Witz. Einfügen?"
+      },
+      {
+        "id": "intro_joke_020",
+        "text": "Kapitän, Erlaubnis, die Stille zu unterbrechen. Kurz und nur zum Lachen."
+      },
+      {
+        "id": "intro_joke_021",
+        "text": "Kapitän, die Neon-Schilder blinken im Takt. Zeit für einen Witz."
+      },
+      {
+        "id": "intro_joke_022",
+        "text": "Kapitän, die Messingzahnräder meines Gedächtnisses drehten sich und lieferten einen Witz."
+      },
+      {
+        "id": "intro_joke_023",
+        "text": "Kapitän, draußen Stille und Sterne. Etwas Lachen dazu?"
+      },
+      {
+        "id": "intro_joke_024",
+        "text": "Kapitän, Bordcomputer spricht. Geplante Prüfung des Humormoduls."
+      }
+    ],
+    "fact": [
+      {
+        "id": "intro_fact_001",
+        "text": "Kapitän, ich habe einen interessanten Fakt. Genau eine halbe Minute."
+      },
+      {
+        "id": "intro_fact_002",
+        "text": "Kapitän, die Bordbibliothek empfiehlt eine merkwürdige Geschichte."
+      },
+      {
+        "id": "intro_fact_003",
+        "text": "Kapitän, während wir auf Kurs sind — ein kurzer Fakt zur Bildung."
+      },
+      {
+        "id": "intro_fact_004",
+        "text": "Kapitän, Scanner fanden im Archiv etwas Bemerkenswertes."
+      },
+      {
+        "id": "intro_fact_005",
+        "text": "Kapitän, Achtung: Rubrik Wussten Sie schon."
+      },
+      {
+        "id": "intro_fact_006",
+        "text": "Kapitän, Fakt des Tages von unserer Sternwarte."
+      },
+      {
+        "id": "intro_fact_007",
+        "text": "Kapitän, eine ernste Minute: ein echter historischer Fakt."
+      },
+      {
+        "id": "intro_fact_008",
+        "text": "Kapitän, die Dampfzeit-Archive halten ein interessantes Detail. Erzählen?"
+      },
+      {
+        "id": "intro_fact_009",
+        "text": "Kapitän, in der Neonstadt kennt das jeder Hacker. Jetzt auch Sie."
+      },
+      {
+        "id": "intro_fact_010",
+        "text": "Kapitän, Erlaubnis für einen Bericht aus der Bordenzyklopädie."
+      },
+      {
+        "id": "intro_fact_011",
+        "text": "Kapitän, das Gehirn braucht neue Information. Hier eine frische Portion."
+      },
+      {
+        "id": "intro_fact_012",
+        "text": "Kapitän, während die Finger ruhen — etwas Nahrung für den Geist."
+      },
+      {
+        "id": "intro_fact_013",
+        "text": "Kapitän, eine kurze Notiz aus der Geschichte der Rechentechnik."
+      },
+      {
+        "id": "intro_fact_014",
+        "text": "Kapitän, die Sternkarte erinnerte mich an einen Fakt."
+      },
+      {
+        "id": "intro_fact_015",
+        "text": "Kapitän, geprüft und doppelt geprüft: das ist ein Fakt, keine Sage."
+      },
+      {
+        "id": "intro_fact_016",
+        "text": "Kapitän, der Bordcomputer teilt Wissen. Es dauert eine Minute."
+      }
+    ],
+    "any": [
+      {
+        "id": "intro_any_001",
+        "text": "Kapitän, Bordführer hier. Haben Sie eine Minute?"
+      },
+      {
+        "id": "intro_any_002",
+        "text": "Kapitän, Entschuldigung für den Funk-Einbruch. Ich habe etwas."
+      },
+      {
+        "id": "intro_any_003",
+        "text": "Kapitän, die Stille auf der Brücke dauert zu lange. Darf ich sie unterbrechen?"
+      },
+      {
+        "id": "intro_any_004",
+        "text": "Kapitän, Bordführer meldet: etwas Interessantes gefunden."
+      },
+      {
+        "id": "intro_any_005",
+        "text": "Kapitän, Sie arbeiten hervorragend. Eine kurze Pause schadet nicht?"
+      },
+      {
+        "id": "intro_any_006",
+        "text": "Kapitän, ich bin es, Ihr Bordcomputer. Ich habe das Gespräch vermisst."
+      },
+      {
+        "id": "intro_any_007",
+        "text": "Kapitän, interne Verbindung an. Ein paar Worte vom Führer?"
+      },
+      {
+        "id": "intro_any_008",
+        "text": "Kapitän, Bordmeldung: alles nominal. Und jetzt etwas für die Laune."
+      },
+      {
+        "id": "intro_any_009",
+        "text": "Kapitän, die Wache läuft gut. Ich schlage eine kurze Pause vor."
+      },
+      {
+        "id": "intro_any_010",
+        "text": "Kapitän, keine Angst — nur der Bordführer. Mit einem kleinen Geschenk."
+      }
+    ]
+  }
+}
