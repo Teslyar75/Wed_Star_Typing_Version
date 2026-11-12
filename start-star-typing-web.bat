@@ -63,7 +63,8 @@ if not errorlevel 1 goto opencode_bridge_up
 REM Старый JSON от прошлого запуска сбивает ожидание - удаляем перед стартом.
 if exist "!ORION_OPENCODE_RUNTIME!" del /f /q "!ORION_OPENCODE_RUNTIME!"
 echo       OpenCode bridge (auto port)...
-start "Orion OpenCode" /min py -3 "%~dp0tools\opencode_bridge.py"
+REM watchdog restarts the bridge if it exits.
+start "Orion OpenCode" /min cmd /c "for /l %%i in (0,0,1) do (py -3 "%~dp0tools\opencode_bridge.py" & echo [watchdog] bridge exited, restart in 3s & timeout /t 3 /nobreak >nul)"
 set "OPENCODE_PORT="
 set /a _oc=0
 :wait_opencode_port
