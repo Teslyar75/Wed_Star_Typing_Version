@@ -63,6 +63,29 @@ if [ -z "${CI:-}" ] && [ "${WEB_NO_AUTOUPDATE:-0}" != "1" ] && [ -d .git ]; then
     REBUILD=1
   fi
 fi
+# Мост OpenCode на хосте (автопорт; runtime → backend). Не в CI.
+mkdir -p .runtime
+PY_BRIDGE=python3
+command -v python3 >/dev/null 2>&1 || PY_BRIDGE=python
+if [ -z "${CI:-}" ] && command -v "$PY_BRIDGE" >/dev/null 2>&1; then
+  "$PY_BRIDGE" tools/opencode_bridge.py >/tmp/star-opencode-bridge.log 2>&1 &
+  OPENCODE_PORT=""
+  for _ in $(seq 1 15); do
+    if [ -f .runtime/opencode_bridge.json ]; then
+      OPENCODE_PORT=$(
+        "$PY_BRIDGE" -c "import json;print(json.load(open('.runtime/opencode_bridge.json'))['port'])" 2>/dev/null || true
+      )
+      [ -n "$OPENCODE_PORT" ] && break
+    fi
+    sleep 0.4
+  done
+  if [ -n "$OPENCODE_PORT" ]; then
+    say "OpenCode bridge :$OPENCODE_PORT"
+  else
+    warn "OpenCode bridge стартовал (порт ещё не в runtime-файле)"
+  fi
+fi
+
 # Мост кнопки «Обновить сейчас» в Настройках (не в CI)
 if [ -z "${CI:-}" ] && command -v python3 >/dev/null 2>&1; then
   python3 tools/web_updater.py >/dev/null 2>&1 &
