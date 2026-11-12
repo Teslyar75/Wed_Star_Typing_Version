@@ -72,6 +72,7 @@ export default function ReviewPage({ onDuck, ttsRate = 1, reverse = false }: Pro
     if (r.ok) {
       const j = (await r.json()) as { preview_days?: number; interval?: number };
       setPreview(t("en_next_in").replace("{0}", String(j.preview_days ?? j.interval ?? 1)));
+      window.dispatchEvent(new Event("st-xp"));
     }
     setShow(false);
     if (i + 1 >= words.length) {
@@ -83,18 +84,15 @@ export default function ReviewPage({ onDuck, ttsRate = 1, reverse = false }: Pro
   };
 
   const addNew = async () => {
+    // Like desktop pages_learn.add_new: new words go straight into the session, no auto-grade, no XP.
     const r = await fetch("/api/english/warehouse?limit=10&bin=inbox", { credentials: "include" });
-    const rows = (await r.json()) as EnWord[];
-    for (const row of rows.slice(0, 10)) {
-      await fetch("/api/english/review", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word_id: row.id, grade: 2 }),
-      });
-    }
-    setMsg(t("en_added_new").replace("{0}", "10"));
-    void reload();
+    const rows = r.ok ? ((await r.json()) as EnWord[]) : [];
+    const fresh = Array.isArray(rows) ? rows.slice(0, 10) : [];
+    setWords(fresh);
+    setI(0);
+    setShow(false);
+    setPreview("");
+    setMsg(fresh.length ? t("en_added_new").replace("{0}", String(fresh.length)) : t("en_review_empty"));
   };
 
   if (!w) {

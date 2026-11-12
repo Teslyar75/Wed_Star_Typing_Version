@@ -9328,3 +9328,89 @@ body.zen-lock {
   --st-frame-line: var(--st-cyan);
   --st-frame-glow: var(--st-cyan);
 }
+
+/* СКАНЕР: фокус-режим (O / Щ, Esc — выход), эталон desktop FocusMode */
+.en-sc-focus-btn {
+  border-color: var(--st-accent);
+  color: var(--st-accent);
+}
+.en-sc-focus-btn:hover { color: var(--st-accent); border-color: var(--st-accent); }
+.en-sc-focus-btn.on {
+  color: var(--st-accent);
+  border-color: var(--st-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st-accent) 45%, transparent);
+}
+
+body.en-sc-focus { overflow: hidden; }
+body.en-sc-focus .cockpit > .top-bar,
+body.en-sc-focus .cockpit > .chrome-under-bar,
+body.en-sc-focus .cockpit > .zone-subnav,
+body.en-sc-focus .cockpit > .upd-banner,
+body.en-sc-focus .stage > .stage-fs-bar,
+body.en-sc-focus .english > .en-nav-row,
+body.en-sc-focus .english > .en-seed-hint {
+  display: none !important;
+}
+body.en-sc-focus .stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  padding: 0.3rem 0.45rem 0.35rem;
+  overflow: hidden;
+}
+body.en-sc-focus .english { height: 100%; min-height: 0; }
+body.en-sc-focus .en-sc { height: 100%; gap: 0.35rem; }
+
+/* Верх — три колонки как в desktop: слово | анализ | данные (6:7:9) */
+body.en-sc-focus .en-sc-body {
+  display: grid;
+  grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+  gap: 0.35rem;
+}
+body.en-sc-focus .en-sc-upper {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 7fr) minmax(0, 9fr);
+  gap: 0.35rem;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+body.en-sc-focus .en-sc-window {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  overflow: auto;
+}
+body.en-sc-focus .en-sc-cols { display: contents; }
+body.en-sc-focus .en-sc-cols .en-sc-panel { min-height: 0; overflow: auto; }
+body.en-sc-focus .en-sc-modes { display: none; }
+body.en-sc-focus .en-sc-channel {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
+  overflow: hidden;
+  margin-top: 0;
+}
+body.en-sc-focus .en-sc-chan-grid { min-height: 0; height: 100%; }
+body.en-sc-focus .en-sc-chan-left { min-height: 0; overflow: auto; }
+body.en-sc-focus .en-sc-mic { position: static; }
+
+/* Крупнее шрифты, как в desktop FOCUS_FONT_GAIN */
+body.en-sc-focus .en-sm-title { font-size: 1.25rem; }
+body.en-sc-focus .en-sc-panel-lab { font-size: 0.78rem; }
+body.en-sc-focus .en-sc-freq { font-size: 0.82rem; padding: 0.1rem 0.5rem; }
+body.en-sc-focus .en-sc-word { font-size: clamp(2rem, 4.5vw, 3.4rem); }
+body.en-sc-focus .en-sc-respell { font-size: clamp(1.4rem, 2.6vw, 2.1rem); }
+body.en-sc-focus .en-sc-ptext { font-size: clamp(1rem, 1.5vw, 1.25rem); }
+body.en-sc-focus .en-sc-def { font-size: clamp(1.02rem, 1.5vw, 1.22rem); }
+body.en-sc-focus .en-sc-ex { font-size: clamp(0.95rem, 1.35vw, 1.1rem); }
+body.en-sc-focus .en-sc-sent { font-size: clamp(1.15rem, 2vw, 1.7rem); }
+body.en-sc-focus .en-sc-sent-ru { font-size: 1rem; }
+body.en-sc-focus .en-sc-snum { font-size: 0.74rem; }
+body.en-sc-focus .en-sm-tag { font-size: 0.82rem; }
+body.en-sc-focus .en-sm-chip { font-size: 0.8rem; min-height: 1.9rem; padding: 0.25rem 0.5rem; }
+body.en-sc-focus .en-sc-acts .en-sm-chip { font-size: 0.8rem; }
+body.en-sc-focus .en-sc-tr { font-size: 0.78rem; }
+body.en-sc-focus .en-sc-tr input { font-size: 1rem; }

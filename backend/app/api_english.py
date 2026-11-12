@@ -437,6 +437,7 @@ class FromBookIn(BaseModel):
 
 _SEED_ROWS_CACHE: dict[int, list[dict]] = {}
 _SEED_LOCK = threading.RLock()
+_SEED_ROWS_BUILD_LOCK = threading.Lock()
 
 
 def _iter_seed_rows(limit: int) -> list[dict]:
@@ -446,6 +447,16 @@ def _iter_seed_rows(limit: int) -> list[dict]:
     cached = _SEED_ROWS_CACHE.get(limit)
     if cached is not None:
         return cached
+    with _SEED_ROWS_BUILD_LOCK:
+        cached = _SEED_ROWS_CACHE.get(limit)
+        if cached is not None:
+            return cached
+        return _build_seed_rows(limit)
+
+
+def _build_seed_rows(limit: int) -> list[dict]:
+    from app.english_vocab import load_raw_words, word_meta
+
     raw = load_raw_words(limit, include_dev=True)
     rows: list[dict] = []
     for item in raw:
@@ -467,12 +478,6 @@ def _iter_seed_rows(limit: int) -> list[dict]:
                 "meta": json.dumps(meta, ensure_ascii=False),
             }
         )
-        freq_n = sum(1 for r in rows if not str(r["slug"]).startswith("dev:"))
-        if freq_n >= limit and str(rows[-1]["slug"]).startswith("dev:"):
-            continue
-        if freq_n >= limit and not str(rows[-1]["slug"]).startswith("dev:"):
-            # продолжаем только для dev
-            pass
     if not rows:
         rows = [
             {
@@ -623,7 +628,6 @@ def _ensure_seeded_for(db: Session, need_rank: int, max_rounds: int = 40, *, nee
     """Досеять словарь, пока набор с лимитом need_rank не заполнен целиком."""
     if os.environ.get("CI"):
         return
-    _iter_seed_rows(20000)
 
     def _full() -> bool:
         have = db.query(VocabWord).filter(VocabWord.rank > 0, VocabWord.rank <= need_rank).count()
@@ -976,7 +980,7 @@ def review(
             card.wh_state = card.wh_state or "shelf"
     db.add(ReviewLog(pilot_id=pid, word_id=body.word_id, grade=body.grade))
     if pilot is not None:
-        pilot.xp += 2 if body.grade >= 3 else 1
+        pilot.xp += 2
     db.commit()
     return {
         "ease": ease,
@@ -1637,6 +1641,17 @@ def warehouse_goal(
 
 
 
+def _cefr_level_for_set(set_id: str) -> str:
+    """cefr-a1 / cefr-b1-1 -> A1 / B1.1; иначе пустая строка."""
+    sid = (set_id or "").lower()
+    if not sid.startswith("cefr-"):
+        return ""
+    for lv, _t, _d in packs.LEVELS:
+        if sid == "cefr-" + lv.lower().replace(".", "-"):
+            return lv
+    return ""
+
+
 @router.post("/missions/start")
 def mission_start(
     body: MissionStartIn,
@@ -1687,7 +1702,20 @@ def mission_start(
         ]
         words_orm = db.query(VocabWord).filter(VocabWord.id.in_(ids or [-1])).all() if ids else []
     else:
-        if body.set_id in THEMATIC_SETS:
+        cefr_lv = _cefr_level_for_set(body.set_id)
+        if cefr_lv:
+            # Миссия по уровню CEFR: слова из пакета уровня (как на десктопе), не top-3000.
+            pack_words = [w for b in packs.cefr_blocks(cefr_lv) for w in b][:400]
+            needles = [str(w.get("slug") or w.get("word") or "").lower() for w in pack_words]
+            needles = [n for n in needles if n]
+            words_orm = (
+                db.query(VocabWord)
+                .filter(or_(VocabWord.slug.in_(needles or ["__none__"]), func.lower(VocabWord.word).in_(needles or ["__none__"])))
+                .filter(~VocabWord.slug.like("dev:%"))
+                .limit(400)
+                .all()
+            )
+        elif body.set_id in THEMATIC_SETS:
             words_orm = db.query(VocabWord).filter(VocabWord.slug.like("dev:%")).order_by(VocabWord.id).limit(200).all()
         else:
             lim = SET_LIMIT.get(body.set_id, 3000)

@@ -78,6 +78,8 @@ export default function ScannerPage({
   const [hint, setHint] = useState(false);
   const [ptab, setPtab] = useState<"ipa" | "syl" | "guide" | "notes">("ipa");
   const [match, setMatch] = useState<MatchInfo | null>(null);
+  const [booting, setBooting] = useState(true);
+  const [focus, setFocus] = useState(false);
   const liveRef = useRef(true);
 
   useEffect(() => {
@@ -86,6 +88,49 @@ export default function ScannerPage({
       liveRef.current = false;
     };
   }, []);
+
+  // фокус-режим (O / Щ, Esc — выход): класс на body прячет шапку, вкладки и т.п.
+  useEffect(() => {
+    if (!focus) return;
+    const b = document.body;
+    b.classList.add("en-sc-focus");
+    return () => b.classList.remove("en-sc-focus");
+  }, [focus]);
+
+  useEffect(() => {
+    if (focus && !word) setFocus(false);
+  }, [focus, word]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing =
+        !!el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.tagName === "SELECT" ||
+          el.isContentEditable);
+      if (e.key === "Escape") {
+        if (focus) {
+          e.preventDefault();
+          e.stopPropagation();
+          setFocus(false);
+        }
+        return;
+      }
+      if (typing || !word) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const k = e.key.toLowerCase();
+      if (e.code === "KeyO" || k === "o" || k === "щ") {
+        if (e.repeat) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setFocus((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [focus, word]);
 
   const load = useCallback(async (query: string, opts?: { silentEmpty?: boolean; remember?: boolean; signal?: AbortSignal }) => {
     const needle = query.trim();
@@ -125,32 +170,36 @@ export default function ScannerPage({
   useEffect(() => {
     const ac = new AbortController();
     void (async () => {
-      const seed = initialQuery.trim();
-      if (seed) {
-        if (!ac.signal.aborted) await load(seed, { signal: ac.signal });
-        return;
-      }
       try {
-        const wod = await fetch("/api/english/word-of-day", { credentials: "include", signal: ac.signal });
-        if (wod.ok) {
-          const j = (await wod.json()) as { word?: string };
-          if (!ac.signal.aborted && j.word && (await load(j.word, { silentEmpty: true, remember: true, signal: ac.signal }))) return;
+        const seed = initialQuery.trim();
+        if (seed) {
+          if (!ac.signal.aborted) await load(seed, { signal: ac.signal });
+          return;
         }
-      } catch (e) {
-        if (isAbortError(e)) return;
-      }
-      try {
-        const r = await fetch(
-          `/api/english/set/${encodeURIComponent(currentSet)}?limit=1&offset=0&sort=freq`,
-          { credentials: "include", signal: ac.signal },
-        );
-        if (r.ok) {
-          const j = (await r.json()) as { items?: EnWord[] };
-          const first = j.items?.[0]?.word;
-          if (!ac.signal.aborted && first) await load(first, { silentEmpty: true, remember: true, signal: ac.signal });
+        try {
+          const wod = await fetch("/api/english/word-of-day", { credentials: "include", signal: ac.signal });
+          if (wod.ok) {
+            const j = (await wod.json()) as { word?: string };
+            if (!ac.signal.aborted && j.word && (await load(j.word, { silentEmpty: true, remember: true, signal: ac.signal }))) return;
+          }
+        } catch (e) {
+          if (isAbortError(e)) return;
         }
-      } catch (e) {
-        if (isAbortError(e)) return;
+        try {
+          const r = await fetch(
+            `/api/english/set/${encodeURIComponent(currentSet)}?limit=1&offset=0&sort=freq`,
+            { credentials: "include", signal: ac.signal },
+          );
+          if (r.ok) {
+            const j = (await r.json()) as { items?: EnWord[] };
+            const first = j.items?.[0]?.word;
+            if (!ac.signal.aborted && first) await load(first, { silentEmpty: true, remember: true, signal: ac.signal });
+          }
+        } catch (e) {
+          if (isAbortError(e)) return;
+        }
+      } finally {
+        if (!ac.signal.aborted) setBooting(false);
       }
     })();
     return () => ac.abort();
@@ -208,6 +257,7 @@ export default function ScannerPage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ word_id: word.id, grade: 2 }),
     });
+    window.dispatchEvent(new Event("st-xp"));
     setMsg(t("en_added_review"));
   };
 
@@ -267,7 +317,7 @@ export default function ScannerPage({
           : (word?.notes || []).map((n) => `• ${n}`).join("\n") || t("en_no_data");
 
   return (
-    <section className="en-scanner en-sc">
+    <section className={`en-scanner en-sc ${focus ? "is-focus" : ""}`}>
       <header className="en-sm-strip en-sc-strip">
         <div className="en-sm-strip-bar" aria-hidden />
         <div className="en-sm-strip-main">
@@ -293,12 +343,22 @@ export default function ScannerPage({
           <button type="button" className="en-sm-chip" onClick={() => neighbor(1)} disabled={!word}>
             {t("en_next")}
           </button>
+          <button
+            type="button"
+            className={`en-sm-chip en-sc-focus-btn ${focus ? "on" : ""}`}
+            onClick={() => setFocus((v) => !v)}
+            disabled={!word}
+            aria-pressed={focus}
+            title={focus ? "Esc" : "O"}
+          >
+            {focus ? "✕ ФОКУС Esc" : "⛶ ФОКУС O"}
+          </button>
         </div>
       </header>
 
       {msg && <p className="en-sc-msg">{msg}</p>}
 
-      {!word ? (
+      {booting && !word ? null : !word ? (
         <form
           className="en-sc-empty"
           onSubmit={(e) => {
