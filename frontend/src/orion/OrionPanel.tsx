@@ -17,6 +17,14 @@ import OrionLinkIndicator from "./OrionLinkIndicator";
 import { ot } from "./orionI18n";
 import { contextBlock, markSent } from "./marks";
 import { useOrionLink } from "./useOrionLink";
+import { useGuide } from "../guide/guideStore";
+import {
+  canOnlineAmbient,
+  ONLINE_CHECK_MS,
+  pickIdle,
+  rememberAmbient,
+  saveIdle,
+} from "../guide/guideIdle";
 import "./orion.css";
 
 type Tab = "chat" | "agents" | "archive";
@@ -154,6 +162,52 @@ function ChatScreen({ cfg, quotes, onQuotesUsed, draft, setDraft, boardOn, setBo
     orionApi.messages(0, 50).then((r) => { setMsgs(r.items); onMsgs(r.total); }).catch(() => {});
   }, [cfg.logged_in, onMsgs]);
   useEffect(() => { boardEnd.current?.scrollIntoView({ block: "end" }); }, [msgs, boardOn]);
+
+  /* ONLINE ambient: редкая шутка/факт в чат, только когда агент свободен.
+     Desktop guide_idle такого не делает (только toast) — web-дополнение с выключателем. */
+  useEffect(() => {
+    if (!cfg.logged_in) return;
+    const onlineMode = cfg.mode === "byo" || cfg.mode === "hosted" || cfg.mode === "contributor" || !!crew;
+    if (!onlineMode) return;
+    const tick = () => {
+      const g = useGuide.getState();
+      if (!g.st.jokes || !g.idle.online_jokes) return;
+      if (!canOnlineAmbient(g.idle, {
+        now: Date.now(),
+        lastTypeAt: g.lastTypeAt,
+        jokesOn: g.st.jokes,
+        onlineOn: g.idle.online_jokes,
+        busy,
+        hasDraft: !!draft.trim(),
+        listening: !!listening,
+        pendingAnswer: !!pendingTask,
+      })) return;
+      void (async () => {
+        const idle = { ...g.idle, bags: { ...g.idle.bags } };
+        const picked = await pickIdle(idle);
+        if (!picked?.item) return;
+        /* повторная проверка — за время загрузки мог начаться запрос */
+        const g2 = useGuide.getState();
+        if (busy || draft.trim() || listening || pendingTask) return;
+        const saved = await rememberAmbient({ text: picked.item, kind: picked.kind, clipId: picked.itemId });
+        if (!saved) return;
+        idle.last_online_at = Date.now();
+        saveIdle(g2.pilot, idle);
+        g2.patchIdle({ last_online_at: idle.last_online_at, bags: idle.bags });
+        setMsgs((m) => [...m, {
+          id: saved.id,
+          role: "orion",
+          text: picked.item,
+          kind: picked.kind,
+          clip_id: picked.itemId,
+          mode: "guide",
+        }]);
+        setBoardOn(true);
+      })();
+    };
+    const iv = window.setInterval(tick, ONLINE_CHECK_MS);
+    return () => window.clearInterval(iv);
+  }, [cfg.logged_in, cfg.mode, crew, busy, draft, listening, pendingTask, setBoardOn]);
 
   const link = useOrionLink({
     cfg,
@@ -361,11 +415,14 @@ function ChatScreen({ cfg, quotes, onQuotesUsed, draft, setDraft, boardOn, setBo
             {msgs.length === 0 ? <div className="orion-empty">{cfg.logged_in ? ot("empty_chat") : ot("login")}</div> : null}
             {msgs.map((m) => {
               const pics = Array.isArray(m.images) ? m.images : [];
+              const kindLab = m.kind === "joke" ? ot("kind_joke") : m.kind === "fact" ? ot("kind_fact") : "";
+              const who = m.role === "user" ? ot("you_pilot") : m.role === "system" ? ot("ship") : whoName;
               return (
-                <div key={m.id} className={`orion-msg ${m.role}`} data-testid="orion-msg">
+                <div key={m.id} className={`orion-msg ${m.role}`} data-testid="orion-msg" data-kind={m.kind || ""}>
                   <div className="orion-msg-head">
-                    <b>{m.role === "user" ? ot("you_pilot") : whoName}</b>
-                    {m.mode && m.role === "orion" ? <span className="orion-tag">{ot(`m_${m.mode}`)}</span> : null}
+                    <b>{kindLab ? `${kindLab} · ${who}` : who}</b>
+                    {m.mode && m.role === "orion" && !m.kind ? <span className="orion-tag">{ot(`m_${m.mode}`)}</span> : null}
+                    {m.kind ? <span className="orion-tag" data-testid={`orion-kind-${m.kind}`}>{m.kind}</span> : null}
                     <span className="orion-msg-tools">
                       {pics.map((p, i) => <img key={i} src={p} alt="" className="orion-thumb" onClick={() => setView({ img: p })} />)}
                       <CopyBtn text={m.text} />

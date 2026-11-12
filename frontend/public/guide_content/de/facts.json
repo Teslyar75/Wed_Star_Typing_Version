@@ -1,0 +1,245 @@
+{
+  "lang": "de",
+  "items": [
+    {
+      "id": "fact_001",
+      "text": "Der erste Computerbug war echt: 1947 fand man eine Motte in einem Relais des Harvard Mark II und klebte sie mit dem Vermerk first actual case of bug being found ins Protokoll."
+    },
+    {
+      "id": "fact_002",
+      "text": "Das QWERTY-Layout entstand in den 1870ern auf Schreibmaschinen von Christopher Sholes — lange vor Computern."
+    },
+    {
+      "id": "fact_003",
+      "text": "Ada Lovelace gilt oft als erste Programmiererin: 1843 veröffentlichte sie einen Algorithmus für Charles Babbages Analytical Engine."
+    },
+    {
+      "id": "fact_004",
+      "text": "Die Sprache Python ist nicht nach der Schlange benannt, sondern nach der britischen Comedy-Show Monty Python Flying Circus."
+    },
+    {
+      "id": "fact_005",
+      "text": "Die erste Website der Welt startete Tim Berners-Lee am CERN 1991."
+    },
+    {
+      "id": "fact_006",
+      "text": "Das Wort Roboter erklang zuerst in Karel Capeks Stück 1920; geprägt hat es sein Bruder, der Künstler Josef Capek."
+    },
+    {
+      "id": "fact_007",
+      "text": "Der Apollo-Bordcomputer hatte etwa zweitausend Wörter Arbeitsspeicher."
+    },
+    {
+      "id": "fact_008",
+      "text": "Die Software für das Apollo-Mondprogramm baute ein Team unter Margaret Hamilton. Berühmt ist ihr Foto neben einem Stapel Ausdrucke so hoch wie sie selbst."
+    },
+    {
+      "id": "fact_009",
+      "text": "1991 kündigte Linus Torvalds sein Betriebssystem als bloßes Hobby an. So entstand Linux."
+    },
+    {
+      "id": "fact_010",
+      "text": "Linus Torvalds schrieb Git 2005 in nur wenigen Wochen."
+    },
+    {
+      "id": "fact_011",
+      "text": "Die Phrase Hello, world wurde berühmt durch Kernighan und Ritchies C-Buch von 1978."
+    },
+    {
+      "id": "fact_012",
+      "text": "Die Unix-Zeit zählt Sekunden ab Mitternacht des 1. Januar 1970."
+    },
+    {
+      "id": "fact_013",
+      "text": "Am 19. Januar 2038 läuft der 32-Bit-Unix-Zähler über. Das nennt man das Jahr-2038-Problem."
+    },
+    {
+      "id": "fact_014",
+      "text": "Eine der ersten elektronischen Rechenmaschinen in Kontinentaleuropa, MESM, wurde in Kiew unter Sergej Lebedew gebaut und lief Anfang der 1950er."
+    },
+    {
+      "id": "fact_015",
+      "text": "1888 gewann Stenograf Frank McGurrin einen berühmten Tipbwettbewerb mit zehn Fingern blind. Danach wurde Blindschreiben schnell Standard."
+    },
+    {
+      "id": "fact_016",
+      "text": "Das At-Zeichen in E-Mail-Adressen nutzte Ingenieur Ray Tomlinson erstmals 1971."
+    },
+    {
+      "id": "fact_017",
+      "text": "Der häufigste Buchstabe in englischen Texten ist E, in russischen O."
+    },
+    {
+      "id": "fact_018",
+      "text": "Das Gehirn macht etwa zwei Prozent der Körpermasse aus, verbraucht aber etwa ein Fünftel der Körperenergie."
+    },
+    {
+      "id": "fact_019",
+      "text": "Der deutsche Psychologe Hermann Ebbinghaus beschrieb 1885 die Vergessenskurve. Spaced Repetition für Englischvokabeln basiert darauf."
+    },
+    {
+      "id": "fact_020",
+      "text": "Schlaf hilft, Gelerntes zu festigen: im Schlaf lagert das Gehirn neues Wissen im Langzeitgedächtnis."
+    },
+    {
+      "id": "fact_021",
+      "text": "Licht von der Sonne braucht etwa acht Minuten und zwanzig Sekunden zur Erde."
+    },
+    {
+      "id": "fact_022",
+      "text": "Voyager 1, gestartet 1977, ist das am weitesten von der Erde entfernte von Menschen gebaute Objekt."
+    },
+    {
+      "id": "fact_023",
+      "text": "Ein Tag auf der Venus ist länger als ihr Jahr: sie dreht sich langsamer um die Achse, als sie die Sonne umkreist."
+    },
+    {
+      "id": "fact_024",
+      "text": "Die ISS umkreist die Erde etwa alle neunzig Minuten; die Crew sieht etwa sechzehn Sonnenaufgänge pro Tag."
+    },
+    {
+      "id": "fact_025",
+      "text": "Am 12. April 1961 flog Juri Gagarin als erster Mensch ins All. Der Flug dauerte hundertacht Minuten."
+    },
+    {
+      "id": "fact_026",
+      "text": "Der erste künstliche Erdsatellit startete am 4. Oktober 1957."
+    },
+    {
+      "id": "fact_027",
+      "text": "In der Schwerelosigkeit laufen Tränen nicht die Wangen hinunter, sondern sammeln sich als Wasserball am Auge."
+    },
+    {
+      "id": "fact_028",
+      "text": "Der Mond entfernt sich jährlich etwa 3,8 Zentimeter von der Erde."
+    },
+    {
+      "id": "fact_029",
+      "text": "In den Jupiter passten mehr als eintausenddreihundert erdgroße Planeten."
+    },
+    {
+      "id": "fact_030",
+      "text": "Der Transistor, Grundlage aller modernen Elektronik, wurde 1947 in den Bell Labs erfunden."
+    },
+    {
+      "id": "fact_031",
+      "text": "1965 bemerkte Gordon Moore, dass die Transistorzahl auf einem Chip exponentiell wächst. Das wurde Mooresches Gesetz genannt."
+    },
+    {
+      "id": "fact_032",
+      "text": "Die erste Computermaus erfand Douglas Engelbart. Ihr Gehäuse war aus Holz."
+    },
+    {
+      "id": "fact_033",
+      "text": "Einer der ersten elektronischen Computer, ENIAC, wog etwa siebenundzwanzig Tonnen und füllte eine ganze Halle."
+    },
+    {
+      "id": "fact_034",
+      "text": "Das Wort Bit ist kurz für binary digit. Claude Shannon führte es 1948 in die Wissenschaft ein."
+    },
+    {
+      "id": "fact_035",
+      "text": "Das Acht-Bit-Byte wurde vor allem durch IBM System/360 von 1964 Standard."
+    },
+    {
+      "id": "fact_036",
+      "text": "Brendan Eich schuf die erste Version von JavaScript in etwa zehn Tagen 1995."
+    },
+    {
+      "id": "fact_037",
+      "text": "Das erste Emoji-Set zeichnete der japanische Designer Shigetaka Kurita 1999. Es hatte hundertsechsundsiebzig Zeichen."
+    },
+    {
+      "id": "fact_038",
+      "text": "Beim Lesen bewegen sich die Augen nicht gleichmäßig, sondern in Sprüngen — Sakkaden. Text nehmen wir in kurzen Stopps dazwischen wahr."
+    },
+    {
+      "id": "fact_039",
+      "text": "Der Satz The quick brown fox jumps over the lazy dog enthält alle Buchstaben des englischen Alphabets. Solche Sätze heißen Pangramme."
+    },
+    {
+      "id": "fact_040",
+      "text": "Ein russisches Pangramm: Iss noch von diesen weichen französischen Brötchen und trink Tee. Es enthält alle Buchstaben des russischen Alphabets."
+    },
+    {
+      "id": "fact_041",
+      "text": "Das Wort Alphabet kommt von den ersten beiden griechischen Buchstaben — Alpha und Beta."
+    },
+    {
+      "id": "fact_042",
+      "text": "Kyrill und Method schufen die glagolitische Schrift. Die kyrillische Schrift, nach Kyrill benannt, entstand nach den meisten Forschern später durch ihre Schüler."
+    },
+    {
+      "id": "fact_043",
+      "text": "Ein Oktopus hat drei Herzen und blaues Blut."
+    },
+    {
+      "id": "fact_044",
+      "text": "Botanisch ist eine Banane eine Beere, eine Erdbeere nicht."
+    },
+    {
+      "id": "fact_045",
+      "text": "Eis schwimmt, weil Wasser beim Gefrieren sich ausdehnt und leichter wird."
+    },
+    {
+      "id": "fact_046",
+      "text": "Ein Blitzkanal erhitzt sich auf ein Vielfaches der Temperatur der Sonnenoberfläche."
+    },
+    {
+      "id": "fact_047",
+      "text": "Vor dem Bildschirm blinzelt man deutlich seltener. Deshalb die Zwanzig-zwanzig-zwanzig-Regel: alle zwanzig Minuten zwanzig Sekunden auf etwas in etwa sechs Metern Entfernung schauen."
+    },
+    {
+      "id": "fact_048",
+      "text": "Die erste SMS der Welt wurde 1992 gesendet. Text: Merry Christmas."
+    },
+    {
+      "id": "fact_049",
+      "text": "Wikipedia erschien 2001."
+    },
+    {
+      "id": "fact_050",
+      "text": "Der Name Google kommt von Googol — eine Eins mit hundert Nullen."
+    },
+    {
+      "id": "fact_051",
+      "text": "Tetris erfand Alexei Paschitnow 1984 im Rechenzentrum der Akademie der Wissenschaften in Moskau."
+    },
+    {
+      "id": "fact_052",
+      "text": "Das Wort Pixel ist kurz für picture element."
+    },
+    {
+      "id": "fact_053",
+      "text": "Die erste serienmäßige IBM-Festplatte von 1956 speicherte etwa vier Megabyte und wog fast eine Tonne."
+    },
+    {
+      "id": "fact_054",
+      "text": "CAPTCHA heißt Completely Automated Public Turing test to tell Computers and Humans Apart."
+    },
+    {
+      "id": "fact_055",
+      "text": "Auf den Tasten F und J sitzen kleine Noppen. Sie helfen den Fingern, die Grundreihe für Blindschreiben zu finden, ohne auf die Tastatur zu schauen."
+    },
+    {
+      "id": "fact_056",
+      "text": "Die am häufigsten gedrückte Taste beim normalen Tippen ist die Leertaste."
+    },
+    {
+      "id": "fact_057",
+      "text": "Im Weltraum herrscht Stille: Schall braucht Luft oder ein anderes Medium; im Vakuum hat er nichts zum Ausbreiten."
+    },
+    {
+      "id": "fact_058",
+      "text": "Sonnenuntergänge auf dem Mars wirken bläulich: Marstaub streut Licht anders als Erdatmosphäre."
+    },
+    {
+      "id": "fact_059",
+      "text": "Die mittlere Dichte des Saturns ist geringer als die von Wasser. In einem Riesenmeer würde er nicht untergehen."
+    },
+    {
+      "id": "fact_060",
+      "text": "Programmierer-Indizes beginnen meist bei null, nicht bei eins. So lässt sich der Versatz vom Array-Anfang im Speicher leichter berechnen."
+    }
+  ]
+}

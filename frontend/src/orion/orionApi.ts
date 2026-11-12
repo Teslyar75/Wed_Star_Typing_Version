@@ -25,7 +25,16 @@ export type OrionHealth = {
   model?: string;
   cached?: boolean;
 };
-export type ChatMsg = { id: number; role: "user" | "orion"; text: string; mode?: string; images?: string[] | number };
+export type ChatMsg = {
+  id: number;
+  role: "user" | "orion" | "system";
+  text: string;
+  mode?: string;
+  images?: string[] | number;
+  kind?: string;
+  clip_id?: string;
+  at?: string;
+};
 export type Step = { title: string; weight: number; status: string };
 export type Task = { id: number; title: string; state: string; steps: Step[]; percent: number; color: string; stale: boolean };
 export type Hit = { id: number; role: string; before: string; match: string; after: string; at: string; text?: string };
@@ -83,6 +92,9 @@ export const orionApi = {
       }),
     }),
   clearMessages: () => j<{ ok: boolean; deleted: number }>("/api/orion/messages", { method: "DELETE" }),
+  /** Desktop-compatible remember: шутка/факт в историю чата с kind. */
+  remember: (body: { text: string; kind: "joke" | "fact"; clip_id?: string; role?: "orion" | "system"; mode?: string }) =>
+    j<ChatMsg>("/api/orion/remember", { method: "POST", headers: JSONH, body: JSON.stringify(body) }),
   archive: (q: string) => j<{ items: Hit[]; found?: number }>(`/api/orion/archive?q=${encodeURIComponent(q)}&limit=400`),
   tasks: () => j<{ items: Task[] }>("/api/orion/tasks"),
   plan: (title: string, steps: { title: string; weight: number }[]) =>

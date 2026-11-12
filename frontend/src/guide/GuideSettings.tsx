@@ -10,7 +10,9 @@ type RowT = (p: { title: string; desc: string; children: ReactNode }) => ReactEl
 
 export default function GuideSettings({ Row, onReplay }: { Row: RowT; onReplay?: () => void }) {
   const st = useGuide((s) => s.st);
+  const idle = useGuide((s) => s.idle);
   const patch = useGuide((s) => s.patch);
+  const patchIdle = useGuide((s) => s.patchIdle);
   const off = st.id === NO_GUIDE;
   const sample = (vol = st.volume) => {
     const line = linesOf(st.id)?.sample?.default?.[0];
@@ -51,7 +53,7 @@ export default function GuideSettings({ Row, onReplay }: { Row: RowT; onReplay?:
           </button>
         ))}
       </Row>
-      <Row title="Шутки Ориона" desc="Орион иногда сам прерывает тишину или приглушает радио — ему скучно. Enter — послушать, Esc — не сейчас. Около раз в 10 минут, не во время набора.">
+      <Row title="Шутки и факты" desc="Бортовой гид без ИИ (как desktop guide_idle): заход → Enter слушать / Esc отказаться. Мешок без повторов. Шутка или факт попадают в чат Ориона с меткой kind.">
         <button
           type="button"
           disabled={off}
@@ -61,18 +63,41 @@ export default function GuideSettings({ Row, onReplay }: { Row: RowT; onReplay?:
         >
           {st.jokes ? "● вкл" : "○ выкл"}
         </button>
+        {(["5-10", "10-20", "20-40"] as const).map((iv) => (
+          <button
+            key={iv}
+            type="button"
+            disabled={off || !st.jokes}
+            className={`hud-btn ${idle.interval === iv ? "amber" : ""}`}
+            aria-pressed={idle.interval === iv}
+            onClick={() => patchIdle({ interval: iv })}
+          >
+            {iv.replace("-", "–")} мин
+          </button>
+        ))}
         <button
           type="button"
           disabled={off || !st.jokes}
           className="hud-btn"
           onClick={() => {
             const g = useGuide.getState();
-            /* сброс кулдауна — сразу предложить */
+            g.patchIdle({ last_offer_at: 0 });
             g.patch({ last_by: { ...g.st.last_by, joke_offer: 0 }, last_popup: 0 });
             g.maybeOfferJoke();
           }}
         >
-          ▶ Предложить шутку
+          ▶ Проверить
+        </button>
+      </Row>
+      <Row title="В ONLINE-чате" desc="Редко вставлять шутку/факт в историю чата, только когда агент свободен (нет запроса, пилот не печатает миссию). Не смешивается с ответом ИИ. На desktop такого нет — только toast гида.">
+        <button
+          type="button"
+          disabled={off || !st.jokes}
+          className={`hud-btn settings-toggle ${idle.online_jokes ? "ok" : ""}`}
+          aria-pressed={idle.online_jokes}
+          onClick={() => patchIdle({ online_jokes: !idle.online_jokes })}
+        >
+          {idle.online_jokes ? "● вкл" : "○ выкл"}
         </button>
       </Row>
       <Row title="Голос гида" desc="Нейроголос с сервера, без сети — голос браузера. В окне гида — клавиша V.">

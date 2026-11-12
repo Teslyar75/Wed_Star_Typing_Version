@@ -10,13 +10,19 @@ import {
   markShown,
   muteTrigger,
   normalize,
-  pickJokeKey,
   pickLines,
-  pickOneLine,
   type GuideState,
 } from "./guideLogic";
+import {
+  canOfferNow,
+  loadIdle,
+  pickIdle,
+  rememberAmbient,
+  saveIdle,
+  systemText,
+  type GuideIdlePersist,
+} from "./guideIdle";
 import { linesOf } from "./guides";
-import { useRadio } from "../radio/radioStore";
 import { useSkin } from "../theme/skinStore";
 
 const KEY = (pilot: string) => `st_guide::${pilot || "guest"}`;
@@ -66,10 +72,13 @@ type S = {
   noteTyping: (paused?: boolean) => void;
   /** вход пилота: long_break, база звания, отметка визита */
   onEntry: (rank: string | undefined, vars: Pending["vars"], skin: string) => void;
-  /** Орион сам вклинивается: тишина или радио → предложение анекдота */
+  /** Орион сам вклинивается: тишина → предложение шутки/факта (desktop guide_idle) */
   maybeOfferJoke: () => void;
-  /** Сразу рассказать анекдот (голосовая команда / кнопка) */
+  /** Сразу рассказать шутку/факт (голосовая команда / кнопка) */
   tellJokeNow: () => boolean;
+  /** Состояние мешков / интервал / online-флаг (localStorage) */
+  idle: GuideIdlePersist;
+  patchIdle: (p: Partial<GuideIdlePersist>) => void;
 };
 
 export const useGuide = create<S>((set, get) => {
@@ -90,15 +99,22 @@ export const useGuide = create<S>((set, get) => {
     set({ popup: { trigger: p.trigger, lines, idx: 0, onYes: p.onYes } });
     return "done";
   };
+  const commitIdle = (idle: GuideIdlePersist) => {
+    saveIdle(get().pilot, idle);
+    set({ idle });
+  };
   return {
     pilot: "",
     st: { ...DEFAULT_STATE },
+    idle: { ...DEFAULT_IDLE_BAGS() },
     popup: null,
     queue: [],
     lastTypeAt: 0,
     paused: false,
-    setPilot: (pilot) => set({ pilot, st: loadGuideState(pilot), popup: null, queue: [] }),
+    setPilot: (pilot) =>
+      set({ pilot, st: loadGuideState(pilot), idle: loadIdle(pilot), popup: null, queue: [] }),
     patch: (p) => commit({ ...get().st, ...p }),
+    patchIdle: (p) => commitIdle({ ...get().idle, ...p }),
     fire: (trigger, opts = {}) => {
       const p: Pending = {
         trigger,
@@ -132,7 +148,22 @@ export const useGuide = create<S>((set, get) => {
         pp.onYes?.();
       }
     },
-    close: () => set({ popup: null }),
+    close: () => {
+      const pp = get().popup;
+      /* Esc на предложении шутки/факта = отказ (desktop guide_idle.decline) */
+      if (pp?.trigger === "joke_offer" && pp.onYes) {
+        const idle3 = { ...get().idle };
+        idle3.declined += 1;
+        idle3.decline_streak += 1;
+        commitIdle(idle3);
+        void systemText("sys_decline").then((t) => {
+          if (t) set({ popup: { trigger: "sys_decline", lines: [t], idx: 0 } });
+          else set({ popup: null });
+        });
+        return;
+      }
+      set({ popup: null });
+    },
     muteCurrent: () => {
       const pp = get().popup;
       if (!pp) return;
@@ -148,40 +179,60 @@ export const useGuide = create<S>((set, get) => {
       if (days) get().fire("long_break", { vars: { ...vars, days, days_word: daysWord(days) }, skin });
     },
     maybeOfferJoke: () => {
-      const { st, popup, queue, pilot } = get();
+      const { st, popup, queue, pilot, idle, lastTypeAt, paused } = get();
       if (!pilot || !st.jokes || st.id === "none" || popup || queue.length) return;
-      const skin = useSkin.getState().skin.id;
-      const own = linesOf(st.id);
-      const key = pickJokeKey(own);
-      if (!key) return;
-      /* скучает: вклинивается в тишину или в радио */
-      const offerPool = useRadio.getState().playing ? "joke_offer_radio" : "joke_offer";
-      const offer = pickOneLine(offerPool, skin, own) || pickOneLine("joke_offer", skin, own);
-      if (!offer) return;
-      get().fire("joke_offer", {
-        skin,
-        lines: [offer],
-        onYes: () => {
-          const lines = pickLines(key, skin, linesOf(get().st.id)).map((l) =>
-            fill(l, { pilot: get().pilot, sir: addressOf() }),
-          );
-          if (!lines.length) return;
-          /* сразу окно шутки — без повторного canShow (лимит уже сработал на offer) */
-          set({ popup: { trigger: key, lines, idx: 0 } });
-        },
+      const verdict = canOfferNow(idle, {
+        now: Date.now(),
+        lastTypeAt,
+        paused,
+        jokesOn: st.jokes,
+        guideOn: st.id !== "none",
       });
+      if (verdict !== "show") return;
+      const skin = useSkin.getState().skin.id;
+      void (async () => {
+        const next = { ...get().idle, bags: { ...get().idle.bags } };
+        const picked = await pickIdle(next);
+        if (!picked || !picked.intro || !picked.item) return;
+        next.last_offer_at = Date.now();
+        commitIdle(next);
+        const prompt = await systemText("sys_prompt");
+        get().fire("joke_offer", {
+          skin,
+          lines: [picked.intro, prompt || "Послушаете? Enter — да, Escape — нет."],
+          onYes: () => {
+            const idle2 = { ...get().idle };
+            idle2.listened += 1;
+            idle2.decline_streak = 0;
+            commitIdle(idle2);
+            set({
+              popup: {
+                trigger: picked.itemId,
+                lines: [picked.item],
+                idx: 0,
+              },
+            });
+            void rememberAmbient({ text: picked.item, kind: picked.kind, clipId: picked.itemId });
+          },
+        });
+      })();
     },
     tellJokeNow: () => {
       const { st, pilot } = get();
       if (!pilot || st.id === "none") return false;
-      const skin = useSkin.getState().skin.id;
-      const own = linesOf(st.id);
-      const key = pickJokeKey(own);
-      if (!key) return false;
-      const lines = pickLines(key, skin, own).map((l) => fill(l, { pilot: get().pilot, sir: addressOf() }));
-      if (!lines.length) return false;
-      set({ popup: { trigger: key, lines, idx: 0 } });
+      void (async () => {
+        const next = { ...get().idle, bags: { ...get().idle.bags } };
+        const picked = await pickIdle(next);
+        if (!picked || !picked.item) return;
+        commitIdle(next);
+        set({ popup: { trigger: picked.itemId, lines: [picked.item], idx: 0 } });
+        void rememberAmbient({ text: picked.item, kind: picked.kind, clipId: picked.itemId });
+      })();
       return true;
     },
   };
 });
+
+function DEFAULT_IDLE_BAGS(): GuideIdlePersist {
+  return loadIdle("");
+}

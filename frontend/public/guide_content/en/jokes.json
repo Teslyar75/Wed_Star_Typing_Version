@@ -1,0 +1,245 @@
+{
+  "lang": "en",
+  "items": [
+    {
+      "id": "joke_001",
+      "text": "How many programmers does it take to change a light bulb? None. It is a hardware problem."
+    },
+    {
+      "id": "joke_002",
+      "text": "A programmer puts two glasses on the nightstand: one with water, in case he gets thirsty at night, and an empty one, in case he does not."
+    },
+    {
+      "id": "joke_003",
+      "text": "An optimist sees the glass half full, a pessimist half empty, and a programmer sees a glass that is twice as big as needed."
+    },
+    {
+      "id": "joke_004",
+      "text": "Why do programmers confuse Halloween and Christmas? Because OCT 31 equals DEC 25."
+    },
+    {
+      "id": "joke_005",
+      "text": "There are 10 kinds of people in the world: those who understand binary, and those who do not."
+    },
+    {
+      "id": "joke_006",
+      "text": "A wife tells a programmer: buy a loaf of bread, and if they have eggs, get a dozen. He came back with ten loaves — they had eggs."
+    },
+    {
+      "id": "joke_007",
+      "text": "My code does not work, and I do not know why. My code works, and I also do not know why."
+    },
+    {
+      "id": "joke_008",
+      "text": "Debugging is like being a detective in a crime movie where you are also the murderer."
+    },
+    {
+      "id": "joke_009",
+      "text": "It works on my machine! Great — then we will ship your machine to the client."
+    },
+    {
+      "id": "joke_010",
+      "text": "Commit: final version. Commit: now definitely final. Commit: final, honestly, the last one."
+    },
+    {
+      "id": "joke_011",
+      "text": "The shortest programmer fairy tale: it is a tiny fix, will take five minutes."
+    },
+    {
+      "id": "joke_012",
+      "text": "A programmer is a device for turning coffee into code."
+    },
+    {
+      "id": "joke_013",
+      "text": "An hour before the deadline a programmer writes more code than in the whole previous week."
+    },
+    {
+      "id": "joke_014",
+      "text": "When I wrote this code, two beings understood it: me and God. Now only God does."
+    },
+    {
+      "id": "joke_015",
+      "text": "There are only two hard things in programming: cache invalidation, naming things, and off-by-one errors."
+    },
+    {
+      "id": "joke_016",
+      "text": "A tester walks into a bar. Orders one beer. Zero beers. A million beers. Minus one beer. A lizard. Everything works. The first real customer asks where the exit is — and the bar crashes."
+    },
+    {
+      "id": "joke_017",
+      "text": "You had a problem and solved it with a regular expression. Congratulations, now you have two problems."
+    },
+    {
+      "id": "joke_018",
+      "text": "If it works — do not touch it. The first law of engineering, broken by every refactor."
+    },
+    {
+      "id": "joke_019",
+      "text": "I am not resting. A build is running."
+    },
+    {
+      "id": "joke_020",
+      "text": "How is your personal life? Like git: there are branches, it is complicated, and a couple of unresolved conflicts."
+    },
+    {
+      "id": "joke_021",
+      "text": "A senior is a junior who has already seen exactly how this breaks."
+    },
+    {
+      "id": "joke_022",
+      "text": "To understand recursion, you must first understand recursion."
+    },
+    {
+      "id": "joke_023",
+      "text": "Deploy to production on Friday evening. The shortest horror movie."
+    },
+    {
+      "id": "joke_024",
+      "text": "Why do programmers love dark themes? Because light attracts bugs."
+    },
+    {
+      "id": "joke_025",
+      "text": "A bug is an undocumented feature. A feature is a documented bug."
+    },
+    {
+      "id": "joke_026",
+      "text": "How much does it cost to fix a bug? One line of code and three days finding which one."
+    },
+    {
+      "id": "joke_027",
+      "text": "We do not make mistakes. We ship beta versions."
+    },
+    {
+      "id": "joke_028",
+      "text": "A variable named temp outlives every permanent one in the project."
+    },
+    {
+      "id": "joke_029",
+      "text": "A programmer falls asleep with one thought: what if it is null?"
+    },
+    {
+      "id": "joke_030",
+      "text": "Why are you still up? Waiting for dependencies to install. I will wake up and finish in the morning."
+    },
+    {
+      "id": "joke_031",
+      "text": "The team lead asks how long the task will take. The programmer doubles the estimate, adds one, and switches to the next unit. Two hours become three days."
+    },
+    {
+      "id": "joke_032",
+      "text": "Good code is like a good joke: if you have to explain it, it is not that good."
+    },
+    {
+      "id": "joke_033",
+      "text": "A stack trace three screens long — and the cause is a missing comma."
+    },
+    {
+      "id": "joke_034",
+      "text": "Documentation is a letter to your future self. That nobody ever writes."
+    },
+    {
+      "id": "joke_035",
+      "text": "Support call: nothing works. Did you try turning it off and on? I did. Now nothing works at all."
+    },
+    {
+      "id": "joke_036",
+      "text": "Unit tests pass, integration tests do not. Like two dresser drawers: each opens alone, but together they jam."
+    },
+    {
+      "id": "joke_037",
+      "text": "Almost done means ninety percent of the work is done. Another ninety percent remains."
+    },
+    {
+      "id": "joke_038",
+      "text": "Why so much debug printing in your code? That is not printing — that is sonar."
+    },
+    {
+      "id": "joke_039",
+      "text": "Touch typing means typing without looking at the keyboard. An experienced programmer also does not look at what they typed."
+    },
+    {
+      "id": "joke_040",
+      "text": "Ship alarm: someone closed the browser tab with the forum solution."
+    },
+    {
+      "id": "joke_041",
+      "text": "Code review: ten lines — ten comments. Five hundred lines — looks fine."
+    },
+    {
+      "id": "joke_042",
+      "text": "The scariest commit message: minor fixes. Two thousand lines."
+    },
+    {
+      "id": "joke_043",
+      "text": "The computer does exactly what you told it. That is the problem."
+    },
+    {
+      "id": "joke_044",
+      "text": "I will just check my email, said the programmer. An hour later he knew the history of the tab key."
+    },
+    {
+      "id": "joke_045",
+      "text": "Spaces or tabs? The ship nearly fell apart three times over that argument."
+    },
+    {
+      "id": "joke_046",
+      "text": "A typo in the word typo — a classic of any typing trainer."
+    },
+    {
+      "id": "joke_047",
+      "text": "The onboard computer does not make mistakes. It merely sometimes chooses an alternate reality."
+    },
+    {
+      "id": "joke_048",
+      "text": "Why is the ship flying sideways? That is not a bug, captain. It is a new navigation mode."
+    },
+    {
+      "id": "joke_049",
+      "text": "They say somewhere there is a programmer who reads the docs before everything breaks. Nobody has seen him, but everyone believes."
+    },
+    {
+      "id": "joke_050",
+      "text": "The code compiled on the first try. Suspicious. Checking whether the right project is open."
+    },
+    {
+      "id": "joke_051",
+      "text": "Error 404: joke not found. Oh wait — there it is."
+    },
+    {
+      "id": "joke_052",
+      "text": "How to name a variable? Thirty minutes of thinking. Result: x."
+    },
+    {
+      "id": "joke_053",
+      "text": "Start explaining your code to a colleague and the bug finds itself. That is why many keep a rubber duck on the desk."
+    },
+    {
+      "id": "joke_054",
+      "text": "At night a brilliant idea came to the programmer. In the morning he read his code and realised it was not an idea — it was a fever."
+    },
+    {
+      "id": "joke_055",
+      "text": "Where do you see yourself in five years? Judging by this code, still in the same legacy."
+    },
+    {
+      "id": "joke_056",
+      "text": "In the steam age they also had a debugger: a person with a wrench and a very bad mood."
+    },
+    {
+      "id": "joke_057",
+      "text": "In Neon City even errors glow. In red."
+    },
+    {
+      "id": "joke_058",
+      "text": "One robot asks another: why so slow? The other answers: I am on an interpreter."
+    },
+    {
+      "id": "joke_059",
+      "text": "A programmer on the beach does not sunbathe. He waits for the sun to commit its changes."
+    },
+    {
+      "id": "joke_060",
+      "text": "What did one byte say to the other? Are you okay? No, I dropped a bit."
+    }
+  ]
+}

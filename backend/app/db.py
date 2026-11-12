@@ -100,6 +100,8 @@ def _ensure_columns() -> None:
         ("card_progress", "wh_q", "TEXT DEFAULT ''"),
         ("pilot_docs", "deleted_at", "TIMESTAMP"),
         ("comm_messages", "images_json", "TEXT DEFAULT '[]'"),
+        ("orion_messages", "kind", "VARCHAR(24) DEFAULT ''"),
+        ("orion_messages", "clip_id", "VARCHAR(40) DEFAULT ''"),
     ]
     url = _engine_url()
     with engine.begin() as conn:
