@@ -9,8 +9,9 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 
 | Этап | SHA | Ветка | PR | GitHub CI | Docker | Примечание |
 | --- | --- | --- | --- | --- | --- | --- |
-| Орион guide jokes/facts full port | `aafe84f` | `cursor/orion-guide-content-648e` | [#32](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/32) | **5/5 SUCCESS** | **SUCCESS** | desktop guide_idle 60+60; remember kind; ONLINE ambient |
-| master | `6f5a902` | `master` | — | — | — | после PR #30/#31 |
+| Лаборатория (LOD) | `119eb90` | `cursor/laboratory-compartment-dd72` | [#33](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/33) | local OK · CI pending | pending | visual/work/full; Ctrl+0; +master `ff6f694` (guide); merge PR не делали |
+| Орион guide jokes/facts full port | `aafe84f` | `cursor/orion-guide-content-648e` | [#32](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/32) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `ff6f694`; desktop guide_idle 60+60; remember kind; ONLINE ambient |
+| master | `ff6f694` | `master` | — | — | — | + PR #32 guide content (`ff6f694`) |
 | OpenCode автопорт (10013) | `580e9b4` | `cursor/opencode-port-auto-06a2` | [#27](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/27) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `33ec4cf`; автопорт + `ORION_SILENT_SAY=1` |
 | Орион индикатор связи | `ce190b1` | `cursor/orion-link-indicator-dc67` | [#28](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/28) | **5/5 SUCCESS** | **SUCCESS** | **merged** → `72721c8`; health + индикатор |
 | Security: texts ACL + upload limits + SSRF | *(merge master)* | `cursor/security-text-access-e31f` | [#30](https://github.com/Teslyar75/Wed_Star_Typing_Version/pull/30) | pending | pending | auth+pilot_texts/is_public; 413; SSRF; после merge master (PR27–29) |
@@ -46,6 +47,9 @@ Actions: [https://github.com/Teslyar75/Wed_Star_Typing_Version/actions](https://
 | 11.11 CI | PR #30 HEAD `9f35b3e`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
 
 | 11.11 CI | PR #28 HEAD `5581f87`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
+| 12.11 | Лаборатория web: порт desktop PR#36 — три LOD, сущность, зум к курсору, слепок, F1; зона Ctrl+0. Merge не делать. |
+| 12.11 CI | PR #33 HEAD `38a7194`: **GitHub 5/5 SUCCESS** (backend/frontend/e2e + Docker×2). Merge не делали. |
+| 12.11 | PR #32 guide content **merged** → master `ff6f694`. В PR #33: merge `origin/master` (без rebase/force); CHANGELOG/PROGRESS — обе записи; lab Ctrl+0 / settings Ctrl+9; Гид toggle сохранён. |
 
 ## Локальные прогоны vs CI
 

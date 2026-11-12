@@ -18,6 +18,7 @@ const ZONE_SEG: Record<ZoneId, PathSeg> = {
   comm: { slug: "comm", labelKey: "comm", tab: "comm" },
   docs: { slug: "docs", labelKey: "docs", tab: "docs" },
   orion: { slug: "orion", labelKey: "orion_zone", tab: "orion" },
+  lab: { slug: "lab", labelKey: "lab", tab: "lab" },
   settings: { slug: "settings", labelKey: "settings", tab: "settings" },
 };
 

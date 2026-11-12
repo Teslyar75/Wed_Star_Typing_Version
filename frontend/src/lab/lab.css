@@ -1,0 +1,197 @@
+/* Лаборатория — без прокрутки страницы; сцена заполняет stage */
+.lab-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem 0.5rem;
+  box-sizing: border-box;
+}
+
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+  flex: 0 0 auto;
+}
+
+.lab-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.lab-title {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--st-text, #e8eefc);
+}
+
+.lab-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #f87171;
+  letter-spacing: 0.06em;
+}
+
+.lab-mode {
+  font-size: 0.75rem;
+}
+
+.lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lab-summary {
+  font-size: 0.75rem;
+  margin-right: 0.35rem;
+}
+
+.lab-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 1px solid color-mix(in srgb, var(--st-amber, #f0b429) 35%, transparent);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0b1220;
+  touch-action: none;
+}
+
+.lab-canvas-wrap,
+.lab-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+}
+
+.lab-canvas-wrap:active,
+.lab-stage:active .lab-canvas {
+  cursor: grabbing;
+}
+
+.lab-tip {
+  position: absolute;
+  z-index: 3;
+  max-width: 240px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #e8eefc;
+  background: rgba(8, 14, 28, 0.92);
+  border: 1px solid rgba(160, 180, 220, 0.35);
+  pointer-events: none;
+  white-space: pre-wrap;
+}
+
+.lab-detail {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 2;
+  max-width: min(320px, 42%);
+  max-height: 40%;
+  overflow: auto;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--st-text, #e8eefc);
+  background: rgba(10, 16, 32, 0.88);
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  border-radius: 4px;
+}
+
+.lab-detail ul {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-err {
+  color: #f87171;
+  font-size: 0.8rem;
+}
+
+.lab-snap-dlg {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.lab-panel > .lab-snap-dlg {
+  position: fixed;
+}
+
+.lab-snap-card {
+  width: min(520px, 92vw);
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  background: #0f172a;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  border-radius: 6px;
+  color: #e8eefc;
+}
+
+.lab-snap-card h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.lab-snap-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.lab-snap-bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #4fd1c5);
+  transition: width 0.2s ease;
+}
+
+.lab-snap-json header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lab-snap-json textarea {
+  flex: 1 1 auto;
+  min-height: 220px;
+  resize: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #d7e0f2;
+  background: #080e1a;
+  border: 1px solid rgba(120, 140, 180, 0.35);
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.lab-snap-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.lab-snap-actions a.hud-btn {
+  text-decoration: none;
+}

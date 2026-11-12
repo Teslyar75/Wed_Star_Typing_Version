@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Добавлено
+- **Лаборатория:** зона `lab` (Ctrl+0), три уровня LOD (visual / working / полный слепок), живая сущность, Ctrl+wheel зум к курсору, ЛКМ-орбита, 1∶1 / Ctrl+Home, F1 (уровни · управление), i18n ru/en/uk/de. API `/api/lab/*`, Canvas 2D, демо `st_lab_demo=1`. См. `docs/web/LABORATORY.md`. Эталон: desktop My_Stamina PR #36.
 - **Бортовой гид — полный пул шуток/фактов (desktop guide_idle):** 60 шуток + 60 фактов + заходы/system на ru/en/uk/de; JSON по языку и категории (`/guide_content/<lang>/…`, `/api/guide/content`); мешок без повторов; интервалы 5–10 / 10–20 / 20–40 мин; Enter/Esc. Принятые шутки/факты пишутся в чат Ориона через `POST /api/orion/remember` с `kind=joke|fact` (формат desktop `orion.remember`). **Desktop** показывает toast+аудио и в чат не пишет; **ONLINE ambient** (редко, кулдаун, только когда агент свободен, выключатель в Настройки→Гид) — web-дополнение, на desktop нет.
 - **Орион — индикатор связи:** зелёный / жёлтый / красный / серый в шапке чата и на вкладке Агенты; опрос `/api/orion/config` и `/api/orion/health` (~20 с, только при видимой вкладке); клик по красному — повторная проверка и подсказка (мост, ключ, таймаут).
 

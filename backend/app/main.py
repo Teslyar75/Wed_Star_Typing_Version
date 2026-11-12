@@ -19,6 +19,7 @@ from app.api_guide import router as guide_router
 from app.api_updates import router as updates_router
 from app.api_docs import router as docs_router
 from app.api_comm import router as comm_router
+from app.api_lab import router as lab_router
 from app.api_pilots import router as pilots_router
 from app.api_portal import router as portal_router
 from app.api_lounge import router as lounge_router
@@ -95,6 +96,7 @@ app.include_router(guide_router)
 app.include_router(updates_router)
 app.include_router(docs_router)
 app.include_router(comm_router)
+app.include_router(lab_router)
 app.include_router(portal_router)
 
 

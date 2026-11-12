@@ -11,4 +11,5 @@ export type Tab =
   | "comm"
   | "docs"
   | "orion"
+  | "lab"
   | "settings";
