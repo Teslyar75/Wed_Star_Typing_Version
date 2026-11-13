@@ -100,6 +100,12 @@ class PilotOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AuthOut(PilotOut):
+    """Ответ входа/регистрации: тот же профиль + JWT для клиентов без cookie."""
+
+    token: str
+
+
 class HonorRow(BaseModel):
     callsign: str
     xp: int
@@ -160,8 +166,8 @@ def roster(db: Session = Depends(get_db)) -> list[RosterCard]:
     return [_roster_card(db, p) for p in pilots]
 
 
-@router.post("/register", response_model=PilotOut)
-def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)) -> Pilot:
+@router.post("/register", response_model=AuthOut)
+def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)) -> dict:
     cs = body.callsign.strip()
     err = validate_callsign(cs)
     if err:
@@ -183,12 +189,13 @@ def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)
     db.add(p)
     db.commit()
     db.refresh(p)
-    _set_cookie(response, make_token(p.id))
-    return p
+    token = make_token(p.id)
+    _set_cookie(response, token)
+    return {**PilotOut.model_validate(p).model_dump(), "token": token}
 
 
-@router.post("/login", response_model=PilotOut)
-def login(body: LoginIn, response: Response, db: Session = Depends(get_db)) -> Pilot:
+@router.post("/login", response_model=AuthOut)
+def login(body: LoginIn, response: Response, db: Session = Depends(get_db)) -> dict:
     wait = _pin_locked(body.callsign)
     if wait > 0:
         raise HTTPException(429, {"code": "pin_locked", "retry_after": int(wait) + 1})
@@ -201,8 +208,9 @@ def login(body: LoginIn, response: Response, db: Session = Depends(get_db)) -> P
         # PIN десктопа принят → перехешировать в bcrypt
         p.pin_hash = hash_pin(body.pin)
         db.commit()
-    _set_cookie(response, make_token(p.id))
-    return p
+    token = make_token(p.id)
+    _set_cookie(response, token)
+    return {**PilotOut.model_validate(p).model_dump(), "token": token}
 
 
 class ClearPinIn(BaseModel):

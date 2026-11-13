@@ -52,6 +52,24 @@ else
   HAVE_WAIT=0
 fi
 
+# Десктопные данные (READ-ONLY) для переноса профиля по имени + PIN.
+# Если каталога нет — DESKTOP_DATA_DIR не выставляем, функция выключена.
+if [ -z "${DESKTOP_DATA_HOST:-}" ]; then
+  for d in "${APPDATA:+$APPDATA/Stamina}" "${XDG_DATA_HOME:-$HOME/.local/share}/StarTyping"; do
+    if [ -n "$d" ] && [ -d "$d" ]; then
+      DESKTOP_DATA_HOST="$d"
+      break
+    fi
+  done
+fi
+if [ -n "${DESKTOP_DATA_HOST:-}" ] && [ -d "$DESKTOP_DATA_HOST" ]; then
+  export DESKTOP_DATA_HOST
+  export DESKTOP_DATA_DIR=/desktop-data
+  say "Данные десктопа (read-only): $DESKTOP_DATA_HOST"
+else
+  unset DESKTOP_DATA_HOST DESKTOP_DATA_DIR
+fi
+
 
 # Автообновление с GitHub (origin/master, только ff-only). WEB_NO_AUTOUPDATE=1 — выключить.
 if [ -z "${CI:-}" ] && [ "${WEB_NO_AUTOUPDATE:-0}" != "1" ] && [ -d .git ]; then

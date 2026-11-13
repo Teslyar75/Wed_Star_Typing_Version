@@ -116,6 +116,15 @@ if /I not "%WEB_NO_AUTOUPDATE%"=="1" (
   )
 )
 
+REM Desktop %APPDATA%\Stamina (READ-ONLY) — перенос профиля по имени + PIN.
+if "%DESKTOP_DATA_HOST%"=="" if exist "%APPDATA%\Stamina" set "DESKTOP_DATA_HOST=%APPDATA%\Stamina"
+if not "%DESKTOP_DATA_HOST%"=="" if "%DESKTOP_DATA_DIR%"=="" set "DESKTOP_DATA_DIR=/desktop-data"
+if not "%DESKTOP_DATA_HOST%"=="" (
+  echo       Desktop data: !DESKTOP_DATA_HOST! ^(read-only^)
+) else (
+  echo       Desktop data not found - transfer by name disabled
+)
+
 REM Older Docker ships Compose v1 ("docker-compose"). The stack needs v2.
 docker compose version >nul 2>&1
 if errorlevel 1 goto no_compose

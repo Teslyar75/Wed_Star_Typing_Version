@@ -236,9 +236,15 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
   const [pvMode, setPvMode] = useState<"new" | "merge">("new");
   const [report, setReport] = useState<{ report: Record<string, any>; pilot: any } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [deskCall, setDeskCall] = useState("");
+  const [deskPin, setDeskPin] = useState("");
+  const [deskConfirm, setDeskConfirm] = useState(false);
+  const [showFiles, setShowFiles] = useState(false);
 
   const pinRef = useRef<HTMLInputElement>(null);
   const callRef = useRef<HTMLInputElement>(null);
+  const deskRef = useRef<HTMLInputElement>(null);
+  const deskConfirmRef = useRef<HTMLButtonElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLElement>(null);
@@ -287,6 +293,7 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
   }, [lockLeft > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = roster || [];
+  const mePilot = list.find((p) => p.id === meId);
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const selected: RosterCard | undefined = list[sel];
   const [varTick, setVarTick] = useState(0);
@@ -530,7 +537,52 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
     setPv(null);
     setReport(null);
     setMsg(null);
+    setDeskCall("");
+    setDeskPin("");
+    setDeskConfirm(false);
+    setShowFiles(false);
     setView("import");
+    window.setTimeout(() => deskRef.current?.focus(), 0);
+  };
+
+  const transferByName = async (confirm = false) => {
+    if (busy) return;
+    const call = deskCall.trim();
+    if (!call) {
+      say(te("imp_desk_need_callsign"), "err");
+      deskRef.current?.focus();
+      return;
+    }
+    if (!mePilot) {
+      say(te("imp_desk_login"), "err");
+      return;
+    }
+    setBusy(true);
+    say(te("imp_busy"), "info");
+    const res = await readJson(
+      await fetch("/api/import/from-desktop", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callsign: call, pin: deskPin, confirm_identity: confirm }),
+      }),
+    );
+    setBusy(false);
+    if (!res.ok) {
+      if (res.body?.detail?.code === "callsign_mismatch" && !confirm) {
+        setDeskConfirm(true);
+        say(te("imp_desk_confirm", mePilot.callsign), "info");
+        window.setTimeout(() => deskConfirmRef.current?.focus(), 0);
+        return;
+      }
+      say(errText(res.body?.detail) || te("err_generic", res.status), "err");
+      return;
+    }
+    setDeskConfirm(false);
+    setReport({ report: res.body.report, pilot: res.body.pilot });
+    if (res.body.client) onImportedClient?.(res.body.client as ImportClient);
+    say(te("imp_done"), "ok");
+    void refresh();
   };
 
   const upload = async (items: FileWithPath[]) => {
@@ -696,7 +748,8 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
       if (view === "import") {
         if (e.key === "Escape") {
           stop();
-          if (pv && !report) setPv(null);
+          if (deskConfirm) setDeskConfirm(false);
+          else if (pv && !report) setPv(null);
           else setView(list.length ? "roster" : "first");
           return;
         }
@@ -713,12 +766,15 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
           return;
         }
         if (!pv) {
+          if (inField) return;
+          const k = e.key.toLowerCase();
           if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
             stop();
-            fileRef.current?.click();
-          } else if (e.key.toLowerCase() === "f" || e.key.toLowerCase() === "а") {
+            void transferByName(deskConfirm);
+          } else if (k === "f" || k === "а") {
             stop();
-            dirRef.current?.click();
+            setShowFiles((v) => !v);
           }
           return;
         }
@@ -1329,26 +1385,103 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
               }}
             />
             {!pv && !report ? (
-              <div
-                className={`ce-drop ${dragOver ? "over" : ""}`}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => void onDrop(e)}
-              >
-                <div className="ce-drop-ico">⇪</div>
-                <strong>{te("imp_drop")}</strong>
-                <p className="ce-muted">{te("imp_where")}</p>
-                <div className="ce-actions center">
-                  <button type="button" className="ce-btn primary" disabled={busy} onClick={() => fileRef.current?.click()}>
-                    {te("imp_file")} <kbd>Enter</kbd>
-                  </button>
-                  <button type="button" className="ce-btn" disabled={busy} onClick={() => dirRef.current?.click()}>
-                    {te("imp_folder")} <kbd>F</kbd>
-                  </button>
-                </div>
+              <div className="ce-import-main">
+                <form
+                  className="ce-desk"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void transferByName();
+                  }}
+                >
+                  <div className="ce-drop-ico">⇪</div>
+                  <h3>{te("imp_desk_title")}</h3>
+                  <p className="ce-muted">{te("imp_desk_about")}</p>
+                  {mePilot ? (
+                    <p className="ce-muted sm">{te("imp_desk_as", mePilot.callsign)}</p>
+                  ) : (
+                    <p className="ce-warn">{te("imp_desk_login")}</p>
+                  )}
+                  <div className="ce-desk-fields">
+                    <label className="ce-field">
+                      <span>{te("imp_desk_callsign")}</span>
+                      <input
+                        ref={deskRef}
+                        value={deskCall}
+                        maxLength={64}
+                        autoComplete="off"
+                        placeholder={te("imp_desk_callsign_ph")}
+                        onChange={(e) => {
+                          setDeskCall(e.target.value);
+                          setDeskConfirm(false);
+                        }}
+                      />
+                    </label>
+                    <label className="ce-field">
+                      <span>{te("imp_desk_pin")}</span>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={32}
+                        autoComplete="off"
+                        value={deskPin}
+                        placeholder={te("pin_ph")}
+                        onChange={(e) => {
+                          setDeskPin(e.target.value);
+                          setDeskConfirm(false);
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {deskConfirm ? (
+                    <div className="ce-desk-confirm">
+                      <p className="ce-warn">{te("imp_desk_confirm", mePilot?.callsign || "")}</p>
+                      <div className="ce-actions center">
+                        <button
+                          ref={deskConfirmRef}
+                          type="button"
+                          className="ce-btn primary"
+                          disabled={busy}
+                          onClick={() => void transferByName(true)}
+                        >
+                          {te("imp_desk_confirm_yes", mePilot?.callsign || "")}
+                        </button>
+                        <button type="button" className="ce-btn ghost" onClick={() => setDeskConfirm(false)}>
+                          {te("imp_desk_cancel")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="ce-actions center">
+                    <button type="submit" className="ce-btn primary" disabled={busy || !mePilot}>
+                      ⇪ {te("imp_desk_go")} <kbd>Enter</kbd>
+                    </button>
+                    <button type="button" className="ce-btn ghost" onClick={() => setShowFiles((v) => !v)}>
+                      {showFiles ? te("imp_other_hide") : te("imp_other")} <kbd>F</kbd>
+                    </button>
+                  </div>
+                </form>
+                {showFiles ? (
+                  <div
+                    className={`ce-drop ${dragOver ? "over" : ""}`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => void onDrop(e)}
+                  >
+                    <strong>{te("imp_other_title")}</strong>
+                    <p className="ce-muted">{te("imp_where")}</p>
+                    <div className="ce-actions center">
+                      <button type="button" className="ce-btn" disabled={busy} onClick={() => fileRef.current?.click()}>
+                        {te("imp_file")}
+                      </button>
+                      <button type="button" className="ce-btn ghost" disabled={busy} onClick={() => dirRef.current?.click()}>
+                        {te("imp_folder")}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
             {pv && !report ? (
@@ -1454,6 +1587,14 @@ export default function CockpitEntry({ mode = "gate", onEntered, onImportedClien
                 <h2>
                   ✓ {te("imp_done")}: {report.pilot.callsign}
                 </h2>
+                <p className="ce-muted">
+                  {te(
+                    "imp_report_line",
+                    Number(report.pilot.xp || 0),
+                    Number(report.report.words_known || 0),
+                    Number(report.report.runs || 0),
+                  )}
+                </p>
                 <div className="ce-counts">
                   {Object.entries(report.report)
                     .filter(([k, v]) => typeof v === "number" && v > 0 && k !== "_library")

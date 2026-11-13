@@ -25,7 +25,9 @@ from sqlalchemy.orm import Session
 MAX_TOTAL = 200 * 1024 * 1024
 MAX_FILES = 6000
 MAX_FILE = 40 * 1024 * 1024
-SKIP_DIRS = {"backups", "cache", "logs"}
+# Служебные каталоги десктопа: в пакет не попадают и SHA по manifest не проверяется.
+SKIP_DIRS = {"backups", "cache", "logs", "idle_cache", "vocab_lazy_v1", "vocab_lazy"}
+SKIP_SECRET_FILES = {"github_access.json"}
 KNOWN = ("profile.json", "settings.json", "stats.json", "session.json", "cargo.txt", "cargo_original.txt",
          "monkeytype_cache.json", "portal_stats.json",
          "english.json", "speedread.json", "radio.json", "achievements.json", "avatar.png")
@@ -152,7 +154,13 @@ def files_from_zip(raw: bytes) -> dict[str, bytes]:
 
 def _skipped(rel: str) -> bool:
     parts = rel.split("/")
-    return any(p in SKIP_DIRS for p in parts[:-1]) or parts[-1].endswith((".tmp", ".log", ".migrated"))
+    name = parts[-1].casefold()
+    return (
+        any(p in SKIP_DIRS for p in parts[:-1])
+        or name.endswith((".tmp", ".log", ".migrated"))
+        or "token" in name
+        or name in SKIP_SECRET_FILES
+    )
 
 
 def parse_stpilot(files: dict[str, bytes]) -> Package:
@@ -248,6 +256,71 @@ def _date(v: Any) -> date:
         return date.today()
 
 
+def _epoch(dt: datetime | None) -> float | None:
+    """Метка времени для сравнения строк из SQLite (naive считаем UTC)."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return round(dt.timestamp(), 6)
+
+
+def _r4(v: Any) -> float:
+    try:
+        return round(float(v or 0), 4)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _is_lab_slug(slug: Any) -> bool:
+    """Служебные id лаборатории десктопа: dev:noweb, w:…, dev:… — не словарь."""
+    if not isinstance(slug, str):
+        return False
+    s = slug.strip()
+    return s == "dev:noweb" or s.startswith(("w:", "dev:"))
+
+
+def _iter_exercise_runs(node: Any):
+    """Все прогоны из speedread.exercises любой вложенности (E-SHL → 5x5 → runs)."""
+    if isinstance(node, dict):
+        runs = node.get("runs")
+        if isinstance(runs, list):
+            for r in runs:
+                if isinstance(r, dict):
+                    yield r
+        for k, v in node.items():
+            if k != "runs" and isinstance(v, (dict, list)):
+                yield from _iter_exercise_runs(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _iter_exercise_runs(v)
+
+
+def _norm_text(s: Any) -> str:
+    return " ".join(str(s or "").split()).casefold()
+
+
+def _same_text(a: Any, b: Any) -> bool:
+    """Грубое совпадение текста груза/сессии с оригиналом книги."""
+    na, nb = _norm_text(a), _norm_text(b)
+    if not na or not nb:
+        return False
+    if na == nb:
+        return True
+    n = min(len(na), len(nb))
+    return n >= 40 and na[:n] == nb[:n]
+
+
+def _title_keys(title: Any) -> set[str]:
+    t = str(title or "").strip()
+    if not t:
+        return set()
+    keys = {t.casefold()}
+    if " — " in t:
+        keys.add(t.rsplit(" — ", 1)[0].strip().casefold())
+    return keys
+
+
 def _avatar_data(pkg: Package) -> str:
     prof = pkg.json("profile.json")
     av = prof.get("avatar") or {}
@@ -308,13 +381,14 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
     rep: dict[str, Any] = {k: 0 for k in (
         "cards", "words_known", "my_translations", "lists", "list_items", "warehouse_shelf", "warehouse_away",
         "warehouse_done", "speech_attempts", "english_xp", "runs", "keys", "missions", "speed_sessions",
-        "radio_favorites", "library_texts", "words_added_to_vocab")}
+        "schulte_runs", "lounge_best", "radio_favorites", "library_texts", "words_added_to_vocab")}
     rep["skipped"] = []
     prof = pkg.json("profile.json")
     st = pkg.json("stats.json")
     en = pkg.json("english.json")
     sr = pkg.json("speedread.json")
     rd = pkg.json("radio.json")
+    lounge = pkg.json("lounge.json")
     settings = pkg.json("settings.json")
 
     # -- профиль
@@ -335,17 +409,23 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
     pilot.xp = max(int(pilot.xp or 0), int(st.get("xp") or 0)) if merge else int(st.get("xp") or 0)
 
     # -- английский
-    words = {k: v for k, v in (en.get("words") or {}).items() if isinstance(v, dict)}
-    cards = {k: v for k, v in (en.get("cards") or {}).items() if isinstance(v, dict)}
+    words = {k: v for k, v in (en.get("words") or {}).items()
+             if isinstance(v, dict) and not _is_lab_slug(k)}
+    cards = {k: v for k, v in (en.get("cards") or {}).items()
+             if isinstance(v, dict) and not _is_lab_slug(k)}
     lists = [l for l in (en.get("lists") or []) if isinstance(l, dict)]
     wh = en.get("warehouse") or {}
-    away = set(x for x in (wh.get("away") or []) if isinstance(x, str))
-    cleared = {k: v for k, v in (wh.get("cleared") or {}).items()} if isinstance(wh.get("cleared"), dict) else {}
+    away = set(x for x in (wh.get("away") or []) if isinstance(x, str) and not _is_lab_slug(x))
+    cleared = ({k: v for k, v in (wh.get("cleared") or {}).items() if not _is_lab_slug(k)}
+               if isinstance(wh.get("cleared"), dict) else {})
     wh_runs = wh.get("runs") if isinstance(wh.get("runs"), dict) else {}
-    attempts = [a for a in (en.get("attempts") or []) if isinstance(a, dict)]
-    slugs = set(words) | set(cards) | away | set(cleared) | {a.get("slug") for a in attempts}
+    wh_best = ({k: v for k, v in (wh.get("best") or {}).items() if not _is_lab_slug(k)}
+               if isinstance(wh.get("best"), dict) else {})
+    attempts = [a for a in (en.get("attempts") or [])
+                if isinstance(a, dict) and not _is_lab_slug(a.get("slug"))]
+    slugs = set(words) | set(cards) | away | set(cleared) | set(wh_best) | {a.get("slug") for a in attempts}
     for l in lists:
-        slugs |= set(x for x in (l.get("slugs") or []) if isinstance(x, str))
+        slugs |= set(x for x in (l.get("slugs") or []) if isinstance(x, str) and not _is_lab_slug(x))
     ids = _word_ids(db, slugs, rep)
     fav = next((l for l in lists if l.get("id") == "favorites"), None)
     fav_slugs = set((fav or {}).get("slugs") or [])
@@ -411,6 +491,16 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
         r = wh_runs.get(slug)
         if isinstance(r, (int, float)):
             row.wh_runs = max(int(row.wh_runs or 0), int(r))
+    # склад «flips/ok/best»: лучший результат по слову — в карточку (max)
+    for slug, val in wh_best.items():
+        if slug not in ids:
+            continue
+        row = card_for(slug)
+        try:
+            best = float(val)
+        except (TypeError, ValueError):
+            continue
+        row.wh_avg = max(float(row.wh_avg or 0), best)
     # списки
     for l in lists:
         kind = "favorite" if l.get("id") == "favorites" else "custom"
@@ -428,13 +518,33 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
                 db.add(EnglishListItem(list_id=lst.id, word_id=ids[s]))
                 have.add(ids[s])
                 rep["list_items"] += 1
-    # попытки речи
+    # попытки речи (идемпотентно: pilot + created_at + mode + word + score)
+    sp_with: set[tuple] = set()
+    sp_without: set[tuple] = set()
+    for prev in db.query(SpeechAttempt).filter_by(pilot_id=pilot.id).all():
+        rest = (str(prev.mode or ""), int(prev.word_id or 0), int(prev.score or 0))
+        sp_without.add(rest)
+        e = _epoch(prev.created_at)
+        if e is not None:
+            sp_with.add((e, *rest))
     for a in attempts[-2000:]:
         score = int(a.get("score") or 0)
-        row = SpeechAttempt(pilot_id=pilot.id, word_id=ids.get(a.get("slug"), 0),
-                            mode=str(a.get("mode") or "speaking")[:32], score=score,
-                            ok=1 if a.get("ok") or score >= 60 else 0)
+        wid = ids.get(a.get("slug"), 0)
+        mode = str(a.get("mode") or "speaking")[:32]
         t = _ts(a.get("ts"))
+        rest = (mode, wid, score)
+        if t is not None:
+            key = (_epoch(t), *rest)
+            if key in sp_with:
+                continue
+            sp_with.add(key)
+            sp_without.add(rest)
+        elif rest in sp_without:
+            continue
+        else:
+            sp_without.add(rest)
+        row = SpeechAttempt(pilot_id=pilot.id, word_id=wid, mode=mode, score=score,
+                            ok=1 if a.get("ok") or score >= 60 else 0)
         if t:
             row.created_at = t
         db.add(row)
@@ -450,32 +560,89 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
             for i, r in enumerate(rows):
                 r.english_xp = int(r.english_xp or 0) + share + (1 if i < rest else 0)
         rep["english_xp"] = en_xp
-    if isinstance(en.get("settings"), dict) and en["settings"]:
+    # настройки английского + склад в формате десктопа flips/ok/by_day/best
+    wh_state: dict[str, Any] = {}
+    for k in ("flips", "ok"):
+        v = wh.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            wh_state[k] = int(v)
+    if isinstance(wh.get("by_day"), dict) and wh["by_day"]:
+        wh_state["by_day"] = {str(k): v for k, v in wh["by_day"].items()}
+    if wh_best:
+        wh_state["best"] = dict(wh_best)
+    new_settings = en.get("settings") if isinstance(en.get("settings"), dict) else {}
+    if new_settings or wh_state:
         es = db.query(EnglishSettings).filter_by(pilot_id=pilot.id).first()
-        cur = json.loads(es.data or "{}") if es else {}
-        new = {**en["settings"], **cur} if merge else {**cur, **en["settings"]}
         if es is None:
-            db.add(EnglishSettings(pilot_id=pilot.id, data=json.dumps(new, ensure_ascii=False)))
-        else:
-            es.data = json.dumps(new, ensure_ascii=False)
+            es = EnglishSettings(pilot_id=pilot.id, data="{}")
+            db.add(es)
+        try:
+            cur = json.loads(es.data or "{}")
+        except ValueError:
+            cur = {}
+        if not isinstance(cur, dict):
+            cur = {}
+        if new_settings:
+            cur = {**new_settings, **cur} if merge else {**cur, **new_settings}
+        if wh_state:
+            old = cur.get("warehouse") if isinstance(cur.get("warehouse"), dict) else {}
+            merged = dict(old)
+            for k in ("flips", "ok"):
+                if k in wh_state:
+                    merged[k] = max(int(old.get(k) or 0), wh_state[k])
+            for k in ("by_day", "best"):
+                if k not in wh_state:
+                    continue
+                d = dict(old.get(k)) if isinstance(old.get(k), dict) else {}
+                for kk, vv in wh_state[k].items():
+                    try:
+                        d[kk] = max(float(d.get(kk) or 0), float(vv))
+                    except (TypeError, ValueError):
+                        d[kk] = vv
+                merged[k] = d
+            cur["warehouse"] = merged
+        es.data = json.dumps(cur, ensure_ascii=False)
     for k in ("achievements", "book_sentences", "speech_best", "review_done_days"):
         if en.get(k):
             rep["skipped"].append(f"english.{k}")
 
     # -- набор: забеги, клавиши, миссии
+    # идемпотентность забегов: pilot + created_at + mode + chars/typed/errors + cpm/elapsed (4 знака)
+    ts_with: set[tuple] = set()
+    ts_without: set[tuple] = set()
+    for prev in db.query(TypingSession).filter_by(pilot_id=pilot.id).all():
+        rest = (str(prev.mode or ""), int(prev.chars or 0), int(prev.typed or 0), int(prev.errors or 0),
+                _r4(prev.cpm), _r4(prev.elapsed))
+        ts_without.add(rest)
+        e = _epoch(prev.created_at)
+        if e is not None:
+            ts_with.add((e, *rest))
     for r in (st.get("runs") or [])[-5000:]:
         if not isinstance(r, dict):
             continue
         mid = str(r.get("mission") or "")
+        mode = str(r.get("mode") or "cargo")[:32]
+        chars, typed, errors = int(r.get("chars") or 0), int(r.get("typed") or 0), int(r.get("errors") or 0)
+        elapsed, cpm = _r4(r.get("elapsed")), _r4(r.get("cpm"))
+        t = _ts(r.get("ts"))
+        rest = (mode, chars, typed, errors, cpm, elapsed)
+        if t is not None:
+            key = (_epoch(t), *rest)
+            if key in ts_with:
+                continue
+            ts_with.add(key)
+            ts_without.add(rest)
+        elif rest in ts_without:
+            continue
+        else:
+            ts_without.add(rest)
         row = TypingSession(
-            pilot_id=pilot.id, text_id=None,
-            mode=str(r.get("mode") or "cargo")[:32],
+            pilot_id=pilot.id, text_id=None, mode=mode,
             lang=(mid.split("-")[0] if "-" in mid else "")[:16] or "en",
-            chars=int(r.get("chars") or 0), typed=int(r.get("typed") or 0), errors=int(r.get("errors") or 0),
+            chars=chars, typed=typed, errors=errors,
             elapsed=float(r.get("elapsed") or 0), cpm=float(r.get("cpm") or 0), acc=float(r.get("acc") or 0),
             rhythm=float(r.get("rhythm") or 0), best_streak=int(r.get("best_streak") or 0),
         )
-        t = _ts(r.get("ts"))
         if t:
             row.created_at = t
         db.add(row)
@@ -489,8 +656,9 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
             row = PilotKeyStat(pilot_id=pilot.id, key=ch, hits=0, errors=0)
             db.add(row)
             keys[ch] = row
-        row.hits = int(row.hits or 0) + int(v[0] or 0)
-        row.errors = int(row.errors or 0) + int(v[1] or 0)
+        # merge: max, не сумма; при mode=new база нулевая — результат тот же
+        row.hits = max(int(row.hits or 0), int(v[0] or 0))
+        row.errors = max(int(row.errors or 0), int(v[1] or 0))
         rep["keys"] += 1
     drills = {d.mission_id: d for d in db.query(DrillProgress).filter_by(pilot_id=pilot.id).all()}
     for mid, v in (st.get("missions") or {}).items():
@@ -505,19 +673,56 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
         row.attempts = max(int(row.attempts or 0), 1)
         rep["missions"] += 1
 
-    # -- скорочтение
-    for s in (sr.get("sessions") or [])[-2000:]:
-        if not isinstance(s, dict):
-            continue
-        row = SpeedResult(pilot_id=pilot.id, mode="reading", wpm=float(s.get("avg_wpm") or s.get("eff_wpm") or 0),
-                          words=int(s.get("words") or 0), elapsed=float(s.get("secs") or 0),
-                          score=float(s.get("comp") or 0))
-        t = _ts(s.get("ts"))
+    # -- скорочтение (идемпотентно: pilot + created_at + mode + words + wpm/elapsed/score)
+    sr_with: set[tuple] = set()
+    sr_without: set[tuple] = set()
+    for prev in db.query(SpeedResult).filter_by(pilot_id=pilot.id).all():
+        rest = (str(prev.mode or ""), int(prev.words or 0), _r4(prev.wpm), _r4(prev.elapsed), _r4(prev.score))
+        sr_without.add(rest)
+        e = _epoch(prev.created_at)
+        if e is not None:
+            sr_with.add((e, *rest))
+
+    def _add_speed(mode: str, wpm: float, words: int, elapsed: float, score: float, t: datetime | None) -> bool:
+        rest = (mode, int(words or 0), _r4(wpm), _r4(elapsed), _r4(score))
+        if t is not None:
+            key = (_epoch(t), *rest)
+            if key in sr_with:
+                return False
+            sr_with.add(key)
+            sr_without.add(rest)
+        elif rest in sr_without:
+            return False
+        else:
+            sr_without.add(rest)
+        row = SpeedResult(pilot_id=pilot.id, mode=mode, wpm=float(wpm or 0), words=int(words or 0),
+                          elapsed=float(elapsed or 0), score=float(score or 0))
         if t:
             row.created_at = t
         db.add(row)
-        rep["speed_sessions"] += 1
-    if sr.get("exercises"):
+        return True
+
+    for s in (sr.get("sessions") or [])[-2000:]:
+        if not isinstance(s, dict):
+            continue
+        if _add_speed("reading", float(s.get("avg_wpm") or s.get("eff_wpm") or 0),
+                      int(s.get("words") or 0), float(s.get("secs") or 0),
+                      float(s.get("comp") or 0), _ts(s.get("ts"))):
+            rep["speed_sessions"] += 1
+    # Шульте: прогоны exercises → speed_results mode=schulte, elapsed=score=время (сек)
+    exercise_runs = 0
+    for run in _iter_exercise_runs(sr.get("exercises") or {}):
+        try:
+            secs = float(run.get("result"))
+        except (TypeError, ValueError):
+            continue
+        if secs <= 0:
+            continue
+        exercise_runs += 1
+        if _add_speed("schulte", 0.0, 0, secs, secs, _ts(run.get("ts"))):
+            rep["speed_sessions"] += 1
+            rep["schulte_runs"] += 1
+    if sr.get("exercises") and not exercise_runs:
         rep["skipped"].append("speedread.exercises")
 
     # -- радио
@@ -534,6 +739,28 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
         db.add(PilotRadioFav(pilot_id=pilot.id, station_uuid=uuid, payload=json.dumps(payload, ensure_ascii=False)))
         favs.add(uuid)
         rep["radio_favorites"] += 1
+
+    # -- Lounge: рекорды десктопа {"best": {"tetris": 47790, …}} → lounge_scores
+    best_games = lounge.get("best") if isinstance(lounge.get("best"), dict) else {}
+    if best_games:
+        from app.api_lounge import LoungeScore
+
+        have_lounge = {(str(r.game or ""), int(r.score or 0))
+                       for r in db.query(LoungeScore).filter_by(pilot_id=pilot.id).all()}
+        for game, value in best_games.items():
+            try:
+                score = int(float(value))
+            except (TypeError, ValueError):
+                continue
+            if score <= 0:
+                continue
+            g = str(game)[:32]
+            if (g, score) in have_lounge:
+                continue
+            db.add(LoungeScore(pilot_id=pilot.id, callsign=str(pilot.callsign or "")[:64],
+                               game=g, score=score))
+            have_lounge.add((g, score))
+            rep["lounge_best"] += 1
 
     # -- клиентская часть (localStorage браузера): настройки кабины, груз, радио
     client: dict[str, Any] = {}
@@ -575,15 +802,62 @@ def apply_package(db: Session, pkg: Package, pilot, *, merge: bool) -> dict[str,
 
 
 def import_library(db: Session, pkg: Package, pilot, report: dict) -> None:
-    """Тексты полки: original (+translation) → texts; позиция чтения → pilot_texts."""
+    """Тексты полки: original (+translation) → texts; позиция чтения → pilot_texts (max)."""
     from app.api_library import PilotText
-    from app.models import TextDoc
+    from app.models import Segment, TextDoc
     from app.texts_service import import_bilingual, import_text
 
-    have_titles = {
-        t.title for t in db.query(TextDoc).join(PilotText, PilotText.text_id == TextDoc.id)
-        .filter(PilotText.pilot_id == pilot.id).all()
-    }
+    def _segments(text_id: int) -> list:
+        return db.query(Segment).filter_by(text_id=text_id).order_by(Segment.idx).all()
+
+    def _char_to_pos(segs: list, char_pos: int, original: str) -> int:
+        if not segs or char_pos <= 0:
+            return 0
+        placed = [s for s in segs if int(s.char_end or 0) > int(s.char_start or 0)]
+        if placed:
+            for s in placed:
+                if int(s.char_start or 0) <= char_pos < int(s.char_end or 0):
+                    return int(s.idx or 0)
+            if char_pos >= int(placed[-1].char_end or 0):
+                return int(placed[-1].idx or 0)
+            return int(placed[0].idx or 0)
+        total = len(original or "")
+        if total <= 0:
+            return 0
+        frac = min(1.0, char_pos / total)
+        return int(round(frac * (len(segs) - 1)))
+
+    def _word_to_pos(segs: list, word_pos: int, original: str) -> int:
+        words = (original or "").split()
+        total = len(words)
+        if not segs or word_pos <= 0 or total <= 0:
+            return 0
+        frac = min(1.0, word_pos / total)
+        last_end = int(segs[-1].char_end or 0)
+        if last_end > 0:
+            return _char_to_pos(segs, int(frac * last_end), original)
+        return int(round(frac * (len(segs) - 1)))
+
+    links = db.query(PilotText).filter_by(pilot_id=pilot.id).all()
+    doc_ids = [l.text_id for l in links]
+    docs = {d.id: d for d in db.query(TextDoc).filter(TextDoc.id.in_(doc_ids)).all()} if doc_ids else {}
+    by_title: dict[str, PilotText] = {}
+    for link in links:
+        doc = docs.get(link.text_id)
+        if doc is None:
+            continue
+        for key in _title_keys(doc.title):
+            by_title.setdefault(key, link)
+
+    lib = pkg.json("library/library.json")
+    active = lib.get("active_typing")
+    sess = pkg.json("session.json")
+    cargo = pkg.text("cargo.txt") or (sess.get("text") if isinstance(sess.get("text"), str) else "")
+    try:
+        sess_index = max(0, int(sess.get("index") or 0))
+    except (TypeError, ValueError):
+        sess_index = 0
+
     for tid in report.pop("_library", []):
         base = f"library/texts/{tid}/"
         meta = pkg.json(base + "meta.json")
@@ -593,8 +867,42 @@ def import_library(db: Session, pkg: Package, pilot, report: dict) -> None:
         title = str(meta.get("title") or tid)[:500]
         if meta.get("author"):
             title = f"{title} — {meta['author']}"[:500]
-        if title in have_titles:
+
+        active_ids = {str(tid), str(meta.get("id") or tid)}
+        is_active = active is not None and str(active) in active_ids
+        if not is_active and cargo and _same_text(cargo, original):
+            is_active = True
+
+        positions = meta.get("positions") if isinstance(meta.get("positions"), dict) else {}
+        typing_pos = positions.get("typing") if isinstance(positions.get("typing"), dict) else {}
+        reading_pos = positions.get("reading") if isinstance(positions.get("reading"), dict) else {}
+        chars: list[int] = []
+        if is_active and sess_index > 0:
+            chars.append(sess_index)
+        try:
+            meta_char = int(typing_pos.get("char") or 0)
+        except (TypeError, ValueError):
+            meta_char = 0
+        if meta_char > 0:
+            chars.append(meta_char)
+        try:
+            meta_word = int(reading_pos.get("word") or 0)
+        except (TypeError, ValueError):
+            meta_word = 0
+
+        link = next((by_title[k] for k in sorted(_title_keys(title)) if k in by_title), None)
+        if link is not None:
+            doc = docs.get(link.text_id)
+            if doc is None:
+                continue
+            segs = _segments(doc.id)
+            new_pos = max((_char_to_pos(segs, c, original) for c in chars), default=0)
+            new_pos = max(new_pos, _word_to_pos(segs, meta_word, original))
+            if new_pos > int(link.sentence_id or 0):
+                link.sentence_id = new_pos
+                db.commit()
             continue
+
         lang = str(meta.get("lang") or "en")[:16]
         tr = pkg.text(base + "translation.txt")
         if tr.strip():
@@ -602,9 +910,15 @@ def import_library(db: Session, pkg: Package, pilot, report: dict) -> None:
             doc = import_bilingual(db, title=title, lang_src=lang, lang_tgt=tgt, original=original, translation=tr)
         else:
             doc = import_text(db, title=title, lang=lang, content=original, source="desktop")
-        db.add(PilotText(pilot_id=pilot.id, text_id=doc.id, sentence_id=0, mode="reader"))
+        segs = _segments(doc.id)
+        new_pos = max((_char_to_pos(segs, c, original) for c in chars), default=0)
+        new_pos = max(new_pos, _word_to_pos(segs, meta_word, original))
+        db.add(PilotText(pilot_id=pilot.id, text_id=doc.id, sentence_id=new_pos, mode="reader"))
         db.commit()
-        have_titles.add(title)
+        docs[doc.id] = doc
+        created = db.query(PilotText).filter_by(pilot_id=pilot.id, text_id=doc.id).first()
+        for key in _title_keys(title):
+            by_title.setdefault(key, created)
         report["library_texts"] += 1
 
 

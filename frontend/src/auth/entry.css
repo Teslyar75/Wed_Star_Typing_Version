@@ -697,6 +697,63 @@ kbd {
   flex-direction: column;
   min-height: 0;
 }
+.ce-import-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+.ce-desk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 24px;
+  border: 1px solid var(--ce-line);
+  border-radius: 18px;
+  background: var(--ce-panel);
+}
+.ce-desk h3 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+}
+.ce-desk p {
+  margin: 0;
+  max-width: 720px;
+  text-align: center;
+}
+.ce-desk-fields {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin: 4px 0 2px;
+}
+.ce-desk-fields .ce-field {
+  width: min(300px, 100%);
+  max-width: 300px;
+}
+.ce-import-main .ce-drop {
+  min-height: 150px;
+}
+.ce-desk-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--ce-accent);
+  border-radius: 12px;
+}
+.ce-desk-confirm p {
+  margin: 0;
+  text-align: center;
+}
 .ce-drop {
   flex: 1;
   border: 2px dashed var(--ce-line);
