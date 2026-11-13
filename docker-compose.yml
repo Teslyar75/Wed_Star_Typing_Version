@@ -35,7 +35,12 @@ services:
       ORION_OPENCODE_TIMEOUT: "180"
       ORION_OPENCODE_TOKEN: ${ORION_OPENCODE_TOKEN:-}
       WEB_UPDATE_URL: http://host.docker.internal:8766
+      # Перенос профиля по имени + PIN: включается только когда start-скрипт
+      # нашёл хостовый %APPDATA%\Stamina (иначе пусто = 503 desktop_data_unavailable).
+      DESKTOP_DATA_DIR: ${DESKTOP_DATA_DIR:-}
     volumes:
+      # READ-ONLY каталог десктопа. Заглушка, чтобы compose не падал без хоста.
+      - "${DESKTOP_DATA_HOST:-./backend/.desktop-data-empty}:/desktop-data:ro"
       # та же модель, что у десктопа (репозиторий My_New_Stamina/models).
       # Клонировали только веб-версию — папки нет, распознавание речи просто выключено.
       # Другое место:  MODELS_DIR=/путь/к/models ./start.sh

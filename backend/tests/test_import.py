@@ -8,7 +8,10 @@ import zipfile
 
 from fastapi.testclient import TestClient
 
+from app.db import SessionLocal, init_db
 from app.main import app
+
+init_db()
 
 
 def _pin_rec(code: str) -> dict:
@@ -133,10 +136,14 @@ def test_whole_appdata_folder_two_pilots_and_merge_dedupe() -> None:
     assert c.post("/api/import/commit", json={"token": pv["token"], "source_id": src, "mode": "merge"}).status_code == 401
     me = f"Me{uuid.uuid4().hex[:5]}"
     assert c.post("/api/pilots/register", json={"callsign": me}).status_code == 200
-    r1 = c.post("/api/import/commit", json={"token": pv["token"], "source_id": src, "mode": "merge"})
+    bad = c.post("/api/import/commit", json={"token": pv["token"], "source_id": src, "mode": "merge"})
+    assert bad.status_code == 400 and bad.json()["detail"]["code"] == "callsign_mismatch"
+    r1 = c.post("/api/import/commit",
+                json={"token": pv["token"], "source_id": src, "mode": "merge", "confirm_identity": True})
     assert r1.status_code == 200, r1.text
     assert c.get("/api/pilots/me").json()["callsign"] == me
-    r2 = c.post("/api/import/commit", json={"token": pv["token"], "source_id": src, "mode": "merge"})
+    r2 = c.post("/api/import/commit",
+                json={"token": pv["token"], "source_id": src, "mode": "merge", "confirm_identity": True})
     assert r2.status_code == 409
 
 
@@ -239,3 +246,290 @@ def test_register_old_england_skin() -> None:
     c = TestClient(app)
     r = c.post("/api/pilots/register", json={"callsign": f"Oe{uuid.uuid4().hex[:5]}", "skin": "old_england"})
     assert r.status_code == 200 and r.json()["skin"] == "old_england"
+
+
+def _register(c: TestClient, prefix: str = "Mg") -> str:
+    cs = f"{prefix}{uuid.uuid4().hex[:6]}"
+    r = c.post("/api/pilots/register", json={"callsign": cs})
+    assert r.status_code == 200, r.text
+    return cs
+
+
+def _commit_stpilot(c: TestClient, files: dict[str, bytes], *, mode: str, force: bool = False) -> dict:
+    pv = _preview(c, "p.stpilot", _stpilot_full(files))
+    s = pv["pilots"][0]
+    body = {"token": pv["token"], "source_id": s["source_id"], "mode": mode, "force": force}
+    if mode == "merge":
+        body["confirm_identity"] = True
+    r = c.post("/api/import/commit", json=body)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def _row_counts(pilot_id: int) -> tuple[int, int, int]:
+    from app.api_english import SpeechAttempt
+    from app.api_speedread import SpeedResult
+    from app.sessions import TypingSession
+
+    db = SessionLocal()
+    try:
+        return (
+            db.query(TypingSession).filter_by(pilot_id=pilot_id).count(),
+            db.query(SpeechAttempt).filter_by(pilot_id=pilot_id).count(),
+            db.query(SpeedResult).filter_by(pilot_id=pilot_id).count(),
+        )
+    finally:
+        db.close()
+
+
+def test_desktop_export_with_idle_cache_and_lazy_vocab() -> None:
+    c = TestClient(app)
+    cs = f"Ic{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs)
+    files["idle_cache/spaceship/x.jpg"] = b"jpgbytes"
+    files["vocab_lazy_v1/index.json.gz"] = b"gzipbytes"
+    files["vocab_lazy/other.json"] = b"{}"
+    man = {"format": "stpilot", "version": 1, "pilot": {"id": "p-x", "callsign": cs},
+           "files": {k: hashlib.sha256(v).hexdigest() for k, v in files.items()}}
+    # служебный файл намеренно с «плохим» SHA: его не должно требовать и проверять
+    man["files"]["vocab_lazy_v1/index.json.gz"] = "0" * 64
+    raw = _zip({"manifest.json": json.dumps(man).encode(), **{"data/" + k: v for k, v in files.items()}})
+    pv = _preview(c, "p.stpilot", raw)
+    s = pv["pilots"][0]
+    r = c.post("/api/import/commit", json={"token": pv["token"], "source_id": s["source_id"], "mode": "new"})
+    assert r.status_code == 200, r.text
+    assert r.json()["report"]["library_texts"] == 1
+
+
+def test_merge_repeat_does_not_duplicate_rows_or_xp() -> None:
+    c = TestClient(app)
+    _register(c, "Id")
+    cs = f"Ot{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs)
+    _commit_stpilot(c, files, mode="merge")
+    me = c.get("/api/pilots/me").json()
+    before = _row_counts(me["id"])
+    xp = me["xp"]
+    assert before == (1, 1, 1)
+
+    files2 = dict(files)
+    settings = json.loads(files2["settings.json"])
+    settings["extra_key"] = 1
+    files2["settings.json"] = json.dumps(settings).encode()
+    _commit_stpilot(c, files2, mode="merge", force=True)
+
+    assert _row_counts(me["id"]) == before
+    assert c.get("/api/pilots/me").json()["xp"] == xp
+
+
+def test_merge_key_stats_use_max() -> None:
+    c = TestClient(app)
+    _register(c, "Kx")
+    cs = f"Kx{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs)
+    _commit_stpilot(c, files, mode="merge")
+    files2 = dict(files)
+    settings = json.loads(files2["settings.json"])
+    settings["extra_key"] = 2
+    files2["settings.json"] = json.dumps(settings).encode()
+    _commit_stpilot(c, files2, mode="merge", force=True)
+
+    from app.api_missions import PilotKeyStat
+
+    pid = c.get("/api/pilots/me").json()["id"]
+    db = SessionLocal()
+    try:
+        row = db.query(PilotKeyStat).filter_by(pilot_id=pid, key="a").first()
+        assert row is not None and (row.hits, row.errors) == (50, 2)
+    finally:
+        db.close()
+
+
+def test_lounge_best_imported_once() -> None:
+    c = TestClient(app)
+    _register(c, "Lg")
+    cs = f"Lg{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs)
+    files["lounge.json"] = json.dumps({"best": {"tetris": 47790, "snake": 0}}).encode()
+    r1 = _commit_stpilot(c, files, mode="merge")
+    assert r1["report"]["lounge_best"] == 1
+
+    files2 = dict(files)
+    settings = json.loads(files2["settings.json"])
+    settings["extra_key"] = 3
+    files2["settings.json"] = json.dumps(settings).encode()
+    r2 = _commit_stpilot(c, files2, mode="merge", force=True)
+    assert r2["report"]["lounge_best"] == 0
+
+    from app.api_lounge import LoungeScore
+
+    pid = c.get("/api/pilots/me").json()["id"]
+    db = SessionLocal()
+    try:
+        rows = db.query(LoungeScore).filter_by(pilot_id=pid, game="tetris").all()
+        assert [x.score for x in rows] == [47790]
+        assert db.query(LoungeScore).filter_by(pilot_id=pid, game="snake").count() == 0
+    finally:
+        db.close()
+
+
+def test_schulte_exercises_imported_once() -> None:
+    c = TestClient(app)
+    _register(c, "Sh")
+    cs = f"Sh{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs)
+    files["speedread.json"] = json.dumps({
+        "sessions": [],
+        "exercises": {"E-SHL": {"5x5": {"runs": [{"ts": 1760000500, "result": 23.4, "stars": 2, "errors": 1}]}}},
+    }).encode()
+    r1 = _commit_stpilot(c, files, mode="merge")
+    assert r1["report"]["schulte_runs"] == 1
+
+    files2 = dict(files)
+    settings = json.loads(files2["settings.json"])
+    settings["extra_key"] = 4
+    files2["settings.json"] = json.dumps(settings).encode()
+    _commit_stpilot(c, files2, mode="merge", force=True)
+
+    from app.api_speedread import SpeedResult
+
+    pid = c.get("/api/pilots/me").json()["id"]
+    db = SessionLocal()
+    try:
+        rows = db.query(SpeedResult).filter_by(pilot_id=pid, mode="schulte").all()
+        assert len(rows) == 1
+        assert abs(rows[0].elapsed - 23.4) < 0.01 and abs(rows[0].score - 23.4) < 0.01
+    finally:
+        db.close()
+
+
+def test_library_position_from_session_is_max() -> None:
+    c = TestClient(app)
+    cs = f"Bk{uuid.uuid4().hex[:6]}"
+    book = "First sentence. Second one. Third sentence here."
+    files = _pilot_files(cs)
+    files["cargo.txt"] = book.encode()
+    files["session.json"] = json.dumps({"text": book, "index": 20}).encode()
+    files["library/library.json"] = json.dumps({
+        "active_typing": "t-1",
+        "texts": [{"id": "t-1", "title": "Book", "author": "", "lang": "en", "kind": "text"}],
+    }).encode()
+    _commit_stpilot(c, files, mode="new")
+
+    shelf = c.get("/api/library").json()
+    first = next(x for x in shelf if x["title"] == "Book")
+    assert first["sentence_id"] > 0
+
+    files2 = dict(files)
+    files2["session.json"] = json.dumps({"text": book, "index": 2}).encode()
+    settings = json.loads(files2["settings.json"])
+    settings["extra_key"] = 5
+    files2["settings.json"] = json.dumps(settings).encode()
+    _commit_stpilot(c, files2, mode="merge", force=True)
+
+    shelf2 = c.get("/api/library").json()
+    second = next(x for x in shelf2 if x["title"] == "Book")
+    assert second["sentence_id"] == first["sentence_id"]
+
+
+def test_warehouse_flips_ok_best() -> None:
+    c = TestClient(app)
+    _register(c, "Wh")
+    cs = f"Wh{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs)
+    en = json.loads(files["english.json"])
+    en["warehouse"] = {"flips": 172, "ok": 92, "by_day": {"2026-10-01": 40}, "best": {"the": 91.5}}
+    files["english.json"] = json.dumps(en, ensure_ascii=False).encode()
+    _commit_stpilot(c, files, mode="merge")
+
+    from app.api_english import CardProgress, EnglishSettings, VocabWord
+
+    pid = c.get("/api/pilots/me").json()["id"]
+    db = SessionLocal()
+    try:
+        word = db.query(VocabWord).filter_by(slug="the").first()
+        card = db.query(CardProgress).filter_by(pilot_id=pid, word_id=word.id).first()
+        assert card is not None and card.wh_avg >= 91.5
+        es = db.query(EnglishSettings).filter_by(pilot_id=pid).first()
+        wh = json.loads(es.data)["warehouse"]
+        assert wh["flips"] == 172 and wh["ok"] == 92 and wh["by_day"]["2026-10-01"] == 40
+        assert wh["best"]["the"] == 91.5
+    finally:
+        db.close()
+
+    files2 = dict(files)
+    settings = json.loads(files2["settings.json"])
+    settings["extra_key"] = 6
+    files2["settings.json"] = json.dumps(settings).encode()
+    _commit_stpilot(c, files2, mode="merge", force=True)
+
+    db = SessionLocal()
+    try:
+        es = db.query(EnglishSettings).filter_by(pilot_id=pid).first()
+        wh = json.loads(es.data)["warehouse"]
+        assert wh["flips"] == 172 and wh["ok"] == 92
+    finally:
+        db.close()
+
+
+def test_lab_slug_not_in_vocab() -> None:
+    c = TestClient(app)
+    cs = f"Lb{uuid.uuid4().hex[:6]}"
+    files = _pilot_files(cs)
+    en = json.loads(files["english.json"])
+    en["words"] = {"the": {"known": True}, "dev:noweb": {"known": True}}
+    files["english.json"] = json.dumps(en, ensure_ascii=False).encode()
+    r = _commit_stpilot(c, files, mode="new")
+    assert r["report"]["words_known"] == 1
+
+    from app.api_english import VocabWord
+
+    pid = c.get("/api/pilots/me").json()["id"]
+    db = SessionLocal()
+    try:
+        assert db.query(VocabWord).filter(
+            (VocabWord.slug == "dev:noweb") | (VocabWord.word == "dev:noweb")
+        ).count() == 0
+    finally:
+        db.close()
+
+
+def test_merge_preserves_web_card_and_xp() -> None:
+    from datetime import date
+
+    c = TestClient(app)
+    _register(c, "We")
+    pid = c.get("/api/pilots/me").json()["id"]
+    from app.api_english import CardProgress, ReviewLog, VocabWord
+    from app.pilots import Pilot
+
+    db = SessionLocal()
+    try:
+        slug = f"webonly-{uuid.uuid4().hex[:10]}"
+        w = db.query(VocabWord).filter_by(word=slug).first()
+        if w is None:
+            w = VocabWord(word=slug[:64], slug=slug[:80], translation="", example="", rank=999999, meta="")
+            db.add(w)
+            db.flush()
+        db.add(CardProgress(pilot_id=pid, word_id=w.id, ease=2.5, interval=5, reps=3, due=date.today(),
+                            bin="favorite", english_xp=10, known=1, my_tr="веб",
+                            wh_state="", wh_runs=0, wh_goal=2, wh_run="", wh_stars=0, wh_avg=0.0))
+        db.add(ReviewLog(pilot_id=pid, word_id=w.id, grade=4))
+        p = db.get(Pilot, pid)
+        p.xp = 1000
+        db.commit()
+        wid = w.id
+    finally:
+        db.close()
+
+    files = _pilot_files(f"An{uuid.uuid4().hex[:6]}")
+    r = _commit_stpilot(c, files, mode="merge")
+    assert r["pilot"]["xp"] == 1000
+
+    db = SessionLocal()
+    try:
+        card = db.query(CardProgress).filter_by(pilot_id=pid, word_id=wid).first()
+        assert card is not None and card.known == 1 and card.my_tr == "веб"
+        assert db.query(ReviewLog).filter_by(pilot_id=pid, word_id=wid).count() == 1
+    finally:
+        db.close()

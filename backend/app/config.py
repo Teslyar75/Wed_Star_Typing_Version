@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     allow_dev_secret: bool = False
     secret_key_file: str = "./.jwt_secret"
     stamina_repo_root: Path | None = None
+    # READ-ONLY каталог %APPDATA%\Stamina (хоста) для переноса профиля по имени + PIN.
+    # Пусто = функция выключена (503 desktop_data_unavailable).
+    desktop_data_dir: str = ""
     # Слайдшоу (E2): ключи только из окружения/.env (в git не попадают).
     unsplash_access_key: str = ""
     pexels_api_key: str = ""
