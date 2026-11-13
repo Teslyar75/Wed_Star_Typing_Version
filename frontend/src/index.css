@@ -8157,7 +8157,7 @@ html {
 }
 .en-sc-strip { flex: 0 0 auto; }
 .en-sc-nav { display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: flex-end; align-items: center; }
-.en-sc-msg { margin: 0; color: var(--st-accent); font-size: 0.78rem; flex: 0 0 auto; }
+.en-sc-msg { margin: 0; color: var(--st-accent); font-size: calc(0.78rem * var(--sc-k, 1)); flex: 0 0 auto; }
 .en-sc-empty {
   display: flex;
   flex-direction: column;
@@ -8180,10 +8180,17 @@ html {
   min-height: 0;
   max-height: none;
   overflow: auto;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 6fr 7fr 9fr;
+  align-items: stretch;
   gap: 0.25rem;
   padding-bottom: 0.1rem;
+}
+.en-sc-upper > .en-sc-cols { display: contents; }
+.en-sc-upper .en-sc-panel { min-width: 0; }
+.en-sc-upper > .en-sc-modes { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .en-sc-upper { grid-template-columns: 1fr; }
 }
 .en-sc-panel {
   border: 1px solid var(--st-line);
@@ -8193,7 +8200,7 @@ html {
   z-index: 2;
 }
 .en-sc-panel-lab {
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--sc-k, 1));
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--st-muted);
@@ -8202,7 +8209,7 @@ html {
 .en-sc-window { text-align: center; padding: 0.25rem 0.5rem 0.3rem; flex: 0 0 auto; }
 .en-sc-freq {
   display: inline-block;
-  font-size: 0.65rem;
+  font-size: calc(0.65rem * var(--sc-k, 1));
   font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--st-cyan);
@@ -8212,13 +8219,14 @@ html {
 }
 .en-sc-word {
   font-family: var(--st-font-mono, Consolas, monospace);
-  font-size: clamp(1.15rem, 2.2vw, 1.65rem);
+  font-size: calc(1.65rem * var(--sc-k, 1));
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--st-text);
   line-height: 1.1;
   margin: 0.05rem 0 0.15rem;
   text-transform: none;
+  overflow-wrap: anywhere;
 }
 .en-sc-meta {
   display: flex;
@@ -8264,7 +8272,7 @@ html {
 .en-sc-respell {
   margin: 0.05rem 0 0.25rem;
   font-family: var(--st-font-mono, Consolas, monospace);
-  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  font-size: calc(1.3rem * var(--sc-k, 1));
   font-weight: 700;
   color: var(--st-cyan);
   letter-spacing: 0.04em;
@@ -8281,15 +8289,15 @@ html {
   margin: 0;
   white-space: pre-wrap;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: calc(0.88rem * var(--sc-k, 1));
   color: var(--st-text);
   line-height: 1.4;
 }
-.en-sc-def { margin: 0 0 0.4rem; font-size: 0.95rem; line-height: 1.35; }
+.en-sc-def { margin: 0 0 0.4rem; font-size: calc(0.95rem * var(--sc-k, 1)); line-height: 1.35; }
 .en-sc-ex {
   margin: 0 0 0.5rem;
   color: var(--st-muted);
-  font-size: 0.88rem;
+  font-size: calc(0.88rem * var(--sc-k, 1));
   line-height: 1.35;
 }
 .en-sc-hl {
@@ -8303,7 +8311,7 @@ html {
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.68rem;
+  font-size: calc(0.68rem * var(--sc-k, 1));
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--st-muted);
@@ -8324,7 +8332,7 @@ html {
   border: 1px solid var(--st-line);
   padding: 0.35rem 0.5rem;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--sc-k, 1));
   text-transform: none;
   letter-spacing: 0;
 }
@@ -8339,7 +8347,7 @@ html {
   flex: 1 1 0;
   min-width: 0;
   white-space: nowrap;
-  font-size: 0.68rem;
+  font-size: calc(0.68rem * var(--sc-k, 1));
   padding: 0.28rem 0.35rem;
   justify-content: center;
 }
@@ -8358,7 +8366,7 @@ html {
 .en-sc-mode {
   min-height: 1.65rem;
   padding: 0.2rem 0.5rem;
-  font-size: 0.7rem;
+  font-size: calc(0.7rem * var(--sc-k, 1));
 }
 .en-sc-channel {
   flex: 0 1 28%;
@@ -8379,7 +8387,7 @@ html {
   min-height: 0;
 }
 .en-sc-snum {
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--sc-k, 1));
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--st-muted);
@@ -8388,12 +8396,12 @@ html {
 .en-sc-sent {
   margin: 0 0 0.2rem;
   font-family: var(--st-font-mono, Consolas, monospace);
-  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+  font-size: calc(1.15rem * var(--sc-k, 1));
   color: var(--st-text);
   line-height: 1.3;
 }
-.en-sc-sent-ru { margin: 0 0 0.2rem; color: var(--st-muted); font-size: 0.8rem; }
-.en-sc-hint-word { margin: 0 0 0.2rem; color: var(--st-accent); font-size: 0.78rem; font-weight: 700; }
+.en-sc-sent-ru { margin: 0 0 0.2rem; color: var(--st-muted); font-size: calc(0.8rem * var(--sc-k, 1)); }
+.en-sc-hint-word { margin: 0 0 0.2rem; color: var(--st-accent); font-size: calc(0.78rem * var(--sc-k, 1)); font-weight: 700; }
 .en-sc-chan-btns { display: flex; flex-wrap: wrap; gap: 0.2rem; align-items: center; margin-bottom: 0.25rem; }
 .en-sc-chan-left .en-match {
   margin: 0.3rem 0 0.35rem;
@@ -9414,3 +9422,23 @@ body.en-sc-focus .en-sm-chip { font-size: 0.8rem; min-height: 1.9rem; padding: 0
 body.en-sc-focus .en-sc-acts .en-sm-chip { font-size: 0.8rem; }
 body.en-sc-focus .en-sc-tr { font-size: 0.78rem; }
 body.en-sc-focus .en-sc-tr input { font-size: 1rem; }
+
+/* Режим O (Щ) на большом экране: ещё крупнее (запрос Сергея 12.11.2026) */
+@media (min-width: 1400px) and (min-height: 800px) {
+  body.en-sc-focus .en-sm-title { font-size: 1.6rem; }
+  body.en-sc-focus .en-sc-panel-lab { font-size: 0.95rem; }
+  body.en-sc-focus .en-sc-freq { font-size: 1rem; }
+  body.en-sc-focus .en-sc-word { font-size: clamp(2.6rem, 5vw, 4.6rem); }
+  body.en-sc-focus .en-sc-respell { font-size: clamp(1.8rem, 3vw, 2.8rem); }
+  body.en-sc-focus .en-sc-ptext { font-size: clamp(1.25rem, 1.6vw, 1.6rem); }
+  body.en-sc-focus .en-sc-def { font-size: clamp(1.3rem, 1.7vw, 1.6rem); }
+  body.en-sc-focus .en-sc-ex { font-size: clamp(1.2rem, 1.5vw, 1.45rem); }
+  body.en-sc-focus .en-sc-sent { font-size: clamp(1.5rem, 2.2vw, 2.2rem); }
+  body.en-sc-focus .en-sc-sent-ru { font-size: 1.25rem; }
+  body.en-sc-focus .en-sc-snum { font-size: 0.92rem; }
+  body.en-sc-focus .en-sm-tag { font-size: 1rem; }
+  body.en-sc-focus .en-sm-chip { font-size: 1rem; min-height: 2.3rem; }
+  body.en-sc-focus .en-sc-acts .en-sm-chip { font-size: 1rem; }
+  body.en-sc-focus .en-sc-tr { font-size: 0.95rem; }
+  body.en-sc-focus .en-sc-tr input { font-size: 1.25rem; }
+}
