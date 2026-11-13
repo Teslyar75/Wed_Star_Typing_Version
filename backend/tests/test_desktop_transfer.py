@@ -243,3 +243,43 @@ def test_push_guest_rejected() -> None:
     r = g.post("/api/import/push", files=[("files", ("p.stpilot", raw, "application/zip"))],
                data={"confirm_identity": "true"})
     assert r.status_code == 401
+
+
+def test_desktop_package_skips_github_token_files(tmp_path, monkeypatch) -> None:
+    """Pilot folder with github_token / github_access.json must not enter the package or export."""
+    from app.desktop_source import load_desktop_package
+
+    cs = f"Tok{uuid.uuid4().hex[:5]}"
+    root = _desktop_tree(tmp_path, cs, pin="2468")
+    pdir = root / "pilots" / "p-1"
+    secret = b"github_pat_SHOULD_NOT_APPEAR"
+    (pdir / "github_token").write_bytes(secret)
+    (pdir / "github_access.json").write_bytes(b'{"access": "secret-json"}')
+    (pdir / "extra_token.txt").write_bytes(b"also-secret")
+    monkeypatch.setattr(settings, "desktop_data_dir", str(root))
+
+    pkg = load_desktop_package(cs)
+    names = set(pkg.files)
+    assert "github_token" not in names
+    assert "github_access.json" not in names
+    assert "extra_token.txt" not in names
+    assert "profile.json" in names
+    blob = b"".join(pkg.files.values())
+    assert secret not in blob
+    assert b"also-secret" not in blob
+    assert b"secret-json" not in blob
+
+    c = TestClient(app)
+    _register(c, "Imp")
+    r = c.post("/api/import/from-desktop",
+               json={"callsign": cs, "pin": "2468", "confirm_identity": True})
+    assert r.status_code == 200, r.text
+    ex = c.get("/api/import/export")
+    assert ex.status_code == 200
+    assert secret not in ex.content
+    assert b"also-secret" not in ex.content
+    assert b"secret-json" not in ex.content
+    z = zipfile.ZipFile(io.BytesIO(ex.content))
+    exported = {n.split("/")[-1] for n in z.namelist()}
+    assert "github_token" not in exported
+    assert "github_access.json" not in exported

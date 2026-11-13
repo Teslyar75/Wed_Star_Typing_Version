@@ -27,6 +27,7 @@ MAX_FILES = 6000
 MAX_FILE = 40 * 1024 * 1024
 # Служебные каталоги десктопа: в пакет не попадают и SHA по manifest не проверяется.
 SKIP_DIRS = {"backups", "cache", "logs", "idle_cache", "vocab_lazy_v1", "vocab_lazy"}
+SKIP_SECRET_FILES = {"github_access.json"}
 KNOWN = ("profile.json", "settings.json", "stats.json", "session.json", "cargo.txt", "cargo_original.txt",
          "monkeytype_cache.json", "portal_stats.json",
          "english.json", "speedread.json", "radio.json", "achievements.json", "avatar.png")
@@ -153,7 +154,13 @@ def files_from_zip(raw: bytes) -> dict[str, bytes]:
 
 def _skipped(rel: str) -> bool:
     parts = rel.split("/")
-    return any(p in SKIP_DIRS for p in parts[:-1]) or parts[-1].endswith((".tmp", ".log", ".migrated"))
+    name = parts[-1].casefold()
+    return (
+        any(p in SKIP_DIRS for p in parts[:-1])
+        or name.endswith((".tmp", ".log", ".migrated"))
+        or "token" in name
+        or name in SKIP_SECRET_FILES
+    )
 
 
 def parse_stpilot(files: dict[str, bytes]) -> Package:
