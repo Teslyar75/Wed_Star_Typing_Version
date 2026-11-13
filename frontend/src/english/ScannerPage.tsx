@@ -5,6 +5,7 @@ import { isAbortError } from "../shell/requestEpoch";
 import MatchReadout from "./MatchReadout";
 import MicTransmit, { type MatchInfo } from "./MicTransmit";
 import SpeakButton from "./SpeakButton";
+import { passed, scheduleAdvance } from "./speechStd";
 import type { EnPage, EnWord } from "./types";
 
 type Props = {
@@ -81,6 +82,32 @@ export default function ScannerPage({
   const [booting, setBooting] = useState(true);
   const [focus, setFocus] = useState(false);
   const liveRef = useRef(true);
+  const siRef = useRef(si);
+  const wordIdRef = useRef<number | null>(null);
+  const advanceTimerRef = useRef<number | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const fitRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    siRef.current = si;
+  }, [si]);
+
+  useEffect(() => {
+    wordIdRef.current = word?.id ?? null;
+    if (advanceTimerRef.current != null) {
+      window.clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+  }, [word?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current != null) {
+        window.clearTimeout(advanceTimerRef.current);
+        advanceTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     liveRef.current = true;
@@ -100,6 +127,58 @@ export default function ScannerPage({
   useEffect(() => {
     if (focus && !word) setFocus(false);
   }, [focus, word]);
+
+  // масштаб шрифта как в desktop: k = clamp(min(3, W/512, H/270) * 0.6, 1, 1.8),
+  // в обычном режиме уменьшаем до 0.66, пока верх не поместится в кадр
+  const fitScale = useCallback(() => {
+    const sec = sectionRef.current;
+    if (!sec) return;
+    if (fitRafRef.current != null) {
+      cancelAnimationFrame(fitRafRef.current);
+      fitRafRef.current = null;
+    }
+    if (focus) {
+      sec.style.setProperty("--sc-k", "1");
+      return;
+    }
+    const W = sec.clientWidth;
+    const H = sec.clientHeight;
+    if (W < 50 || H < 50) return;
+    let k = Math.max(1, Math.min(1.8, Math.min(3, W / 512, H / 270) * 0.6));
+    const body = sec.querySelector<HTMLElement>(".en-sc-body");
+    const step = () => {
+      sec.style.setProperty("--sc-k", k.toFixed(3));
+      if (body && body.scrollHeight > body.clientHeight + 1 && k > 0.66 + 0.001) {
+        k = Math.max(0.66, k * 0.92);
+        fitRafRef.current = requestAnimationFrame(step);
+        return;
+      }
+      fitRafRef.current = null;
+    };
+    step();
+  }, [focus]);
+
+  useEffect(() => {
+    const sec = sectionRef.current;
+    if (!sec) return;
+    fitScale();
+    const onResize = () => fitScale();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
+    if (ro) ro.observe(sec);
+    else window.addEventListener('resize', onResize);
+    return () => {
+      if (ro) ro.disconnect();
+      else window.removeEventListener('resize', onResize);
+      if (fitRafRef.current != null) {
+        cancelAnimationFrame(fitRafRef.current);
+        fitRafRef.current = null;
+      }
+    };
+  }, [fitScale]);
+
+  useEffect(() => {
+    fitScale();
+  }, [word?.id, fitScale]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -317,7 +396,7 @@ export default function ScannerPage({
           : (word?.notes || []).map((n) => `• ${n}`).join("\n") || t("en_no_data");
 
   return (
-    <section className={`en-scanner en-sc ${focus ? "is-focus" : ""}`}>
+    <section ref={sectionRef} className={`en-scanner en-sc ${focus ? "is-focus" : ""}`}>
       <header className="en-sm-strip en-sc-strip">
         <div className="en-sm-strip-bar" aria-hidden />
         <div className="en-sm-strip-main">
@@ -584,6 +663,20 @@ export default function ScannerPage({
                         score,
                       }),
                     });
+                    if (passed(score) && sents.length > 1) {
+                      const hereWord = word.id;
+                      const hereSi = si;
+                      if (advanceTimerRef.current != null) {
+                        window.clearTimeout(advanceTimerRef.current);
+                      }
+                      advanceTimerRef.current = scheduleAdvance(
+                        () => {
+                          setSi((x) => x + 1);
+                          setMatch(null);
+                        },
+                        () => wordIdRef.current === hereWord && siRef.current === hereSi,
+                      );
+                    }
                   }}
                 />
               </div>
